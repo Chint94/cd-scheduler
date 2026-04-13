@@ -1760,31 +1760,86 @@ function taskToGcalEvent(t){
 
 // ── Get OAuth token then run callback ─────────────────────────────────────────
 // Uses signInWithPopup every time — if scope already granted, resolves silently.
+// ── GIS token client (loaded once on first sync) ─────────────────────────────
+var gisClient=null;
+var gisLoading=false;
+var gisCallbackQueue=[];
+
+function loadGIS(onReady){
+  if(gisClient){onReady(gisClient);return;}
+  gisCallbackQueue.push(onReady);
+  if(gisLoading) return;
+  gisLoading=true;
+  var s=document.createElement('script');
+  s.src='https://accounts.google.com/gsi/client';
+  s.onload=function(){
+    gisClient=google.accounts.oauth2.initTokenClient({
+      client_id:GCAL_CLIENT_ID,
+      scope:GCAL_SCOPE,
+      callback:'' // set per-request below
+    });
+    gisCallbackQueue.forEach(function(cb){cb(gisClient);});
+    gisCallbackQueue=[];
+  };
+  s.onerror=function(){
+    // GIS failed to load (e.g. WebView) — fall back to Firebase popup
+    gisLoading=false;
+    gisCallbackQueue.forEach(function(cb){cb(null);});
+    gisCallbackQueue=[];
+  };
+  document.head.appendChild(s);
+}
+
 function gcalGetToken(callback){
   // Use cached token if still valid
   if(gcalToken&&gcalToken.access_token&&Date.now()<gcalToken.expires_at){
     callback(gcalToken.access_token); return;
   }
+
+  // Try GIS first (most reliable for Calendar scope in browser)
+  loadGIS(function(client){
+    if(client){
+      // GIS token client — most reliable way to get Calendar-scoped token
+      client.callback=function(resp){
+        if(resp.error){
+          gcalMsg('Calendar access error: '+resp.error,'err');
+          gcalStatus2('Access error');
+          return;
+        }
+        gcalToken={access_token:resp.access_token,
+                   expires_at:Date.now()+(resp.expires_in||3500)*1000};
+        callback(resp.access_token);
+      };
+      // requestAccessToken opens a popup asking specifically for Calendar scope
+      client.requestAccessToken({prompt:''});
+    } else {
+      // GIS unavailable (WebView) — fall back to Firebase signInWithPopup
+      gcalGetTokenViaFirebase(callback);
+    }
+  });
+}
+
+function gcalGetTokenViaFirebase(callback){
   var p=new firebase.auth.GoogleAuthProvider();
   p.addScope(GCAL_SCOPE);
-  p.setCustomParameters({prompt:'select_account'});
+  p.setCustomParameters({prompt:'consent'});
   firebase.auth().signInWithPopup(p).then(function(result){
     var tok=result&&result.credential&&result.credential.accessToken||null;
     if(tok){
       gcalToken={access_token:tok,expires_at:Date.now()+3500000};
       callback(tok);
     } else {
-      gcalMsg('Calendar permission not granted. Please click Allow in the popup.','err');
-      gcalStatus2('Permission needed');
+      gcalMsg('❌ No access token returned. Sign out, sign back in, then try again.','err');
+      gcalStatus2('Token error');
     }
   }).catch(function(e){
     if(e.code==='auth/popup-closed-by-user'){
-      gcalMsg('Popup closed — click Sync again and select Allow.','');
+      gcalMsg('Popup closed — click Sync again and click Allow.','');
       gcalStatus2('Tap to try again');
     } else if(e.code==='auth/cancelled-popup-request'){
-      // ignore
+      // ignore silently
     } else if(e.code==='auth/popup-blocked'){
-      gcalMsg('Popup blocked by browser. Allow popups for this site, then try again.','err');
+      gcalMsg('Popup blocked. Allow popups for this site in browser settings.','err');
       gcalStatus2('Popup blocked');
     } else {
       gcalMsg('Auth error: '+e.message,'err');
@@ -1854,18 +1909,32 @@ function gcalSyncAllTasks(){
         body:JSON.stringify(ev)
       }).then(function(r){return r.json();}).then(function(d){
         if(d.error){
-          if(d.error.code===404){
+          var code=d.error.code, reason=(d.error.errors&&d.error.errors[0]&&d.error.errors[0].reason)||'';
+          if(code===404){
             // Event deleted from Calendar — retry as insert
             cache[t.id]={};gcalCacheSet(cache);
             setTimeout(function(){next(i);},400); return;
           }
-          if(d.error.code===401){
-            // Token expired — clear and stop
+          if(code===401||reason==='authError'||reason==='invalidCredentials'){
+            // Token expired or invalid scope — clear token and show fix
             gcalToken=null;
             if(btn) btn.classList.remove('syncing');
-            gcalMsg('Session expired. Click Sync again to re-authenticate.','err');
+            gcalMsg('❌ Auth error (401): Token invalid or Calendar scope not granted. '
+              +'Please sign out of CD Scheduler, sign back in, and try syncing again.','err');
+            gcalStatus2('Auth error — sign out & in');
             return;
           }
+          if(code===403){
+            if(btn) btn.classList.remove('syncing');
+            gcalMsg('❌ Access denied (403): '+d.error.message
+              +' — Check that chint94.github.io is added as an Authorised JavaScript origin '
+              +'in your Google Cloud Console OAuth credentials.','err');
+            gcalStatus2('403 — check OAuth origin');
+            return;
+          }
+          // Log unknown errors with full detail
+          console.error('GCal error on task',t.id,'code:',code,'msg:',d.error.message,'reason:',reason);
+          gcalMsg('❌ Error '+code+': '+d.error.message,'err');
           errs++;
         } else {
           cache[t.id]={eventId:d.id,hash:gcalHash(t)};
