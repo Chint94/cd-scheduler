@@ -769,7 +769,7 @@ function nextRecurrenceDate(fromDateStr, type){
 
 // Generate N instances of a recurring task from a base task object
 function generateRecurringInstances(base, count){
-  count=count||30; // generate 30 instances by default
+  count=count||20; // generate 20 instances by default
   var instances=[];
   var currentDate=base.date;
   for(var i=0;i<count;i++){
@@ -899,7 +899,7 @@ function openRecurringSetupModal(existingGroupId){
   // Info note
   var info=document.createElement('div');
   info.style.cssText='font-size:11px;color:var(--inkl);margin-bottom:10px;line-height:1.5;';
-  info.textContent='30 instances will be created starting from the chosen date. You can delete individual occurrences without affecting the rest.';
+  info.textContent='20 instances will be created starting from the chosen date. You can delete individual occurrences without affecting the rest.';
   modal.appendChild(info);
 
   // Action buttons
@@ -907,7 +907,7 @@ function openRecurringSetupModal(existingGroupId){
   if(existingGroupId){
     var delAllBtn=document.createElement('button');delAllBtn.className='pop-btn dan';delAllBtn.textContent='🗑 Delete all';
     delAllBtn.addEventListener('click',function(){
-      if(!confirm('Delete ALL 30 instances of this recurring task? This cannot be undone.'))return;
+      if(!confirm('Delete ALL 20 instances of this recurring task? This cannot be undone.'))return;
       var tasks2=lsGet(TK);
       var toDelete=Object.keys(tasks2).filter(function(k){return tasks2[k].recurrenceGroupId===existingGroupId;});
       toDelete.forEach(function(k){
@@ -938,7 +938,7 @@ function openRecurringSetupModal(existingGroupId){
     }
     // Generate new instances
     var base={title:title,date:startDate,time:time,notes:'',priority:priority,recurrence:recType,recurrenceGroupId:groupId};
-    var instances=generateRecurringInstances(base,30);
+    var instances=generateRecurringInstances(base,20);
     instances.forEach(function(inst){
       tasks2[inst.id]=inst;
       FB.saveTask(inst.id,inst);
@@ -1033,7 +1033,7 @@ function renderTasks(){
               '<option value="weekly"'+(t.recurrence==='weekly'?' selected':'')+'>Weekly</option>'+
               '<option value="monthly"'+(t.recurrence==='monthly'?' selected':'')+'>Monthly</option>'+
             '</select>'+
-            (t.recurrence?'<span class="rec-inst-note">Instance '+((t.recurrenceIndex||0)+1)+' of 30 · '+t.date+'</span>'+
+            (t.recurrence?'<span class="rec-inst-note">Instance '+((t.recurrenceIndex||0)+1)+' of 20 · '+t.date+'</span>'+
               '<button class="bni rec-edit-series" style="font-size:11px;padding:2px 7px;border:1px solid rgba(91,155,213,0.4);border-radius:5px;color:#185FA5;background:rgba(91,155,213,0.1);">Edit series</button>'
             :'')+
           '</div>'+
@@ -1131,7 +1131,7 @@ function renderTasks(){
     if(repeatChk){
       repeatChk.addEventListener('change',function(){
         if(repeatChk.checked){
-          // Convert this single task into a recurring series of 30
+          // Convert this single task into a recurring series of 20
           freqWrap.classList.add('visible');
           var freqSel=freqWrap.querySelector('.rec-type-sel');
           var recType=freqSel?freqSel.value:'daily';
@@ -1150,8 +1150,8 @@ function renderTasks(){
           };
           // Remove the original single task
           delete tasks2[t.id];
-          // Generate 30 instances
-          var instances=generateRecurringInstances(base,30);
+          // Generate 20 instances
+          var instances=generateRecurringInstances(base,20);
           instances.forEach(function(inst){
             tasks2[inst.id]=inst;
             FB.saveTask(inst.id,inst);
