@@ -203,6 +203,12 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .rec-lbl{font-size:11px;color:var(--inkl);font-weight:500}
 .rec-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(91,155,213,0.15);color:#185FA5}
 .rec-inst-note{font-size:10px;color:var(--inkl);font-style:italic}
+.repeat-toggle-wrap{display:flex;align-items:center;gap:6px;margin-top:7px;padding-top:7px;border-top:1px solid var(--gp)}
+.repeat-toggle-lbl{font-size:12px;font-weight:600;color:var(--inkm);cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px}
+.repeat-chk{width:15px;height:15px;border-radius:3px;border:2px solid var(--gm);appearance:none;background:white;cursor:pointer;flex-shrink:0}
+.repeat-chk:checked{background:var(--gm);border-color:var(--gm);background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 6l3 3 5-5' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center}
+.repeat-freq-wrap{display:none;margin-top:6px}
+.repeat-freq-wrap.visible{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 /* Recurring pill in planner */
 .tpill.rec-pill{border-left-color:#5B9BD5!important}
 .filter-bar{display:flex;gap:7px;margin-bottom:13px;flex-wrap:wrap}
@@ -763,7 +769,7 @@ function nextRecurrenceDate(fromDateStr, type){
 
 // Generate N instances of a recurring task from a base task object
 function generateRecurringInstances(base, count){
-  count=count||8; // generate 8 future instances by default
+  count=count||30; // generate 30 instances by default
   var instances=[];
   var currentDate=base.date;
   for(var i=0;i<count;i++){
@@ -893,7 +899,7 @@ function openRecurringSetupModal(existingGroupId){
   // Info note
   var info=document.createElement('div');
   info.style.cssText='font-size:11px;color:var(--inkl);margin-bottom:10px;line-height:1.5;';
-  info.textContent='8 instances will be created starting from the chosen date. You can delete individual occurrences without affecting the rest.';
+  info.textContent='30 instances will be created starting from the chosen date. You can delete individual occurrences without affecting the rest.';
   modal.appendChild(info);
 
   // Action buttons
@@ -901,15 +907,14 @@ function openRecurringSetupModal(existingGroupId){
   if(existingGroupId){
     var delAllBtn=document.createElement('button');delAllBtn.className='pop-btn dan';delAllBtn.textContent='🗑 Delete all';
     delAllBtn.addEventListener('click',function(){
-      if(!confirm('Delete all instances of this recurring task?'))return;
+      if(!confirm('Delete ALL 30 instances of this recurring task? This cannot be undone.'))return;
       var tasks2=lsGet(TK);
-      Object.keys(tasks2).forEach(function(k){if(tasks2[k].recurrenceGroupId===existingGroupId)delete tasks2[k];});
+      var toDelete=Object.keys(tasks2).filter(function(k){return tasks2[k].recurrenceGroupId===existingGroupId;});
+      toDelete.forEach(function(k){
+        FB.deleteTask(k); // remove from Firebase
+        delete tasks2[k];
+      });
       lsSet(TK,tasks2);
-      if(window._isLoggedIn&&window._isLoggedIn()){
-        Object.keys(lsGet(TK)).forEach(function(k){});// already deleted
-        // re-sync: delete each key
-        var allKeys=Object.keys(JSON.parse(localStorage.getItem(TK+'_deleted')||'{}'));
-      }
       closePopover();renderTasks();buildGrid();
     });
     actRow.appendChild(delAllBtn);
@@ -933,7 +938,7 @@ function openRecurringSetupModal(existingGroupId){
     }
     // Generate new instances
     var base={title:title,date:startDate,time:time,notes:'',priority:priority,recurrence:recType,recurrenceGroupId:groupId};
-    var instances=generateRecurringInstances(base,8);
+    var instances=generateRecurringInstances(base,30);
     instances.forEach(function(inst){
       tasks2[inst.id]=inst;
       FB.saveTask(inst.id,inst);
@@ -1015,18 +1020,23 @@ function renderTasks(){
             '</select>'+
           '</div>'+
           '<textarea class="task-ni" data-notes-id="'+t.id+'" placeholder="Add notes... (Enter for new line)">'+(t.notes||'')+'</textarea>'+
-          (t.recurrence?
-            '<div class="rec-bar">'+
-              '<span class="rec-lbl">🔁 Repeats</span>'+
-              '<select class="rec-sel rec-type-sel">'+
-                '<option value="daily"'+(t.recurrence==='daily'?' selected':'')+'>Daily</option>'+
-                '<option value="weekly"'+(t.recurrence==='weekly'?' selected':'')+'>Weekly</option>'+
-                '<option value="monthly"'+(t.recurrence==='monthly'?' selected':'')+'>Monthly</option>'+
-              '</select>'+
-              '<span class="rec-inst-note">Instance '+(((t.recurrenceIndex||0)+1))+' · '+t.date+'</span>'+
-              '<button class="bni rec-edit-series" title="Edit entire series" style="font-size:11px;padding:2px 7px;border:1px solid rgba(91,155,213,0.4);border-radius:5px;color:#185FA5;background:rgba(91,155,213,0.1);">Edit series</button>'+
-            '</div>'
-          :'')+
+          '<div class="repeat-toggle-wrap">'+
+            '<label class="repeat-toggle-lbl">'+
+              '<input type="checkbox" class="repeat-chk"'+(t.recurrence?' checked':'')+'>'+
+              '🔁 Repeat this task'+
+            '</label>'+
+          '</div>'+
+          '<div class="repeat-freq-wrap'+(t.recurrence?' visible':'')+'">'+
+            '<span class="rec-lbl">Frequency:</span>'+
+            '<select class="rec-sel rec-type-sel">'+
+              '<option value="daily"'+(t.recurrence==='daily'?' selected':'')+'>Daily</option>'+
+              '<option value="weekly"'+(t.recurrence==='weekly'?' selected':'')+'>Weekly</option>'+
+              '<option value="monthly"'+(t.recurrence==='monthly'?' selected':'')+'>Monthly</option>'+
+            '</select>'+
+            (t.recurrence?'<span class="rec-inst-note">Instance '+((t.recurrenceIndex||0)+1)+' of 30 · '+t.date+'</span>'+
+              '<button class="bni rec-edit-series" style="font-size:11px;padding:2px 7px;border:1px solid rgba(91,155,213,0.4);border-radius:5px;color:#185FA5;background:rgba(91,155,213,0.1);">Edit series</button>'
+            :'')+
+          '</div>'+
         '</div>'+
         '<div class="task-acts"><button class="bni task-del" title="'+(t.recurrence?'Delete this occurrence':'Delete task')+'">🗑️</button></div>'+
       '</div>';
@@ -1105,38 +1115,129 @@ function renderTasks(){
       buildGrid();
     });
 
-    // Recurring: change type on individual instance
-    var recTypeSel=card.querySelector('.rec-type-sel');
-    if(recTypeSel){
-      recTypeSel.addEventListener('change',function(){
-        // Ask: change just this or whole series?
-        var choice=confirm('Change the entire series recurrence to "'+recTypeSel.value+'"?\n\nOK = change whole series\nCancel = change only this instance');
-        var tasks2=lsGet(TK);
-        if(choice&&t.recurrenceGroupId){
-          // Change whole series
-          Object.values(tasks2).forEach(function(task){
-            if(task.recurrenceGroupId===t.recurrenceGroupId)task.recurrence=recTypeSel.value;
-          });
-        } else {
-          // Change only this instance (detach from series)
-          if(tasks2[t.id]){
-            tasks2[t.id].recurrence=recTypeSel.value;
-            delete tasks2[t.id].recurrenceGroupId;
-            delete tasks2[t.id].recurrenceIndex;
-          }
-        }
-        lsSet(TK,tasks2);
-        FB.ignoreNextTaskSync=true;
-        Object.values(tasks2).forEach(function(task){FB.saveTask(task.id,task);});
-        renderTasks();buildGrid();
-      });
-    }
+    // Frequency change handled by repeat-toggle section above
 
     // Edit entire series button
     var editSeriesBtn=card.querySelector('.rec-edit-series');
     if(editSeriesBtn){
       editSeriesBtn.addEventListener('click',function(){
         openRecurringSetupModal(t.recurrenceGroupId);
+      });
+    }
+
+    // ── Repeat toggle checkbox ──────────────────────────────
+    var repeatChk=card.querySelector('.repeat-chk');
+    var freqWrap=card.querySelector('.repeat-freq-wrap');
+    if(repeatChk){
+      repeatChk.addEventListener('change',function(){
+        if(repeatChk.checked){
+          // Convert this single task into a recurring series of 30
+          freqWrap.classList.add('visible');
+          var freqSel=freqWrap.querySelector('.rec-type-sel');
+          var recType=freqSel?freqSel.value:'daily';
+          var tasks2=lsGet(TK);
+          if(!tasks2[t.id])return;
+          var groupId=genId();
+          // Use the current task's data as the base
+          var base={
+            title:tasks2[t.id].title||'',
+            date:tasks2[t.id].date||fmtDate(new Date()),
+            time:tasks2[t.id].time||'',
+            notes:tasks2[t.id].notes||'',
+            priority:tasks2[t.id].priority||'medium',
+            recurrence:recType,
+            recurrenceGroupId:groupId
+          };
+          // Remove the original single task
+          delete tasks2[t.id];
+          // Generate 30 instances
+          var instances=generateRecurringInstances(base,30);
+          instances.forEach(function(inst){
+            tasks2[inst.id]=inst;
+            FB.saveTask(inst.id,inst);
+          });
+          lsSet(TK,tasks2);
+          renderTasks();buildGrid();
+        } else {
+          // Remove recurrence from this task (detach from series entirely)
+          freqWrap.classList.remove('visible');
+          var tasks2=lsGet(TK);
+          if(tasks2[t.id]){
+            delete tasks2[t.id].recurrence;
+            delete tasks2[t.id].recurrenceGroupId;
+            delete tasks2[t.id].recurrenceIndex;
+            lsSet(TK,tasks2);
+            FB.saveTask(t.id,tasks2[t.id]);
+          }
+        }
+      });
+
+      // When frequency selector changes, propagate to whole series
+      var freqSel2=freqWrap?freqWrap.querySelector('.rec-type-sel'):null;
+      if(freqSel2){
+        freqSel2.addEventListener('change',function(){
+          var newFreq=freqSel2.value;
+          var tasks2=lsGet(TK);
+          if(t.recurrenceGroupId){
+            // Update all instances in series with new frequency
+            Object.values(tasks2).forEach(function(task){
+              if(task.recurrenceGroupId===t.recurrenceGroupId)task.recurrence=newFreq;
+            });
+            lsSet(TK,tasks2);
+            FB.ignoreNextTaskSync=true;
+            Object.values(tasks2).filter(function(task){
+              return task.recurrenceGroupId===t.recurrenceGroupId;
+            }).forEach(function(task){FB.saveTask(task.id,task);});
+            renderTasks();buildGrid();
+          }
+        });
+      }
+    }
+
+    // ── Propagate title/date/time/notes changes to whole series ────────────
+    if(t.recurrenceGroupId){
+      // Wrap the existing saveLocal to also propagate to series when needed
+      var origSaveLocal=saveLocal;
+      var propagateFields=['title','notes']; // propagate text fields to whole series
+
+      ti.addEventListener('blur',function(){
+        // On blur, propagate title to all instances in series
+        var tasks2=lsGet(TK);
+        Object.values(tasks2).forEach(function(task){
+          if(task.recurrenceGroupId===t.recurrenceGroupId)task.title=ti.value;
+        });
+        lsSet(TK,tasks2);
+        FB.ignoreNextTaskSync=true;
+        Object.values(tasks2).filter(function(task){
+          return task.recurrenceGroupId===t.recurrenceGroupId;
+        }).forEach(function(task){FB.saveTask(task.id,task);});
+      });
+
+      ni.addEventListener('blur',function(){
+        // On blur, propagate notes to all instances in series
+        var tasks2=lsGet(TK);
+        Object.values(tasks2).forEach(function(task){
+          if(task.recurrenceGroupId===t.recurrenceGroupId)task.notes=ni.value;
+        });
+        lsSet(TK,tasks2);
+        FB.ignoreNextTaskSync=true;
+        Object.values(tasks2).filter(function(task){
+          return task.recurrenceGroupId===t.recurrenceGroupId;
+        }).forEach(function(task){FB.saveTask(task.id,task);});
+      });
+
+      tmi.addEventListener('blur',function(){
+        // On blur, propagate time to all instances in series
+        var tasks2=lsGet(TK);
+        Object.values(tasks2).forEach(function(task){
+          if(task.recurrenceGroupId===t.recurrenceGroupId)task.time=tmi.value;
+        });
+        lsSet(TK,tasks2);
+        buildGrid();
+        FB.ignoreNextTaskSync=true;
+        Object.values(tasks2).filter(function(task){
+          return task.recurrenceGroupId===t.recurrenceGroupId;
+        }).forEach(function(task){FB.saveTask(task.id,task);});
       });
     }
   });
