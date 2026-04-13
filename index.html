@@ -354,6 +354,17 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   .tpill:hover::before{opacity:.7}
 }
 
+/* ── Custom weekly day pills ── */
+.day-pills{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
+.day-pill{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--gp);
+  background:var(--gc);font-family:DM Sans,sans-serif;font-size:11px;font-weight:600;
+  color:var(--inkl);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;-webkit-tap-highlight-color:transparent;flex-shrink:0}
+.day-pill.active{background:var(--gm);border-color:var(--gm);color:white}
+.day-pill:hover:not(.active){border-color:var(--gm);color:var(--gd)}
+.day-pills-wrap{display:none;margin-top:6px}
+.day-pills-wrap.show{display:block}
+
 /* ── Footer ── */
 footer{background:var(--gd);color:rgba(255,253,245,0.5);text-align:center;
   font-size:11px;padding:11px 18px;letter-spacing:.5px}
@@ -1096,6 +1107,7 @@ function nextRecurrenceDate(fromDateStr, type){
     // ── Weekly variants ─────────────────────────────────────────────────
     case 'weekly':       d=addDays(d,7);  break;
     case 'fortnightly':  d=addDays(d,14); break;
+    case 'custom-weekly': d=addDays(d,1); break; // handled in generateRecurringInstances
     case 'every3weeks':  d=addDays(d,21); break;
     // ── Monthly variants ────────────────────────────────────────────────
     case 'monthly':
@@ -1120,7 +1132,8 @@ function recurrenceLabel(type){
   var labels={
     'daily':'Daily','every2days':'Every 2 days','every3days':'Every 3 days',
     'weekdays':'Weekdays (Mon–Fri)','weekends':'Weekends (Sat–Sun)',
-    'weekly':'Weekly','fortnightly':'Fortnightly (every 2 weeks)',
+    'weekly':'Weekly','custom-weekly':'Custom days',
+    'fortnightly':'Fortnightly (every 2 weeks)',
     'every3weeks':'Every 3 weeks',
     'monthly':'Monthly','every2months':'Every 2 months',
     'quarterly':'Quarterly','halfyearly':'Every 6 months',
@@ -1148,6 +1161,49 @@ function generateRecurringInstances(base, count){
     limit=maxCount; // will break on date check
   } else {
     limit=Math.min(parseInt(base.endCount)||20, maxCount);
+  }
+
+  // Custom weekly: generate one instance per selected weekday
+  if(base.recurrence==='custom-weekly'&&base.weekDays&&base.weekDays.length){
+    var weekDays=base.weekDays.slice().sort(function(a,b){return a-b;});
+    var startD=parseDate(base.date);if(!startD) return instances;
+    var cur=new Date(startD);
+    var idx=0;
+    // Find the Monday of the start week
+    var dayOfWeek=cur.getDay(); // 0=Sun,1=Mon...6=Sat
+    // Advance to first selected day on or after start date
+    // We'll iterate day by day, only adding days that match weekDays
+    cur=new Date(startD);
+    var totalAdded=0;
+    var maxIter=limit*7+365; // safety: no more than limit*7 days to scan
+    for(var iter=0;iter<maxIter&&totalAdded<limit;iter++){
+      var wd=cur.getDay(); // 0=Sun,1=Mon...6=Sat
+      // Convert to Mon=0..Sun=6 convention? No — store as JS getDay() values
+      if(weekDays.indexOf(wd)>=0){
+        var cDateStr=fmtDate(cur);
+        // End date check
+        if(endType==='date'&&base.endDate){
+          var ed=parseDate(base.endDate);
+          if(ed&&cur>ed) break;
+        }
+        var id=genId();
+        instances.push({
+          id:id,title:base.title,date:cDateStr,time:base.time||'',
+          notes:base.notes||'',done:false,priority:base.priority||'medium',
+          recurrence:'custom-weekly',
+          recurrenceGroupId:base.recurrenceGroupId,
+          recurrenceIndex:totalAdded,
+          recurrenceEndType:endType,
+          recurrenceEndCount:base.endCount||null,
+          recurrenceEndDate:base.endDate||null,
+          recurrenceWeekDays:weekDays,
+          created:Date.now()
+        });
+        totalAdded++;
+      }
+      cur=addDays(cur,1);
+    }
+    return instances;
   }
 
   for(var i=0;i<limit;i++){
@@ -1270,7 +1326,7 @@ function openRecurringSetupModal(existingGroupId){
       ['daily','Daily','Daily'],['every2days','Every 2 days','Daily'],
       ['every3days','Every 3 days','Daily'],['weekdays','Weekdays (Mon–Fri)','Daily'],
       ['weekends','Weekends (Sat–Sun)','Daily'],
-      ['weekly','Weekly','Weekly'],['fortnightly','Fortnightly (2 weeks)','Weekly'],
+      ['weekly','Weekly (custom days)','Weekly'],['fortnightly','Fortnightly (2 weeks)','Weekly'],
       ['every3weeks','Every 3 weeks','Weekly'],
       ['monthly','Monthly','Monthly'],['every2months','Every 2 months','Monthly'],
       ['quarterly','Quarterly (3 months)','Monthly'],['halfyearly','Every 6 months','Monthly'],
@@ -1287,6 +1343,73 @@ function openRecurringSetupModal(existingGroupId){
     });
   })();
   rWrap.appendChild(rLbl);rWrap.appendChild(rSel);modal.appendChild(rWrap);
+
+  // Day picker — shown when weekly or custom-weekly is selected
+  var dayPickWrap=document.createElement('div');dayPickWrap.className='day-pills-wrap';
+  var dayPickLbl=document.createElement('div');dayPickLbl.className='pop-lbl';
+  dayPickLbl.textContent='On these days';dayPickLbl.style.marginBottom='5px';
+  dayPickWrap.appendChild(dayPickLbl);
+  var dayPillsRow=document.createElement('div');dayPillsRow.className='day-pills';
+  var DAY_NAMES=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  // JS getDay(): 0=Sun,1=Mon,...6=Sat
+  var DAY_ORDER=[1,2,3,4,5,6,0]; // Mon first
+  var DAY_LABELS=['M','T','W','T','F','S','S'];
+  var selectedDays=(baseTask&&baseTask.recurrenceWeekDays)
+    ? baseTask.recurrenceWeekDays.slice()
+    : [];
+  // Default: select same day as start date when first showing
+  if(!selectedDays.length&&dInp.value){
+    var sd=parseDate(fromInputDate(dInp.value));
+    if(sd) selectedDays=[sd.getDay()];
+  }
+  DAY_ORDER.forEach(function(jsDay,idx){
+    var pill=document.createElement('button');
+    pill.type='button';
+    pill.textContent=DAY_LABELS[idx];
+    pill.setAttribute('data-day',jsDay);
+    pill.className='day-pill'+(selectedDays.indexOf(jsDay)>=0?' active':'');
+    pill.addEventListener('click',function(){
+      var d=parseInt(pill.getAttribute('data-day'));
+      if(pill.classList.contains('active')){
+        if(selectedDays.length>1){ // keep at least 1 selected
+          pill.classList.remove('active');
+          selectedDays=selectedDays.filter(function(x){return x!==d;});
+        }
+      } else {
+        pill.classList.add('active');
+        if(selectedDays.indexOf(d)<0) selectedDays.push(d);
+      }
+    });
+    dayPillsRow.appendChild(pill);
+  });
+  dayPickWrap.appendChild(dayPillsRow);
+  modal.appendChild(dayPickWrap);
+
+  // Show day picker when weekly selected, update rSel option label
+  function updateDayPickerVisibility(){
+    var v=rSel.value;
+    if(v==='weekly'||v==='custom-weekly'){
+      dayPickWrap.classList.add('show');
+      // Rename the "Weekly" option to clarify custom days will be used
+    } else {
+      dayPickWrap.classList.remove('show');
+    }
+  }
+  rSel.addEventListener('change',updateDayPickerVisibility);
+  // Also update default selected day when start date changes
+  dInp.addEventListener('change',function(){
+    if(selectedDays.length===0){
+      var sd=parseDate(fromInputDate(dInp.value));
+      if(sd){
+        var d=sd.getDay();
+        selectedDays=[d];
+        dayPillsRow.querySelectorAll('.day-pill').forEach(function(p){
+          p.classList.toggle('active',parseInt(p.getAttribute('data-day'))===d);
+        });
+      }
+    }
+  });
+  updateDayPickerVisibility();
 
   // Priority
   var pWrap=document.createElement('div');pWrap.className='pop-field';pWrap.style.marginBottom='8px';
@@ -1439,12 +1562,20 @@ function openRecurringSetupModal(existingGroupId){
         if(tasks2[k].recurrenceGroupId===existingGroupId&&!tasks2[k].done)delete tasks2[k];
       });
     }
+    // If weekly with day pills shown, use custom-weekly mode
+    var finalRecType=recType;
+    var finalWeekDays=null;
+    if((recType==='weekly')&&dayPickWrap.classList.contains('show')&&selectedDays.length){
+      finalRecType='custom-weekly';
+      finalWeekDays=selectedDays.slice().sort(function(a,b){return a-b;});
+    }
     var base={
       title:title,date:startDate,time:time,notes:'',
-      priority:priority,recurrence:recType,recurrenceGroupId:groupId,
+      priority:priority,recurrence:finalRecType,recurrenceGroupId:groupId,
       endType:activeEndType,
       endCount:activeEndType==='count'?endCount:null,
-      endDate:activeEndType==='date'?endDate:null
+      endDate:activeEndType==='date'?endDate:null,
+      weekDays:finalWeekDays
     };
     var instances=generateRecurringInstances(base);
     instances.forEach(function(inst){tasks2[inst.id]=inst;FB.saveTask(inst.id,inst);});
@@ -1563,6 +1694,9 @@ function renderTasks(){
     :t.recurrenceEndType==='date'?' until '+t.recurrenceEndDate
     :t.recurrenceEndCount?' of '+t.recurrenceEndCount
     :' of 20')
+  +(t.recurrenceWeekDays&&t.recurrenceWeekDays.length?' · ['
+    +t.recurrenceWeekDays.map(function(d){return['Su','Mo','Tu','We','Th','Fr','Sa'][d];}).join(',')
+    +']':'')
   +' · '+t.date+'</span>'+
               '<button class="bni rec-edit-series" style="font-size:11px;padding:2px 7px;border:1px solid rgba(91,155,213,0.4);border-radius:5px;color:#185FA5;background:rgba(91,155,213,0.1);">Edit series</button>'
             :'')+
