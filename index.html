@@ -1083,12 +1083,33 @@ function nextRecurrenceDate(fromDateStr, type){
   return fmtDate(d);
 }
 
-// Generate N instances of a recurring task from a base task object
+// Generate recurring instances based on end condition:
+//   base.endType = 'count'   → generate base.endCount occurrences
+//   base.endType = 'date'    → generate until base.endDate (inclusive)
+//   base.endType = 'forever' → generate 730 instances (~2 years), stored as rolling window
+//   cap at 730 total regardless to prevent runaway generation
 function generateRecurringInstances(base, count){
-  count=count||20; // generate 20 instances by default
   var instances=[];
   var currentDate=base.date;
-  for(var i=0;i<count;i++){
+  var endType=base.endType||'count';
+  var maxCount=730; // absolute safety cap
+
+  // Determine iteration limit
+  var limit;
+  if(endType==='forever'){
+    limit=730;
+  } else if(endType==='date'){
+    limit=maxCount; // will break on date check
+  } else {
+    limit=Math.min(parseInt(base.endCount)||20, maxCount);
+  }
+
+  for(var i=0;i<limit;i++){
+    // Date-based end condition
+    if(endType==='date'&&base.endDate){
+      var cd=parseDate(currentDate),ed=parseDate(base.endDate);
+      if(cd&&ed&&cd>ed) break;
+    }
     var id=genId();
     instances.push({
       id:id,
@@ -1101,10 +1122,13 @@ function generateRecurringInstances(base, count){
       recurrence:base.recurrence,
       recurrenceGroupId:base.recurrenceGroupId,
       recurrenceIndex:i,
+      recurrenceEndType:endType,
+      recurrenceEndCount:base.endCount||null,
+      recurrenceEndDate:base.endDate||null,
       created:Date.now()
     });
     currentDate=nextRecurrenceDate(currentDate,base.recurrence);
-    if(!currentDate)break;
+    if(!currentDate) break;
   }
   return instances;
 }
@@ -1202,7 +1226,7 @@ function openRecurringSetupModal(existingGroupId){
   rWrap.appendChild(rLbl);rWrap.appendChild(rSel);modal.appendChild(rWrap);
 
   // Priority
-  var pWrap=document.createElement('div');pWrap.className='pop-field';pWrap.style.marginBottom='10px';
+  var pWrap=document.createElement('div');pWrap.className='pop-field';pWrap.style.marginBottom='8px';
   var pLbl=document.createElement('div');pLbl.className='pop-lbl';pLbl.textContent='Priority';
   var pSel=document.createElement('select');pSel.className='pop-sel';pSel.style.cssText='width:100%;padding:6px 8px;font-size:12px;';
   [['high','🔴 High'],['medium','🟡 Medium'],['low','🟢 Low']].forEach(function(pair){
@@ -1212,23 +1236,107 @@ function openRecurringSetupModal(existingGroupId){
   });
   pWrap.appendChild(pLbl);pWrap.appendChild(pSel);modal.appendChild(pWrap);
 
-  // Info note
-  var info=document.createElement('div');
-  info.style.cssText='font-size:11px;color:var(--inkl);margin-bottom:10px;line-height:1.5;';
-  info.textContent='20 instances will be created starting from the chosen date. You can delete individual occurrences without affecting the rest.';
-  modal.appendChild(info);
+  // ── End condition ─────────────────────────────────────────────────────
+  var endWrap=document.createElement('div');
+  endWrap.style.cssText='margin-bottom:10px;background:rgba(196,148,42,0.07);border:1px solid var(--gp);border-radius:8px;padding:10px 12px;';
+  var endLbl=document.createElement('div');endLbl.className='pop-lbl';endLbl.textContent='Ends';endLbl.style.marginBottom='7px';
+  endWrap.appendChild(endLbl);
 
-  // Action buttons
+  // Determine current end type from baseTask
+  var curEndType=(baseTask&&baseTask.recurrenceEndType)||'count';
+  var curEndCount=(baseTask&&baseTask.recurrenceEndCount)||20;
+  var curEndDate=(baseTask&&baseTask.recurrenceEndDate)||'';
+
+  // Radio-style button row
+  var endBtnRow=document.createElement('div');
+  endBtnRow.style.cssText='display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;';
+  var endTypes=[['count','# of times'],['date','By date'],['forever','Forever']];
+  var endRadios={};
+  endTypes.forEach(function(pair){
+    var btn=document.createElement('button');
+    btn.type='button';
+    btn.textContent=pair[1];
+    btn.setAttribute('data-end',pair[0]);
+    btn.style.cssText='font-family:DM Sans,sans-serif;font-size:11px;font-weight:600;'
+      +'padding:4px 10px;border-radius:5px;cursor:pointer;border:1.5px solid var(--gp);'
+      +'background:'+(pair[0]===curEndType?'var(--gm)':'var(--gc)')+';'
+      +'color:'+(pair[0]===curEndType?'white':'var(--inkm)')+';transition:all .15s;';
+    endRadios[pair[0]]=btn;
+    btn.addEventListener('click',function(){
+      Object.values(endRadios).forEach(function(b){
+        b.style.background='var(--gc)';b.style.color='var(--inkm)';b.style.borderColor='var(--gp)';
+      });
+      btn.style.background='var(--gm)';btn.style.color='white';btn.style.borderColor='var(--gm)';
+      showEndFields(pair[0]);
+    });
+    endBtnRow.appendChild(btn);
+  });
+  endWrap.appendChild(endBtnRow);
+
+  // Count input row
+  var countRow=document.createElement('div');countRow.style.cssText='display:flex;align-items:center;gap:7px;';
+  var countLbl=document.createElement('span');countLbl.style.cssText='font-size:12px;color:var(--inkl);';
+  countLbl.textContent='Number of occurrences:';
+  var countSel=document.createElement('select');countSel.className='pop-sel';
+  countSel.style.cssText='padding:5px 8px;font-size:12px;flex:1;';
+  [['10','10 times'],['20','20 times'],['30','30 times'],['50','50 times'],['100','100 times'],['custom','Custom…']].forEach(function(pair){
+    var o=document.createElement('option');o.value=pair[0];o.textContent=pair[1];
+    if(String(curEndCount)===pair[0])o.selected=true;
+    countSel.appendChild(o);
+  });
+  // If curEndCount not in list, select custom
+  if(['10','20','30','50','100'].indexOf(String(curEndCount))<0){
+    countSel.value='custom';
+  }
+  var countCustom=document.createElement('input');countCustom.type='number';
+  countCustom.min='1';countCustom.max='730';countCustom.value=curEndCount;
+  countCustom.style.cssText='font-family:DM Sans,sans-serif;font-size:12px;background:var(--gc);'
+    +'border:1px solid var(--gp);border-radius:6px;padding:4px 7px;outline:none;width:70px;'
+    +'display:'+(countSel.value==='custom'?'block':'none');
+  countSel.addEventListener('change',function(){
+    countCustom.style.display=countSel.value==='custom'?'block':'none';
+    if(countSel.value!=='custom') countCustom.value=countSel.value;
+  });
+  countRow.appendChild(countLbl);countRow.appendChild(countSel);countRow.appendChild(countCustom);
+  endWrap.appendChild(countRow);
+
+  // Date input row
+  var dateRow=document.createElement('div');dateRow.style.cssText='display:flex;align-items:center;gap:7px;';
+  var dateLbl=document.createElement('span');dateLbl.style.cssText='font-size:12px;color:var(--inkl);';
+  dateLbl.textContent='Repeat until:';
+  var endDateInp=document.createElement('input');endDateInp.type='date';
+  endDateInp.style.cssText='font-family:DM Sans,sans-serif;font-size:12px;background:var(--gc);'
+    +'border:1px solid var(--gp);border-radius:6px;padding:4px 7px;outline:none;flex:1;';
+  endDateInp.value=curEndDate?toInputDate(curEndDate):'';
+  dateRow.appendChild(dateLbl);dateRow.appendChild(endDateInp);
+  endWrap.appendChild(dateRow);
+
+  // Forever info
+  var foreverRow=document.createElement('div');
+  foreverRow.style.cssText='font-size:11px;color:var(--inkl);line-height:1.5;';
+  foreverRow.textContent='Creates 730 occurrences (~2 years). Add more anytime via Edit series.';
+  endWrap.appendChild(foreverRow);
+
+  // Show/hide end fields
+  function showEndFields(type){
+    countRow.style.display=type==='count'?'flex':'none';
+    dateRow.style.display=type==='date'?'flex':'none';
+    foreverRow.style.display=type==='forever'?'block':'none';
+  }
+  showEndFields(curEndType);
+  modal.appendChild(endWrap);
+
+  // ── Action buttons ────────────────────────────────────────────────────
   var actRow=document.createElement('div');actRow.className='pop-acts';
   if(existingGroupId){
     var delAllBtn=document.createElement('button');delAllBtn.className='pop-btn dan';delAllBtn.textContent='🗑 Delete all';
     delAllBtn.addEventListener('click',function(){
-      if(!confirm('Delete ALL 20 instances of this recurring task? This cannot be undone.'))return;
       var tasks2=lsGet(TK);
       var toDelete=Object.keys(tasks2).filter(function(k){return tasks2[k].recurrenceGroupId===existingGroupId;});
+      if(!confirm('Delete all '+toDelete.length+' instances? This cannot be undone.'))return;
       toDelete.forEach(function(k){
-        if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(k); // remove from Google Calendar
-        FB.deleteTask(k); // remove from Firebase
+        if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(k);
+        FB.deleteTask(k);
         delete tasks2[k];
       });
       lsSet(TK,tasks2);
@@ -1236,7 +1344,8 @@ function openRecurringSetupModal(existingGroupId){
     });
     actRow.appendChild(delAllBtn);
   }
-  var saveBtn=document.createElement('button');saveBtn.className='pop-btn pri';saveBtn.textContent=existingGroupId?'Update all':'Create';
+  var saveBtn=document.createElement('button');saveBtn.className='pop-btn pri';
+  saveBtn.textContent=existingGroupId?'Update series':'Create';
   saveBtn.addEventListener('click',function(){
     var title=tInp.value.trim();
     if(!title){tInp.focus();tInp.style.borderColor='var(--ot)';return;}
@@ -1246,21 +1355,43 @@ function openRecurringSetupModal(existingGroupId){
     var recType=rSel.value;
     var priority=pSel.value;
     var groupId=existingGroupId||genId();
+
+    // Read end condition
+    var activeEndType='count';
+    Object.keys(endRadios).forEach(function(k){
+      if(endRadios[k].style.background.indexOf('var(--gm)')>=0||
+         endRadios[k].style.background==='var(--gm)') activeEndType=k;
+    });
+    var endCount=parseInt(countSel.value==='custom'?countCustom.value:countSel.value)||20;
+    var endDate=fromInputDate(endDateInp.value)||'';
+
+    if(activeEndType==='date'&&!endDate){
+      endDateInp.focus();endDateInp.style.borderColor='var(--ot)';return;
+    }
+
     var tasks2=lsGet(TK);
-    // If editing: remove old instances of this group that are not done
+    // Remove old non-done instances
     if(existingGroupId){
       Object.keys(tasks2).forEach(function(k){
         if(tasks2[k].recurrenceGroupId===existingGroupId&&!tasks2[k].done)delete tasks2[k];
       });
     }
-    // Generate new instances
-    var base={title:title,date:startDate,time:time,notes:'',priority:priority,recurrence:recType,recurrenceGroupId:groupId};
-    var instances=generateRecurringInstances(base,20);
-    instances.forEach(function(inst){
-      tasks2[inst.id]=inst;
-      FB.saveTask(inst.id,inst);
-    });
+    var base={
+      title:title,date:startDate,time:time,notes:'',
+      priority:priority,recurrence:recType,recurrenceGroupId:groupId,
+      endType:activeEndType,
+      endCount:activeEndType==='count'?endCount:null,
+      endDate:activeEndType==='date'?endDate:null
+    };
+    var instances=generateRecurringInstances(base);
+    instances.forEach(function(inst){tasks2[inst.id]=inst;FB.saveTask(inst.id,inst);});
     lsSet(TK,tasks2);
+
+    // Show count summary
+    var summary=instances.length+' occurrence'+(instances.length!==1?'s':'');
+    if(activeEndType==='forever') summary='730 occurrences (~2 yrs)';
+    else if(activeEndType==='date') summary=instances.length+' occurrences until '+endDate;
+    showDropToast(title+' — '+summary,'','');
     closePopover();renderTasks();buildGrid();
   });
   actRow.appendChild(saveBtn);modal.appendChild(actRow);
@@ -1367,7 +1498,12 @@ function renderTasks(){
               '<option value="weekly"'+(t.recurrence==='weekly'?' selected':'')+'>Weekly</option>'+
               '<option value="monthly"'+(t.recurrence==='monthly'?' selected':'')+'>Monthly</option>'+
             '</select>'+
-            (t.recurrence?'<span class="rec-inst-note">Instance '+((t.recurrenceIndex||0)+1)+' of 20 · '+t.date+'</span>'+
+            (t.recurrence?'<span class="rec-inst-note">Instance '+((t.recurrenceIndex||0)+1)
+  +(t.recurrenceEndType==='forever'?' (forever)'
+    :t.recurrenceEndType==='date'?' until '+t.recurrenceEndDate
+    :t.recurrenceEndCount?' of '+t.recurrenceEndCount
+    :' of 20')
+  +' · '+t.date+'</span>'+
               '<button class="bni rec-edit-series" style="font-size:11px;padding:2px 7px;border:1px solid rgba(91,155,213,0.4);border-radius:5px;color:#185FA5;background:rgba(91,155,213,0.1);">Edit series</button>'
             :'')+
           '</div>'+
