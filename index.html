@@ -341,6 +341,18 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .gcal-msg.err{color:#B32020;background:#FFF0F0;border-color:#F5C0C0}
 .gcal-msg.ok{color:#2E7D32;background:#E8F5E9;border-color:#A5D6A7}
 
+/* ── Drag and drop ── */
+.tpill.dragging{opacity:.35;pointer-events:none}
+.tpill[draggable=true]{cursor:grab}
+.tpill[draggable=true]:active{cursor:grabbing}
+.sc.drag-over{background:rgba(196,148,42,0.18)!important;outline:2px dashed var(--gm);outline-offset:-2px}
+.sc.drag-over-mobile{background:rgba(196,148,42,0.18)!important;outline:2px dashed var(--gm);outline-offset:-2px}
+/* drag handle hint on desktop */
+@media(min-width:701px){
+  .tpill::before{content:'⠿';font-size:9px;opacity:.3;margin-right:2px;flex-shrink:0}
+  .tpill:hover::before{opacity:.7}
+}
+
 /* ── Footer ── */
 footer{background:var(--gd);color:rgba(255,253,245,0.5);text-align:center;
   font-size:11px;padding:11px 18px;letter-spacing:.5px}
@@ -633,6 +645,9 @@ function getTasksForSlot(colDate,slot){
   });
 }
 
+// ── Drag state ───────────────────────────────────────────────────────────────
+var dragState={taskId:null,touchClone:null,touchTargetCell:null};
+
 function makePill(task){
   var btn=document.createElement('button');
   var pc=PRIORITY_COLORS[task.priority]||PRIORITY_COLORS.medium;
@@ -652,11 +667,154 @@ function makePill(task){
   var icon=task.done?'✅':(task.recurrence?'🔁':'📌');
   var timeHtml=task.time?'<span class="ptime">'+task.time+'</span>':'';
   btn.innerHTML='<span style="flex-shrink:0">'+icon+'</span><span class="ptxt">'+(task.title||'(no title)')+'</span>'+timeHtml;
+
+  // Click to open popover (only if not a drag)
+  var didDrag=false;
+  btn.addEventListener('mousedown',function(){didDrag=false;});
   btn.addEventListener('click',function(e){
+    if(didDrag){didDrag=false;return;}
     e.stopPropagation();
     openTaskPopover(task.id,btn);
   });
+
+  // ── Desktop drag (HTML5 Drag & Drop API) ──────────────────────────────
+  btn.setAttribute('draggable','true');
+  btn.addEventListener('dragstart',function(e){
+    didDrag=true;
+    dragState.taskId=task.id;
+    e.dataTransfer.effectAllowed='move';
+    e.dataTransfer.setData('text/plain',task.id);
+    setTimeout(function(){btn.classList.add('dragging');},0);
+  });
+  btn.addEventListener('dragend',function(){
+    btn.classList.remove('dragging');
+    document.querySelectorAll('.sc.drag-over').forEach(function(el){el.classList.remove('drag-over');});
+  });
+
+  // ── Mobile drag (Touch events) ────────────────────────────────────────
+  btn.addEventListener('touchstart',function(e){
+    // Long-press (500ms) to start drag on mobile
+    var touch=e.touches[0];
+    var longPressTimer=setTimeout(function(){
+      didDrag=true;
+      dragState.taskId=task.id;
+      // Create a visible clone that follows the finger
+      var clone=btn.cloneNode(true);
+      clone.style.cssText='position:fixed;z-index:9999;pointer-events:none;opacity:.8;'
+        +'left:'+(touch.clientX-60)+'px;top:'+(touch.clientY-20)+'px;'
+        +'width:'+btn.offsetWidth+'px;';
+      document.body.appendChild(clone);
+      dragState.touchClone=clone;
+      btn.classList.add('dragging');
+      // Haptic feedback on Android
+      if(navigator.vibrate) navigator.vibrate(40);
+    },500);
+
+    btn.addEventListener('touchmove',function onMove(e){
+      if(!dragState.taskId||!dragState.touchClone){clearTimeout(longPressTimer);return;}
+      e.preventDefault();
+      var t=e.touches[0];
+      dragState.touchClone.style.left=(t.clientX-60)+'px';
+      dragState.touchClone.style.top=(t.clientY-20)+'px';
+      // Find which .sc cell is under the finger
+      dragState.touchClone.style.display='none';
+      var el=document.elementFromPoint(t.clientX,t.clientY);
+      dragState.touchClone.style.display='';
+      var cell=el?el.closest('.sc'):null;
+      if(dragState.touchTargetCell&&dragState.touchTargetCell!==cell)
+        dragState.touchTargetCell.classList.remove('drag-over-mobile');
+      if(cell){cell.classList.add('drag-over-mobile');dragState.touchTargetCell=cell;}
+    },{passive:false});
+
+    btn.addEventListener('touchend',function onEnd(e){
+      clearTimeout(longPressTimer);
+      if(dragState.touchClone){dragState.touchClone.remove();dragState.touchClone=null;}
+      btn.classList.remove('dragging');
+      if(dragState.touchTargetCell){
+        dragState.touchTargetCell.classList.remove('drag-over-mobile');
+        dropTaskOnCell(dragState.taskId,dragState.touchTargetCell);
+        dragState.touchTargetCell=null;
+      }
+      dragState.taskId=null;
+    });
+
+    btn.addEventListener('touchcancel',function(){
+      clearTimeout(longPressTimer);
+      if(dragState.touchClone){dragState.touchClone.remove();dragState.touchClone=null;}
+      btn.classList.remove('dragging');
+      if(dragState.touchTargetCell) dragState.touchTargetCell.classList.remove('drag-over-mobile');
+      dragState.taskId=null;dragState.touchTargetCell=null;
+    });
+  },{passive:true});
+
   return btn;
+}
+
+// ── Apply the drop: update task date+time from the target cell ────────────────
+function dropTaskOnCell(taskId,cell){
+  if(!taskId||!cell) return;
+  // Extract date from cell's parent row's column index
+  // and time from the row's slot index
+  var row=cell.parentElement;
+  var tbody=row.parentElement;
+  var ri=Array.from(tbody.children).indexOf(row); // slot index
+  var ci=Array.from(row.children).indexOf(cell)-1; // col index (subtract time column)
+  if(ri<0||ci<0||ci>=7) return;
+  var slot=SLOTS[ri];
+  if(!slot) return;
+  // Build new date from column
+  var isMobileView=!document.getElementById('schedDesktop').style.display||
+                    document.getElementById('schedDesktop').style.display==='none';
+  var newDate;
+  if(isMobileView){
+    // Mobile: ci is always 0, use currentDayIdx
+    newDate=addDays(weekStart,currentDayIdx);
+    ci=currentDayIdx;
+  } else {
+    newDate=addDays(weekStart,ci);
+  }
+  // Build new time from slot (use the hour:00 of the slot)
+  var newTime=pad(slot.h)+':'+(slot.half?'30':'00');
+  // Load task and update
+  var tasks=lsGet(TK);
+  if(!tasks[taskId]) return;
+  var oldDate=tasks[taskId].date;
+  var oldTime=tasks[taskId].time;
+  var newDateStr=fmtDate(newDate);
+  // Only update if something actually changed
+  if(newDateStr===oldDate && newTime===oldTime) return;
+  tasks[taskId].date=newDateStr;
+  tasks[taskId].time=newTime;
+  lsSet(TK,tasks);
+  FB.ignoreNextTaskSync=true;
+  FB.saveTask(taskId,tasks[taskId]);
+  // Rebuild both planner and tasks list
+  buildGrid();
+  if(typeof buildMobileDay==='function'&&isMobileView) buildMobileDay();
+  if(currentTab==='tasks') renderTasks();
+  // Show a brief confirmation toast
+  showDropToast(tasks[taskId].title,newDateStr,newTime);
+}
+
+// ── Brief toast message after a successful drop ───────────────────────────────
+function showDropToast(title,date,time){
+  var old=document.getElementById('drop-toast');
+  if(old)old.remove();
+  var toast=document.createElement('div');
+  toast.id='drop-toast';
+  var displayDate=date===fmtDate(new Date())?'Today':date;
+  toast.textContent='Moved "'+(title||'Task')+'" → '+displayDate+' '+time;
+  toast.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);'
+    +'background:var(--gd);color:white;padding:9px 18px;border-radius:20px;'
+    +'font-size:12px;font-weight:600;z-index:9999;pointer-events:none;'
+    +'box-shadow:0 4px 16px rgba(0,0,0,0.25);white-space:nowrap;'
+    +'max-width:90vw;overflow:hidden;text-overflow:ellipsis';
+  document.body.appendChild(toast);
+  setTimeout(function(){
+    toast.style.transition='opacity .4s';
+    toast.style.opacity='0';
+    setTimeout(function(){toast.remove();},400);
+  },2000);
 }
 
 function buildGrid(){
@@ -702,6 +860,22 @@ function buildGrid(){
       // Task pills
       getTasksForSlot(colDate,slot).forEach(function(t){
         td.appendChild(makePill(t));
+      });
+
+      // Drag-over highlighting (desktop)
+      td.addEventListener('dragover',function(e){
+        e.preventDefault();
+        e.dataTransfer.dropEffect='move';
+        td.classList.add('drag-over');
+      });
+      td.addEventListener('dragleave',function(){
+        td.classList.remove('drag-over');
+      });
+      td.addEventListener('drop',function(e){
+        e.preventDefault();
+        td.classList.remove('drag-over');
+        var id=e.dataTransfer.getData('text/plain')||dragState.taskId;
+        dropTaskOnCell(id,td);
       });
 
       // Editable textarea
@@ -1598,6 +1772,13 @@ function buildMobileDay(){
     var td=document.createElement('td');
     td.className='sc'+(isToday?' tdy':'')+(ov?' ov':'');
     getTasksForSlot(colDate,slot).forEach(function(t){td.appendChild(makePill(t));});
+    // Desktop drag-over for mobile table cells
+    td.addEventListener('dragover',function(e){e.preventDefault();td.classList.add('drag-over');});
+    td.addEventListener('dragleave',function(){td.classList.remove('drag-over');});
+    td.addEventListener('drop',function(e){
+      e.preventDefault();td.classList.remove('drag-over');
+      dropTaskOnCell(dragState.taskId,td);
+    });
     var key='r'+ri+'_c'+currentDayIdx;
     var ta=document.createElement('textarea');
     ta.className='ci';ta.setAttribute('data-key',key);ta.rows=2;
