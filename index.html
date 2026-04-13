@@ -805,7 +805,7 @@ function renderTasks(){
               '<option value="low"'+(t.priority==='low'?' selected':'')+'>🟢 Low</option>'+
             '</select>'+
           '</div>'+
-          '<textarea class="task-ni" placeholder="Add notes... (Enter for new line)">'+(t.notes||'')+'</textarea>'+
+          '<textarea class="task-ni" data-notes-id="'+t.id+'" placeholder="Add notes... (Enter for new line)">'+(t.notes||'')+'</textarea>'+
         '</div>'+
         '<div class="task-acts"><button class="bni task-del">🗑️</button></div>'+
       '</div>';
@@ -919,6 +919,7 @@ function renderNotes(){
 
     // Body
     var nbi=document.createElement('textarea');nbi.className='note-bi';
+    nbi.setAttribute('data-note-body',note.id);
     nbi.placeholder='Write anything here... (Enter for new line)';
     nbi.value=note.body||'';
     card.appendChild(nbi);
@@ -1081,21 +1082,34 @@ try {
       const wk = window.weekStart ? fmtDate(window.weekStart) : null;
       if (wk) window.FB.reattachPlanner(wk);
 
-      // Tasks listener
+      // Tasks listener — patch DOM fields, never re-render while typing
       if (tasksCb) off(ref(db, `users/${uid()}/tasks`), 'value', tasksCb);
       tasksCb = onValue(ref(db, `users/${uid()}/tasks`), snap => {
         const remote = snap.val() || {};
         lsSet(TK, remote);
-        if (window.currentTab === 'tasks') renderTasks();
+        // Only patch existing DOM cards — do NOT call renderTasks() here
+        // to avoid destroying the focused element mid-keystroke.
+        Object.values(remote).forEach(t => {
+          const ti = document.getElementById('tt-'+t.id);
+          if (ti && document.activeElement !== ti) ti.value = t.title || '';
+          const ni = document.querySelector('[data-notes-id="'+t.id+'"]');
+          if (ni && document.activeElement !== ni) ni.value = t.notes || '';
+        });
         buildGrid();
       });
 
-      // Notes listener
+      // Notes listener — patch DOM fields, never re-render while typing
       if (notesCb) off(ref(db, `users/${uid()}/notes`), 'value', notesCb);
       notesCb = onValue(ref(db, `users/${uid()}/notes`), snap => {
         const remote = snap.val() || {};
         lsSet(NK, remote);
-        if (window.currentTab === 'notes') renderNotes();
+        // Patch existing note cards without rebuilding
+        Object.values(remote).forEach(n => {
+          const ti = document.getElementById('nt-'+n.id);
+          if (ti && document.activeElement !== ti) ti.value = n.title || '';
+          const bi = document.querySelector('[data-note-body="'+n.id+'"]');
+          if (bi && document.activeElement !== bi) bi.value = n.body || '';
+        });
       });
     } else {
       document.getElementById('loginPanel').style.display = 'flex';
