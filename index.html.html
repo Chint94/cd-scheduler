@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CD Scheduler</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<!-- Firebase SDKs -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getDatabase, ref, set, onValue, off }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  // ── Firebase config ──────────────────────────────────────────────────────────
+  // INSTRUCTIONS: Replace these values with YOUR own Firebase project config.
+  // Steps:
+  //   1. Go to https://console.firebase.google.com and create a free project.
+  //   2. Enable "Google" sign-in under Authentication → Sign-in method.
+  //   3. Enable Realtime Database (start in test mode).
+  //   4. In Project Settings → Your apps → Add web app → copy the config below.
+  //   5. Add this file's domain (or just allow all) in Authentication → Authorised domains.
+  const firebaseConfig = {
+    apiKey:            "AIzaSyBfxXR0i6qevze2lGTQyFR7XkeCxxAZBnc",
+    authDomain:        "cd-scheduler-3fdad.firebaseapp.com",
+    databaseURL:       "https://cd-scheduler-3fdad-default-rtdb.firebaseio.com",
+    projectId:         "cd-scheduler-3fdad",
+    storageBucket:     "cd-scheduler-3fdad.firebasestorage.app",
+    messagingSenderId: "654814312302",
+    appId:             "1:654814312302:web:394f66b4eb29327de3b37f"
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const app      = initializeApp(firebaseConfig);
+  const auth     = getAuth(app);
+  const db       = getDatabase(app);
+  const provider = new GoogleAuthProvider();
+
+  let currentUser  = null;
+  let dbListener  = null;
+  let localData    = {};   // { "weekKey": { "row_col": "text" } }
+  let isSyncing    = false;
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  function weekKey() {
+    return document.getElementById('weekStartInput').value.replace(/\//g,'-') || 'nodate';
+  }
+
+  function dbPath() {
+    return `users/${currentUser.uid}/weeks/${weekKey()}`;
+  }
+
+  function attachDbListener() {
+    if (dbListener) off(ref(db, dbPath()), 'value', dbListener);
+    dbListener = onValue(ref(db, dbPath()), snapshot => {
+      const remote = snapshot.val() || {};
+      isSyncing = true;
+      Object.entries(remote).forEach(([key, val]) => {
+        const cell = document.querySelector(`[data-key="${key}"]`);
+        if (cell && cell.value !== val) cell.value = val;
+      });
+      localData[weekKey()] = remote;
+      isSyncing = false;
+      markOverdue();
+    });
+  }
+
+  function saveCell(key, value) {
+    if (!currentUser) return;
+    if (!localData[weekKey()]) localData[weekKey()] = {};
+    localData[weekKey()][key] = value;
+    set(ref(db, `${dbPath()}/${key}`), value);
+  }
+
+  // ── Auth ─────────────────────────────────────────────────────────────────────
+  window.signInWithGoogle = async () => {
+    try {
+      await signInWithPopup(auth, provider);
+    } catch(e) {
+      if (e.code === 'auth/configuration-not-found' || e.code === 'auth/invalid-api-key') {
+        showConfigWarning();
+      } else {
+        alert('Sign-in error: ' + e.message);
+      }
+    }
+  };
+
+  window.signOutUser = async () => {
+    if (dbListener) off(ref(db, dbPath()), 'value', dbListener);
+    await signOut(auth);
+  };
+
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    const loginPanel  = document.getElementById('loginPanel');
+    const userInfo    = document.getElementById('userInfo');
+    const userName    = document.getElementById('userName');
+    const userAvatar  = document.getElementById('userAvatar');
+    const syncBadge   = document.getElementById('syncBadge');
+
+    if (user) {
+      loginPanel.style.display  = 'none';
+      userInfo.style.display    = 'flex';
+      userName.textContent      = user.displayName || user.email;
+      userAvatar.src            = user.photoURL || '';
+      userAvatar.style.display  = user.photoURL ? 'block' : 'none';
+      syncBadge.style.display   = 'flex';
+      attachDbListener();
+    } else {
+      loginPanel.style.display  = 'flex';
+      userInfo.style.display    = 'none';
+      syncBadge.style.display   = 'none';
+    }
+  });
+
+  // ── Expose to global scope ───────────────────────────────────────────────────
+  window._saveCell     = saveCell;
+  window._reattachDb   = () => { if (currentUser) attachDbListener(); };
+  window._isSyncing    = () => isSyncing;
+  window._isLoggedIn   = () => !!currentUser;
+
+  function showConfigWarning() {
+    document.getElementById('configWarning').style.display = 'flex';
+  }
+</script>
+
+<style>
+/* ── Reset & Base ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --gold-deep:    #8B6914;
+  --gold-mid:     #C4942A;
+  --gold-bright:  #E8B84B;
+  --gold-pale:    #F5D98B;
+  --gold-cream:   #FBF0D0;
+  --gold-glow:    #FFE680;
+  --ink:          #1A1208;
+  --ink-mid:      #3D2C0A;
+  --ink-light:    #6B4F1A;
+  --white:        #FFFDF5;
+  --shadow-gold:  rgba(139,105,20,0.25);
+  --overdue-bg:   #FFF0F0;
+  --overdue-border: #D94040;
+  --overdue-text: #B32020;
+  --radius:       10px;
+}
+
+html, body {
+  height: 100%;
+  background: #FDF8EA;
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  overflow-x: hidden;
+}
+
+/* ── Background texture ──────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(232,184,75,0.18) 0%, transparent 70%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 39px,
+      rgba(196,148,42,0.06) 39px,
+      rgba(196,148,42,0.06) 40px
+    );
+  pointer-events: none;
+}
+
+/* ── Layout shell ────────────────────────────────────────────────── */
+#app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ── Header ──────────────────────────────────────────────────────── */
+header {
+  background: linear-gradient(135deg, var(--gold-deep) 0%, var(--gold-mid) 60%, var(--gold-bright) 100%);
+  padding: 0 20px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  min-height: 70px;
+  box-shadow: 0 4px 20px rgba(139,105,20,0.4);
+  position: sticky; top: 0; z-index: 100;
+}
+
+.brand {
+  display: flex; align-items: baseline; gap: 10px;
+}
+.brand-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(22px, 5vw, 32px);
+  font-weight: 900;
+  color: var(--white);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  letter-spacing: 1px;
+}
+.brand-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,253,245,0.7);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+/* ── Header right ────────────────────────────────────────────────── */
+.header-right {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+
+#loginPanel {
+  display: flex; align-items: center;
+}
+
+.btn-google {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--white);
+  border: none; border-radius: 6px;
+  padding: 8px 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 600;
+  color: var(--ink-mid);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: all .15s ease;
+}
+.btn-google:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.3); }
+.btn-google svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+#userInfo {
+  display: none; align-items: center; gap: 8px;
+}
+#userAvatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.5);
+  object-fit: cover;
+}
+#userName {
+  color: var(--white); font-size: 13px; font-weight: 500;
+  max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.btn-signout {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 5px; padding: 5px 10px;
+  color: var(--white); font-size: 12px; font-weight: 500;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: background .15s;
+}
+.btn-signout:hover { background: rgba(255,255,255,0.25); }
+
+#syncBadge {
+  display: none; align-items: center; gap: 5px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 20px; padding: 4px 10px;
+  color: var(--white); font-size: 11px; font-weight: 500;
+}
+.sync-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #7fff7f;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── Config warning ──────────────────────────────────────────────── */
+#configWarning {
+  display: none;
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.65);
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.warning-box {
+  background: var(--white);
+  border: 3px solid var(--gold-mid);
+  border-radius: 12px;
+  padding: 28px;
+  max-width: 500px; width: 100%;
+  font-size: 13px; line-height: 1.7;
+  color: var(--ink);
+}
+.warning-box h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px; margin-bottom: 12px;
+  color: var(--gold-deep);
+}
+.warning-box code {
+  display: block;
+  background: #f5f5f5; border-radius: 5px;
+  padding: 8px 10px; margin: 10px 0;
+  font-size: 12px; word-break: break-all;
+}
+.warning-box a { color: var(--gold-deep); font-weight: 600; }
+.btn-dismiss {
+  margin-top: 16px;
+  background: var(--gold-mid); border: none;
+  border-radius: 6px; padding: 9px 20px;
+  color: white; font-weight: 600; font-size: 13px;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+}
+
+/* ── Controls bar ────────────────────────────────────────────────── */
+.controls-bar {
+  background: var(--gold-cream);
+  border-bottom: 2px solid var(--gold-pale);
+  padding: 12px 20px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+  box-shadow: 0 2px 8px var(--shadow-gold);
+}
+
+.ctrl-group {
+  display: flex; align-items: center; gap: 8px;
+}
+.ctrl-label {
+  font-size: 12px; font-weight: 600;
+  color: var(--gold-deep);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.week-input {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500;
+  color: var(--ink);
+  background: white;
+  border: 1.5px solid var(--gold-mid);
+  border-radius: 7px;
+  padding: 7px 12px;
+  width: 130px;
+  outline: none;
+  transition: border-color .15s;
+}
+.week-input:focus { border-color: var(--gold-deep); box-shadow: 0 0 0 3px rgba(196,148,42,0.15); }
+
+.btn-nav {
+  background: var(--gold-mid);
+  border: none; border-radius: 6px;
+  padding: 7px 12px;
+  color: white; font-size: 15px; font-weight: 700;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+}
+.btn-nav:hover { background: var(--gold-deep); transform: scale(1.05); }
+
+.week-label {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px; font-weight: 700;
+  color: var(--gold-deep);
+  white-space: nowrap;
+}
+
+.btn-clear {
+  margin-left: auto;
+  background: transparent;
+  border: 1.5px solid var(--gold-mid);
+  border-radius: 6px; padding: 6px 14px;
+  color: var(--gold-deep); font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: all .15s;
+}
+.btn-clear:hover { background: var(--gold-mid); color: white; }
+
+/* ── Legend ──────────────────────────────────────────────────────── */
+.legend {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--ink-light); font-weight: 500;
+}
+.legend-dot {
+  width: 11px; height: 11px; border-radius: 3px;
+  background: var(--overdue-bg);
+  border: 1.5px solid var(--overdue-border);
+  flex-shrink: 0;
+}
+
+/* ── Grid wrapper ────────────────────────────────────────────────── */
+.grid-wrapper {
+  flex: 1;
+  overflow-x: auto;
+  padding: 16px 20px 40px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Scheduler table ─────────────────────────────────────────────── */
+.scheduler {
+  min-width: 720px;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 8px 32px var(--shadow-gold);
+}
+
+/* Header row */
+.scheduler thead th {
+  background: linear-gradient(180deg, var(--gold-mid) 0%, var(--gold-deep) 100%);
+  color: var(--white);
+  font-family: 'Playfair Display', serif;
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 12px 8px;
+  text-align: center;
+  border-right: 1px solid rgba(255,255,255,0.15);
+  white-space: nowrap;
+}
+.scheduler thead th:first-child { text-align: left; padding-left: 12px; min-width: 78px; }
+.scheduler thead th.today-col {
+  background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold-mid) 100%);
+}
+.scheduler thead th .day-date {
+  display: block; font-family: 'DM Sans', sans-serif;
+  font-size: 10px; font-weight: 500;
+  opacity: 0.8; letter-spacing: 0;
+  margin-top: 2px;
+}
+
+/* Time label column */
+.time-cell {
+  background: linear-gradient(90deg, var(--gold-cream) 0%, var(--gold-pale) 100%);
+  color: var(--gold-deep);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 0 10px;
+  text-align: right;
+  border-right: 2px solid var(--gold-pale);
+  border-bottom: 1px solid rgba(196,148,42,0.15);
+  white-space: nowrap;
+  min-width: 78px;
+  vertical-align: middle;
+  height: 44px;
+}
+.time-cell.half { color: var(--gold-mid); font-size: 10px; font-weight: 500; }
+
+/* Data cells */
+.scheduler tbody tr { transition: background .1s; }
+.scheduler tbody tr:hover .time-cell { background: linear-gradient(90deg, var(--gold-pale) 0%, var(--gold-glow) 100%); }
+
+.sched-cell {
+  padding: 2px;
+  border-right: 1px solid rgba(196,148,42,0.12);
+  border-bottom: 1px solid rgba(196,148,42,0.12);
+  height: 44px;
+  vertical-align: top;
+  background: white;
+  transition: background .15s;
+}
+.sched-cell:last-child { border-right: none; }
+
+/* Alternating rows */
+.scheduler tbody tr:nth-child(4n+1) .sched-cell,
+.scheduler tbody tr:nth-child(4n+2) .sched-cell { background: white; }
+.scheduler tbody tr:nth-child(4n+3) .sched-cell,
+.scheduler tbody tr:nth-child(4n+4) .sched-cell { background: #FFFBEE; }
+
+/* Half-hour separator */
+.scheduler tbody tr.half-row .sched-cell { border-bottom: 1px dashed rgba(196,148,42,0.1); }
+.scheduler tbody tr:not(.half-row) .sched-cell { border-bottom: 1px solid rgba(196,148,42,0.2); }
+
+/* Today highlight */
+.scheduler thead th.today-col { color: var(--ink); }
+.today-col.sched-cell { background: rgba(232,184,75,0.07) !important; }
+.today-col.sched-cell:hover { background: rgba(232,184,75,0.18) !important; }
+
+/* Textarea in cell */
+.cell-input {
+  width: 100%; height: 100%;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 400;
+  color: var(--ink);
+  background: transparent;
+  border: none; outline: none;
+  resize: none;
+  padding: 5px 7px;
+  line-height: 1.4;
+  cursor: text;
+  transition: background .15s;
+}
+.cell-input::placeholder { color: rgba(139,105,20,0.25); font-style: italic; }
+.cell-input:focus {
+  background: rgba(255,230,128,0.25);
+  border-radius: 4px;
+}
+
+/* Overdue */
+.overdue .sched-cell { background: var(--overdue-bg) !important; }
+.overdue .time-cell { color: var(--overdue-text); }
+.overdue .cell-input { color: var(--overdue-text); font-weight: 600; }
+.overdue .cell-input:not(:empty) { text-decoration: underline wavy rgba(179,32,32,0.3); }
+
+/* ── Footer ──────────────────────────────────────────────────────── */
+footer {
+  background: var(--gold-deep);
+  color: rgba(255,253,245,0.55);
+  text-align: center;
+  font-size: 11px;
+  padding: 14px 20px;
+  letter-spacing: 0.5px;
+}
+footer strong { color: rgba(255,253,245,0.85); }
+
+/* ── Mobile adjustments ──────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .controls-bar { gap: 8px; }
+  .week-input { width: 110px; font-size: 13px; }
+  .week-label { font-size: 13px; }
+  .btn-clear { display: none; }
+  .cell-input { font-size: 11px; padding: 4px 5px; }
+  .scheduler thead th { font-size: 11px; padding: 10px 4px; }
+  .time-cell { font-size: 10px; padding: 0 6px; min-width: 58px; }
+}
+
+/* ── Scrollbar styling ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--gold-cream); }
+::-webkit-scrollbar-thumb { background: var(--gold-mid); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- Config Warning Modal -->
+<div id="configWarning">
+  <div class="warning-box">
+    <h3>🔧 Firebase Setup Required for Sync</h3>
+    <p>To enable cross-device sync with Google login, you need to set up a <strong>free Firebase project</strong>:</p>
+    <ol style="margin: 10px 0 10px 18px; line-height:2">
+      <li>Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> → Create a project</li>
+      <li>Enable <strong>Google sign-in</strong> under Authentication → Sign-in method</li>
+      <li>Create a <strong>Realtime Database</strong> (start in test mode)</li>
+      <li>Go to Project Settings → Add web app → copy config</li>
+      <li>Open this HTML file and replace the <code>firebaseConfig</code> values near the top</li>
+    </ol>
+    <p style="font-size:12px;color:#888">Until then, the planner works fully <strong>offline</strong> — data is saved locally in your browser.</p>
+    <button class="btn-dismiss" onclick="document.getElementById('configWarning').style.display='none'">Got it, use offline</button>
+  </div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="brand">
+    <span class="brand-title">CD Scheduler</span>
+    <span class="brand-sub">Weekly Planner</span>
+  </div>
+  <div class="header-right">
+    <div id="syncBadge">
+      <div class="sync-dot"></div>
+      Live Sync
+    </div>
+    <div id="loginPanel">
+      <button class="btn-google" onclick="window.signInWithGoogle()">
+        <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H24v8h11.3C33.5 33.6 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.2-2.7-.1-4z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.1 19 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 16.3 4 9.7 8.4 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.9 13.5-5.1l-6.2-5.2C29.4 35.5 26.8 36 24 36c-5.2 0-9.5-3.4-11.2-8l-6.6 5.1C9.7 39.5 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20H24v8h11.3c-.9 2.5-2.6 4.5-4.7 5.8l6.2 5.2C40.5 35.6 44 30.3 44 24c0-1.3-.2-2.7-.4-4z"/></svg>
+        Sign in with Google
+      </button>
+    </div>
+    <div id="userInfo">
+      <img id="userAvatar" src="" alt="avatar">
+      <span id="userName"></span>
+      <button class="btn-signout" onclick="window.signOutUser()">Sign out</button>
+    </div>
+  </div>
+</header>
+
+<!-- Controls -->
+<div class="controls-bar">
+  <div class="ctrl-group">
+    <span class="ctrl-label">Week of</span>
+    <input type="text" id="weekStartInput" class="week-input" placeholder="13-04-2026"
+      maxlength="10" autocomplete="off">
+  </div>
+  <button class="btn-nav" onclick="shiftWeek(-1)" title="Previous week">◀</button>
+  <button class="btn-nav" onclick="shiftWeek(1)"  title="Next week">▶</button>
+  <span class="week-label" id="weekRangeLabel"></span>
+  <div class="legend">
+    <div class="legend-dot"></div>
+    Overdue
+  </div>
+  <button class="btn-clear" onclick="clearWeek()">Clear Week</button>
+</div>
+
+<!-- Grid -->
+<div class="grid-wrapper">
+  <table class="scheduler" id="schedulerTable">
+    <thead id="schedHead"></thead>
+    <tbody id="schedBody"></tbody>
+  </table>
+</div>
+
+<footer>
+  <strong>CD Scheduler</strong> · Data syncs in real-time across all your signed-in devices &nbsp;·&nbsp;
+  Offline edits saved locally
+</footer>
+</div>
+
+<script>
+// ── Constants ─────────────────────────────────────────────────────────────────
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const DAY_SHORT = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+const STORAGE_KEY = 'cd_scheduler_v2';
+
+// Hours: 05:00 – 23:30
+const SLOTS = [];
+for (let h = 5; h <= 23; h++) {
+  SLOTS.push({ h, m: 0,  label: `${String(h).padStart(2,'0')}:00`, half: false });
+  if (h < 23)
+  SLOTS.push({ h, m: 30, label: `${String(h).padStart(2,'0')}:30`, half: true  });
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let weekStart = null;   // Date object (always Monday)
+let localStore = {};    // { weekKey: { "r_c": "text" } }
+
+// ── Persistence (localStorage fallback) ──────────────────────────────────────
+function loadLocal() {
+  try { localStore = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) { localStore = {}; }
+}
+function saveLocal() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(localStore)); } catch(e) {}
+}
+
+// ── Date helpers ──────────────────────────────────────────────────────────────
+function parseDate(str) {
+  // accepts dd-mm-yyyy or dd/mm/yyyy
+  const parts = str.replace(/\//g,'-').split('-');
+  if (parts.length !== 3) return null;
+  const [d, m, y] = parts.map(Number);
+  if (!d || !m || !y || y < 2000) return null;
+  return new Date(y, m-1, d);
+}
+function formatDate(d) {
+  return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+}
+function weekKey(d) {
+  return formatDate(d);
+}
+function addDays(d, n) {
+  const r = new Date(d); r.setDate(r.getDate()+n); return r;
+}
+function toMonday(d) {
+  const day = d.getDay();
+  const diff = (day === 0) ? -6 : 1 - day;
+  return addDays(d, diff);
+}
+function shortDate(d) {
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+// ── Overdue logic ─────────────────────────────────────────────────────────────
+function isSlotOverdue(colDate, slot) {
+  const now = new Date();
+  const slotEnd = new Date(colDate.getFullYear(), colDate.getMonth(), colDate.getDate(), slot.h, slot.m + 30);
+  return slotEnd < now;
+}
+
+// ── Build grid ────────────────────────────────────────────────────────────────
+function buildGrid() {
+  if (!weekStart) return;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  // Column dates
+  const cols = DAYS.map((_,i) => addDays(weekStart, i));
+  const todayIdx = cols.findIndex(d => {
+    const dc = new Date(d); dc.setHours(0,0,0,0);
+    return dc.getTime() === today.getTime();
+  });
+
+  // Header
+  const head = document.getElementById('schedHead');
+  head.innerHTML = '';
+  const htr = document.createElement('tr');
+  const th0 = document.createElement('th');
+  th0.textContent = 'Time';
+  htr.appendChild(th0);
+  cols.forEach((d, ci) => {
+    const th = document.createElement('th');
+    if (ci === todayIdx) th.classList.add('today-col');
+    th.innerHTML = `${DAY_SHORT[ci]}<span class="day-date">${shortDate(d)}</span>`;
+    htr.appendChild(th);
+  });
+  head.appendChild(htr);
+
+  // Body
+  const body = document.getElementById('schedBody');
+  body.innerHTML = '';
+  const wk = weekKey(weekStart);
+  const wkData = localStore[wk] || {};
+
+  SLOTS.forEach((slot, ri) => {
+    const tr = document.createElement('tr');
+    if (slot.half) tr.classList.add('half-row');
+
+    // Time label
+    const tc = document.createElement('td');
+    tc.className = 'time-cell' + (slot.half ? ' half' : '');
+    tc.textContent = slot.label;
+    tr.appendChild(tc);
+
+    // Check overdue for whole row (all cols in past)
+    let rowOverdue = true;
+
+    cols.forEach((colDate, ci) => {
+      const cellOverdue = isSlotOverdue(colDate, slot);
+      if (!cellOverdue) rowOverdue = false;
+
+      const td = document.createElement('td');
+      td.className = 'sched-cell' + (ci === todayIdx ? ' today-col' : '');
+
+      const key = `r${ri}_c${ci}`;
+      const ta = document.createElement('textarea');
+      ta.className = 'cell-input';
+      ta.dataset.key = key;
+      ta.rows = 2;
+      ta.value = wkData[key] || '';
+      ta.placeholder = slot.half ? '' : '···';
+
+      ta.addEventListener('input', () => {
+        if (window._isSyncing && window._isSyncing()) return;
+        if (!localStore[wk]) localStore[wk] = {};
+        localStore[wk][key] = ta.value;
+        saveLocal();
+        if (window._saveCell) window._saveCell(key, ta.value);
+        markOverdue();
+      });
+
+      // Mobile: tab-like behaviour
+      ta.addEventListener('keydown', e => {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          const inputs = [...document.querySelectorAll('.cell-input')];
+          const idx = inputs.indexOf(ta);
+          if (idx >= 0 && idx < inputs.length-1) inputs[idx+1].focus();
+        }
+      });
+
+      td.appendChild(ta);
+      tr.appendChild(td);
+    });
+
+    // Mark row if ALL columns in the past
+    if (rowOverdue) tr.classList.add('overdue');
+
+    body.appendChild(tr);
+  });
+}
+
+function markOverdue() {
+  if (!weekStart) return;
+  const rows = document.querySelectorAll('#schedBody tr');
+  rows.forEach((tr, ri) => {
+    const slot = SLOTS[ri];
+    if (!slot) return;
+    const cols = weekStart ? DAYS.map((_,i) => addDays(weekStart, i)) : [];
+    let allPast = true;
+    cols.forEach(d => { if (!isSlotOverdue(d, slot)) allPast = false; });
+    if (allPast) tr.classList.add('overdue'); else tr.classList.remove('overdue');
+  });
+}
+
+// ── Week navigation ───────────────────────────────────────────────────────────
+function setWeek(d) {
+  weekStart = toMonday(d);
+  document.getElementById('weekStartInput').value = formatDate(weekStart);
+  const end = addDays(weekStart, 6);
+  document.getElementById('weekRangeLabel').textContent =
+    `${shortDate(weekStart)} – ${shortDate(end)} ${weekStart.getFullYear()}`;
+  buildGrid();
+  if (window._reattachDb) window._reattachDb();
+}
+
+function shiftWeek(n) {
+  if (!weekStart) return;
+  setWeek(addDays(weekStart, n * 7));
+}
+
+function clearWeek() {
+  if (!weekStart || !confirm('Clear all entries for this week?')) return;
+  const wk = weekKey(weekStart);
+  localStore[wk] = {};
+  saveLocal();
+  buildGrid();
+  if (window._isLoggedIn && window._isLoggedIn()) {
+    // clear in Firebase too
+    import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js").then(({ getDatabase, ref, remove }) => {
+      // lightweight clear
+      document.querySelectorAll('.cell-input').forEach(ta => {
+        if (window._saveCell) window._saveCell(ta.dataset.key, '');
+      });
+    });
+  }
+}
+
+// ── Input handling ────────────────────────────────────────────────────────────
+document.getElementById('weekStartInput').addEventListener('change', function() {
+  const d = parseDate(this.value);
+  if (d) setWeek(d); else this.value = weekStart ? formatDate(weekStart) : '';
+});
+document.getElementById('weekStartInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { const d = parseDate(this.value); if (d) setWeek(d); }
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadLocal();
+setWeek(new Date());   // default to current week
+
+// Refresh overdue marks every minute
+setInterval(markOverdue, 60000);
+</script>
+</body>
+</html>
