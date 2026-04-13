@@ -90,7 +90,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .btn-clr:hover{background:var(--gm);color:white}
 
 /* ── Planner grid ── */
-.grid-wrap{flex:1;overflow-x:auto;padding:12px 18px 36px;-webkit-overflow-scrolling:touch}
+.grid-wrap{flex:1;overflow-x:auto;padding:12px 18px 36px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .sched{min-width:700px;border-collapse:separate;border-spacing:0;width:100%;
   border-radius:10px;overflow:hidden;box-shadow:0 6px 28px var(--sg)}
 .sched thead th{background:linear-gradient(180deg,var(--gm) 0%,var(--gd) 100%);color:var(--white);
@@ -115,9 +115,11 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .sc.ov .ci{color:var(--ot);font-weight:600}
 .ci{width:100%;min-height:36px;font-family:DM Sans,sans-serif;font-size:11px;color:var(--ink);
   background:transparent;border:none;outline:none;resize:none;padding:3px 5px;line-height:1.4;
-  cursor:text;overflow:hidden;display:block}
+  cursor:text;overflow:hidden;display:block;
+  /* Prevent iOS from zooming in on focus (font-size must be >= 16px on iOS) */
+  -webkit-text-size-adjust:100%}
 .ci::placeholder{color:rgba(139,105,20,0.22);font-style:italic}
-.ci:focus{background:rgba(255,230,128,0.22);border-radius:4px}
+.ci:focus{background:rgba(255,230,128,0.22);border-radius:4px;scroll-margin:80px}
 
 /* ── Mobile day view ── */
 .day-nav{display:none;align-items:center;justify-content:space-between;
@@ -314,6 +316,11 @@ footer strong{color:rgba(255,253,245,0.85)}
   #schedMobileWrap{border-radius:10px;overflow:hidden;box-shadow:0 4px 20px var(--sg)}
   .sched-mobile thead th:last-child{border-radius:0 10px 0 0}
   .sched-mobile .sc:last-child{border-right:none}
+  /* iOS requires font-size >= 16px to prevent zoom on focus which dismisses keyboard */
+  .ci{font-size:16px;padding:6px 8px;min-height:44px;line-height:1.5}
+  .sched-mobile .ci{font-size:16px;padding:8px 10px;min-height:48px}
+  .tc{font-size:13px;height:48px}
+  .tc.half{font-size:12px}
 }
 </style>
 </head>
@@ -638,8 +645,11 @@ function buildGrid(){
         s[wk][key]=ta.value;
         lsSet(SK,s);
         FB.savePlannerCell(wk,key,ta.value);
-        ta.style.height='auto';
-        ta.style.height=Math.max(ta.scrollHeight,36)+'px';
+        // Use requestAnimationFrame to avoid keyboard-dismissing layout reflow on mobile
+        var newH=Math.max(ta.scrollHeight,36);
+        if(parseInt(ta.style.height||'0')<newH){
+          requestAnimationFrame(function(){ta.style.height=newH+'px';});
+        }
       });
       ta.addEventListener('keydown',function(e){
         if(e.key==='Tab'){
@@ -1516,8 +1526,10 @@ function buildMobileDay(){
       var s=lsGet(SK);if(!s[wk])s[wk]={};
       s[wk][key]=ta.value;lsSet(SK,s);
       FB.savePlannerCell(wk,key,ta.value);
-      ta.style.height='auto';
-      ta.style.height=Math.max(ta.scrollHeight,44)+'px';
+      var newH=Math.max(ta.scrollHeight,44);
+      if(parseInt(ta.style.height||'0')<newH){
+        requestAnimationFrame(function(){ta.style.height=newH+'px';});
+      }
     });
     td.appendChild(ta);tr.appendChild(tc);tr.appendChild(td);
     body.appendChild(tr);
@@ -1552,7 +1564,11 @@ document.getElementById('nextDay').addEventListener('click',function(){
   },{passive:true});
 })();
 
-window.addEventListener('resize',function(){applyPlannerLayout();});
+window.addEventListener('resize',function(){
+  if(!document.activeElement || !document.activeElement.classList.contains('ci')){
+    applyPlannerLayout();
+  }
+});
 
 // Wrap setWeek to sync mobile view + set today's day
 var _origSetWeek=setWeek;
