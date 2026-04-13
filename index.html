@@ -365,8 +365,20 @@ var FB={
   deleteTask:function(){},
   saveNote:function(){},
   deleteNote:function(){},
-  reattachPlanner:function(){}
+  reattachPlanner:function(){},
+  ignoreNextTaskSync:false,
+  ignoreNextNoteSync:false
 };
+
+// Debounce helper — delays fn execution until ms after last call
+function debounce(fn,ms){
+  var timer=null;
+  return function(){
+    var args=arguments;
+    clearTimeout(timer);
+    timer=setTimeout(function(){fn.apply(null,args);},ms);
+  };
+}
 
 // ── Local storage helpers ────────────────────────────────────────────────────
 function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'{}')}catch(e){return{}}}
@@ -821,18 +833,33 @@ function renderTasks(){
     var chk=card.querySelector('.task-chk');
     var del=card.querySelector('.task-del');
 
-    function saveField(field,value){
+    // Save to localStorage immediately; push to Firebase after 800ms idle
+    function saveLocal(field,value){
       var tasks2=lsGet(TK);if(!tasks2[t.id])return;
       tasks2[t.id][field]=value;lsSet(TK,tasks2);
+    }
+    var debouncedFbSave=debounce(function(){
+      var tasks2=lsGet(TK);if(!tasks2[t.id])return;
+      FB.ignoreNextTaskSync=true; // tell listener to skip the echo
       FB.saveTask(t.id,tasks2[t.id]);
+    },800);
+    function saveField(field,value){
+      saveLocal(field,value);
+      if(field==='title'||field==='notes'){
+        debouncedFbSave(); // text: debounced
+      } else {
+        FB.ignoreNextTaskSync=true;
+        var tasks2=lsGet(TK);if(!tasks2[t.id])return;
+        FB.saveTask(t.id,tasks2[t.id]); // non-text: immediate
+      }
     }
 
-    ti.addEventListener('input',function(){saveField('title',ti.value);});
+    ti.addEventListener('input',function(){saveLocal('title',ti.value);debouncedFbSave();});
     ti.addEventListener('keydown',function(e){
       if(e.key==='Tab'&&!e.shiftKey){e.preventDefault();ni.focus();}
     });
 
-    ni.addEventListener('input',function(){saveField('notes',ni.value);autoResize(ni);});
+    ni.addEventListener('input',function(){saveLocal('notes',ni.value);autoResize(ni);debouncedFbSave();});
     ni.addEventListener('keydown',function(e){
       if(e.key==='Tab'&&!e.shiftKey){
         e.preventDefault();
@@ -946,20 +973,28 @@ function renderNotes(){
     grid.appendChild(card);
 
     // Bind events
-    function saveNoteField(field,value){
+    function saveNoteLocal(field,value){
       var notes2=lsGet(NK);if(!notes2[note.id])return;
       notes2[note.id][field]=value;notes2[note.id].updated=Date.now();lsSet(NK,notes2);
+      tsSpan.textContent='Updated '+fmtTs(Date.now());
+    }
+    var debouncedNoteSave=debounce(function(){
+      var notes2=lsGet(NK);if(!notes2[note.id])return;
+      FB.ignoreNextNoteSync=true; // tell listener to skip the echo
       FB.saveNote(note.id,notes2[note.id]);
-      tsSpan.textContent='Updated '+fmtTs(notes2[note.id].updated);
+    },800);
+    function saveNoteField(field,value){
+      saveNoteLocal(field,value);
+      debouncedNoteSave();
     }
 
-    nti.addEventListener('input',function(){saveNoteField('title',nti.value);});
+    nti.addEventListener('input',function(){saveNoteLocal('title',nti.value);debouncedNoteSave();});
     nti.addEventListener('keydown',function(e){
       if(e.key==='Tab'&&!e.shiftKey){e.preventDefault();nbi.focus();}
       if(e.key==='Enter'){e.preventDefault();nbi.focus();}
     });
 
-    nbi.addEventListener('input',function(){saveNoteField('body',nbi.value);autoResizeNote(nbi);});
+    nbi.addEventListener('input',function(){saveNoteLocal('body',nbi.value);autoResizeNote(nbi);debouncedNoteSave();});
     nbi.addEventListener('keydown',function(e){
       if(e.key==='Tab'&&!e.shiftKey){
         e.preventDefault();
@@ -1082,13 +1117,19 @@ try {
       const wk = window.weekStart ? fmtDate(window.weekStart) : null;
       if (wk) window.FB.reattachPlanner(wk);
 
-      // Tasks listener — patch DOM fields, never re-render while typing
+      // Tasks listener — skip own echoes, patch only non-focused fields
       if (tasksCb) off(ref(db, `users/${uid()}/tasks`), 'value', tasksCb);
+      let firstTaskSync = true;
       tasksCb = onValue(ref(db, `users/${uid()}/tasks`), snap => {
         const remote = snap.val() || {};
+        // Skip the echo of our own write — but always process the first sync (initial load)
+        if (!firstTaskSync && window.FB.ignoreNextTaskSync) {
+          window.FB.ignoreNextTaskSync = false;
+          return;
+        }
+        firstTaskSync = false;
         lsSet(TK, remote);
-        // Only patch existing DOM cards — do NOT call renderTasks() here
-        // to avoid destroying the focused element mid-keystroke.
+        // Patch individual DOM fields without rebuilding
         Object.values(remote).forEach(t => {
           const ti = document.getElementById('tt-'+t.id);
           if (ti && document.activeElement !== ti) ti.value = t.title || '';
@@ -1098,12 +1139,19 @@ try {
         buildGrid();
       });
 
-      // Notes listener — patch DOM fields, never re-render while typing
+      // Notes listener — skip own echoes, patch only non-focused fields
       if (notesCb) off(ref(db, `users/${uid()}/notes`), 'value', notesCb);
+      let firstNoteSync = true;
       notesCb = onValue(ref(db, `users/${uid()}/notes`), snap => {
         const remote = snap.val() || {};
+        // Skip the echo of our own write — but always process the first sync (initial load)
+        if (!firstNoteSync && window.FB.ignoreNextNoteSync) {
+          window.FB.ignoreNextNoteSync = false;
+          return;
+        }
+        firstNoteSync = false;
         lsSet(NK, remote);
-        // Patch existing note cards without rebuilding
+        // Patch individual DOM fields without rebuilding
         Object.values(remote).forEach(n => {
           const ti = document.getElementById('nt-'+n.id);
           if (ti && document.activeElement !== ti) ti.value = n.title || '';
