@@ -229,8 +229,8 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   background:transparent;border:none;border-top:1px dashed var(--gp);outline:none;
   padding:5px 0 0;margin-top:5px;resize:none;min-height:28px;overflow:hidden}
 .task-ni::placeholder{color:rgba(139,105,20,0.32)}
-.task-acts{display:flex;align-items:center;gap:4px;flex-shrink:0}
-.bni{background:transparent;border:none;cursor:pointer;padding:3px;border-radius:5px;font-size:13px}
+.task-acts{display:flex;align-items:flex-start;gap:4px;flex-shrink:0;padding-top:2px}
+.bni{background:transparent;border:none;cursor:pointer;padding:6px;border-radius:5px;font-size:14px;min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
 .bni:hover{background:var(--gc)}
 .tbadge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px}
 .bov{background:#FFE0E0;color:var(--ot)}
@@ -275,7 +275,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .note-bi::placeholder{color:rgba(139,105,20,0.28);font-style:italic}
 .note-ft{display:flex;align-items:center;justify-content:space-between;font-size:10px;
   color:var(--inkl);flex-wrap:wrap;gap:4px}
-.note-add{background:transparent;border:2px dashed var(--gp);border-radius:12px;padding:13px 15px;
+.note-add{background:transparent;border:2px dashed var(--gp);border-radius:12px;padding:13px 15px;overflow:hidden;
   min-height:155px;display:flex;align-items:center;justify-content:center;cursor:pointer;
   transition:all .15s;color:var(--gm);font-size:13px;font-weight:600;gap:7px;
   font-family:DM Sans,sans-serif}
@@ -302,14 +302,6 @@ footer strong{color:rgba(255,253,245,0.85)}
 ::-webkit-scrollbar-thumb{background:var(--gm);border-radius:3px}
 
 @media(max-width:700px){
-  /* Show mobile day navigation, hide desktop table */
-  .day-nav{display:flex!important}
-  .day-dots{display:flex!important}
-  .grid-wrap{padding:10px 10px 30px}
-  /* Hide the full 7-col desktop grid */
-  #schedDesktop{display:none}
-  /* Show the mobile single-day view */
-  #schedMobileWrap{display:block!important}
   .tab-btn{padding:11px 12px;font-size:12px}
   .ctrl-bar{gap:5px}
   .wk-inp{width:104px;font-size:12px}
@@ -317,10 +309,11 @@ footer strong{color:rgba(255,253,245,0.85)}
   .btn-clr{display:none}
   .notes-grid{grid-template-columns:1fr}
   .sw{padding:12px}
-}
-@media(min-width:701px){
-  #schedMobileWrap{display:none!important}
-  #schedDesktop{display:table!important}
+  .grid-wrap{padding:10px 12px 30px}
+  .sched-mobile{width:100%;border-radius:10px;overflow:hidden}
+  #schedMobileWrap{border-radius:10px;overflow:hidden;box-shadow:0 4px 20px var(--sg)}
+  .sched-mobile thead th:last-child{border-radius:0 10px 0 0}
+  .sched-mobile .sc:last-child{border-right:none}
 }
 </style>
 </head>
@@ -526,7 +519,7 @@ document.querySelectorAll('.tab-btn').forEach(function(btn){
     currentTab=name;
     if(name==='tasks')renderTasks();
     if(name==='notes')renderNotes();
-    if(name==='planner')buildGrid();
+    if(name==='planner'){buildGrid();applyPlannerLayout();}
   });
 });
 
@@ -1087,7 +1080,7 @@ function renderTasks(){
     var dateVal=toInputDate(t.date);
 
     card.innerHTML=
-      '<div style="height:3px;background:'+(pc[t.priority]||pc.medium)+';margin:-13px -15px 9px;border-radius:10px 10px 0 0;"></div>'+
+      '<div style="height:5px;background:'+(pc[t.priority]||pc.medium)+';border-radius:10px 10px 0 0;margin:-13px -14px 12px;"></div>'+
       '<div class="task-top">'+
         '<input type="checkbox" class="task-chk"'+(t.done?' checked':'')+'>'+
         '<div class="task-bd'+(t.done?' task-done':'')+'">'+
@@ -1364,7 +1357,7 @@ function renderNotes(){
 
     // Strip
     var strip=document.createElement('div');
-    strip.style.cssText='height:3px;background:'+(note.color||NOTE_COLORS[0])+';margin:-13px -15px 9px;border-radius:10px 10px 0 0;';
+    strip.style.cssText='height:5px;background:'+(note.color||NOTE_COLORS[0])+';border-radius:10px 10px 0 0;margin:-13px -15px 12px;';
     card.appendChild(strip);
 
     // Header row
@@ -1449,6 +1442,19 @@ var currentDayIdx=0;
 
 function isMobile(){return window.innerWidth<=700;}
 
+function applyPlannerLayout(){
+  var mobile=isMobile();
+  var desktop=document.getElementById('schedDesktop');
+  var mobileWrap=document.getElementById('schedMobileWrap');
+  var dayNav=document.getElementById('dayNav');
+  var dayDots=document.getElementById('dayDots');
+  if(desktop)   desktop.style.display   = mobile ? 'none'  : '';
+  if(mobileWrap)mobileWrap.style.display= mobile ? 'block' : 'none';
+  if(dayNav)    dayNav.style.display    = mobile ? 'flex'  : 'none';
+  if(dayDots)   dayDots.style.display   = mobile ? 'flex'  : 'none';
+  if(mobile) buildMobileDay();
+}
+
 function buildDayDots(){
   var dots=document.getElementById('dayDots');if(!dots)return;
   dots.innerHTML='';
@@ -1496,7 +1502,7 @@ function buildMobileDay(){
     if(slot.half)tr.classList.add('hr');
     var tc=document.createElement('td');
     tc.className='tc'+(slot.half?' half':'');
-    var ov=isOverdue(colDate,slot);
+    var ov=isSlotOverdue(colDate,slot);
     if(ov)tc.classList.add('ovt');
     tc.textContent=slot.label;
     var td=document.createElement('td');
@@ -1546,7 +1552,7 @@ document.getElementById('nextDay').addEventListener('click',function(){
   },{passive:true});
 })();
 
-window.addEventListener('resize',function(){if(isMobile())buildMobileDay();});
+window.addEventListener('resize',function(){applyPlannerLayout();});
 
 // Wrap setWeek to sync mobile view + set today's day
 var _origSetWeek=setWeek;
@@ -1559,7 +1565,7 @@ setWeek=function(d){
     if(dc.getTime()===today.getTime()){currentDayIdx=i;found=true;}
   });
   if(!found)currentDayIdx=0;
-  if(isMobile())setTimeout(buildMobileDay,20);
+  setTimeout(applyPlannerLayout,20);
 };
 
 // ── Init ─────────────────────────────────────────────────────────────────────
@@ -1567,6 +1573,7 @@ document.getElementById('dismissWarning').addEventListener('click',function(){
   document.getElementById('configWarning').style.display='none';
 });
 setWeek(new Date());
+applyPlannerLayout();
 renderTasks();
 renderNotes();
 setInterval(markOverdue,60000);
