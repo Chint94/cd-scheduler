@@ -1769,12 +1769,18 @@ function taskToGcalEvent(t){
   };
 }
 
-// Sync all pending+today tasks to Google Calendar
+// ── Local cache of gcal event IDs so we don't re-list on every sync ──────────
+var GCAL_CACHE_KEY = 'cds_gcal_cache_v1';
+function gcalCacheGet(){ try{return JSON.parse(localStorage.getItem(GCAL_CACHE_KEY)||'{}');}catch(e){return{};} }
+function gcalCacheSet(obj){ try{localStorage.setItem(GCAL_CACHE_KEY,JSON.stringify(obj));}catch(e){} }
+
+// Sync all pending/today/overdue tasks — one task at a time with delay to avoid quota burst
 function gcalSyncAllTasks(){
   if(!gapiReady){gcalShowStatus('Calendar API loading, try again in a moment...','orange');return;}
   var tasks=lsGet(TK);
   var toSync=Object.values(tasks).filter(function(t){
-    return t.date && !t.done && (taskStatus(t)==='today'||taskStatus(t)==='pending'||taskStatus(t)==='overdue');
+    return t.date && !t.done &&
+      (taskStatus(t)==='today'||taskStatus(t)==='pending'||taskStatus(t)==='overdue');
   });
   if(toSync.length===0){gcalShowStatus('No pending tasks to sync.');return;}
 
@@ -1782,39 +1788,77 @@ function gcalSyncAllTasks(){
   if(btn)btn.classList.add('syncing');
   gcalShowStatus('Syncing '+toSync.length+' tasks...');
 
-  // First fetch existing CD Scheduler events to avoid duplicates
-  gapi.client.calendar.events.list({
-    calendarId:'primary',
-    privateExtendedProperty:'cdScheduler=true',
-    maxResults:250,
-    singleEvents:true
-  }).then(function(resp){
-    var existing={};
-    (resp.result.items||[]).forEach(function(ev){
-      if(ev.extendedProperties&&ev.extendedProperties.private&&ev.extendedProperties.private.cdTaskId){
-        existing[ev.extendedProperties.private.cdTaskId]=ev.id;
-      }
-    });
-    // Create or update each task
-    var promises=toSync.map(function(t){
-      var event=taskToGcalEvent(t);
-      if(!event)return Promise.resolve();
-      if(existing[t.id]){
-        // Update existing event
-        return gapi.client.calendar.events.update({calendarId:'primary',eventId:existing[t.id],resource:event});
+  var cache=gcalCacheGet();
+  var done=0;
+  var errors=0;
+
+  // Send tasks one at a time with 300ms gap between each — prevents quota burst
+  function syncNext(idx){
+    if(idx>=toSync.length){
+      if(btn)btn.classList.remove('syncing');
+      if(errors===0){
+        gcalShowStatus('✅ '+done+' tasks synced to Google Calendar!','var(--gd)');
       } else {
-        // Create new event
-        return gapi.client.calendar.events.insert({calendarId:'primary',resource:event});
+        gcalShowStatus('⚠ '+done+' synced, '+errors+' failed. Try again shortly.','orange');
       }
+      return;
+    }
+    var t=toSync[idx];
+    var event=taskToGcalEvent(t);
+    if(!event){ syncNext(idx+1); return; }
+
+    gcalShowStatus('Syncing task '+(idx+1)+' of '+toSync.length+'...');
+
+    var req;
+    if(cache[t.id]){
+      // We have a cached event ID — update it
+      req=gapi.client.calendar.events.patch({
+        calendarId:'primary',
+        eventId:cache[t.id],
+        resource:{summary:event.summary,description:event.description,start:event.start,end:event.end}
+      });
+    } else {
+      // New event — insert it
+      req=gapi.client.calendar.events.insert({
+        calendarId:'primary',
+        resource:event
+      });
+    }
+
+    req.then(function(resp){
+      // Cache the event ID so next sync updates instead of inserting
+      if(resp.result && resp.result.id){
+        cache[t.id]=resp.result.id;
+        gcalCacheSet(cache);
+      }
+      done++;
+      // 350ms delay between requests — stays well within 10 req/sec quota
+      setTimeout(function(){syncNext(idx+1);},350);
+    }).catch(function(err){
+      var code=err.result&&err.result.error?err.result.error.code:0;
+      var reason=err.result&&err.result.error&&err.result.error.errors?
+        err.result.error.errors[0].reason:'unknown';
+      if(code===404){
+        // Cached event was deleted from Calendar — remove cache and retry as insert
+        delete cache[t.id];
+        gcalCacheSet(cache);
+        setTimeout(function(){syncNext(idx);},500); // retry this task
+        return;
+      }
+      if(code===403||code===429){
+        // Rate limited — wait 2 seconds then retry
+        gcalShowStatus('Rate limited, waiting...','orange');
+        setTimeout(function(){syncNext(idx);},2000);
+        return;
+      }
+      console.warn('gcal sync error on task',t.id,err);
+      errors++;
+      setTimeout(function(){syncNext(idx+1);},500);
     });
-    return Promise.all(promises);
-  }).then(function(){
-    if(btn)btn.classList.remove('syncing');
-    gcalShowStatus('✅ '+toSync.length+' tasks synced to Google Calendar!','var(--gd)');
-  }).catch(function(err){
-    if(btn)btn.classList.remove('syncing');
-    gcalShowStatus('Sync error: '+(err.result&&err.result.error?err.result.error.message:err.message||'Unknown error'),'red');
-  });
+  }
+
+  // Start syncing — small initial delay to let gapi settle
+  setTimeout(function(){syncNext(0);},200);
 }
 
 // ── Export to .ics (always available, no API key needed) ─────────────────────
