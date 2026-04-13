@@ -228,6 +228,20 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .task-ti::placeholder{color:rgba(139,105,20,0.38);font-weight:400}
 .task-done .task-ti{text-decoration:line-through;color:var(--inkl)}
 .task-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.task-time-block{display:flex;flex-direction:column;gap:5px;margin-bottom:5px}
+.task-time-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.task-time-lbl{font-size:10px;font-weight:600;color:var(--inkl);text-transform:uppercase;
+  letter-spacing:.5px;min-width:38px;flex-shrink:0}
+.task-end-toggle{display:flex;align-items:center;gap:5px;margin-top:2px;cursor:pointer;
+  user-select:none;width:fit-content}
+.task-end-toggle input[type=checkbox]{width:13px;height:13px;accent-color:var(--gm);cursor:pointer}
+.task-end-toggle span{font-size:11px;color:var(--inkl);font-weight:500}
+.task-end-row{display:none;flex-wrap:wrap;gap:6px;align-items:center;margin-top:3px;
+  padding:6px 8px;background:rgba(196,148,42,0.06);border-radius:6px;
+  border:1px dashed var(--gp)}
+.task-end-row.show{display:flex}
+.task-duration{font-size:10px;color:var(--inkl);font-style:italic;width:100%;
+  margin-top:2px;padding-left:2px}
 .task-di,.task-tmi{font-family:DM Sans,sans-serif;font-size:12px;color:var(--inkm);
   background:var(--gc);border:1px solid var(--gp);border-radius:6px;padding:3px 7px;outline:none;cursor:pointer}
 .task-di:focus,.task-tmi:focus{border-color:var(--gm)}
@@ -240,6 +254,40 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .task-acts{display:flex;align-items:flex-start;gap:4px;flex-shrink:0;padding-top:2px}
 .bni{background:transparent;border:none;cursor:pointer;padding:6px;border-radius:5px;font-size:14px;min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
 .bni:hover{background:var(--gc)}
+.bni.edit-btn{color:var(--gm);font-size:13px}
+.bni.edit-btn:hover{background:rgba(196,148,42,0.15)}
+/* Edit modal overlay — full screen centred */
+.edit-modal{position:fixed;z-index:9200;background:var(--white);
+  border:2px solid var(--gm);border-radius:14px;
+  box-shadow:0 8px 40px rgba(139,105,20,0.3);
+  padding:16px 18px;width:min(380px,94vw);max-height:88vh;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  top:50%;left:50%;transform:translate(-50%,-50%)}
+.edit-modal h4{font-family:'Playfair Display',serif;font-size:15px;color:var(--gd);
+  margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.edit-modal h4 button{background:transparent;border:none;cursor:pointer;
+  font-size:18px;color:var(--inkl);padding:0;line-height:1}
+.edit-scope{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap}
+.edit-scope-btn{flex:1;padding:7px 10px;border-radius:7px;border:1.5px solid var(--gp);
+  background:var(--gc);font-family:DM Sans,sans-serif;font-size:12px;font-weight:600;
+  color:var(--inkm);cursor:pointer;transition:all .15s;min-height:36px;text-align:center}
+.edit-scope-btn.active{background:var(--gm);border-color:var(--gm);color:white}
+.edit-field{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.edit-lbl{font-size:10px;font-weight:600;color:var(--inkl);
+  text-transform:uppercase;letter-spacing:.7px}
+.edit-inp{font-family:DM Sans,sans-serif;font-size:13px;color:var(--ink);
+  background:var(--gc);border:1px solid var(--gp);border-radius:7px;
+  padding:6px 9px;outline:none;width:100%}
+.edit-inp:focus{border-color:var(--gm)}
+.edit-row{display:flex;gap:8px;flex-wrap:wrap}
+.edit-row .edit-inp{flex:1;min-width:100px}
+.edit-end-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;
+  user-select:none;font-size:12px;color:var(--inkl);font-weight:500;margin-bottom:8px}
+.edit-end-section{background:rgba(196,148,42,0.06);border:1px dashed var(--gp);
+  border-radius:7px;padding:9px 11px;margin-bottom:10px;display:none}
+.edit-end-section.show{display:block}
+.edit-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:4px;flex-wrap:wrap}
+.edit-acts .pop-btn{min-height:36px;font-size:12px}
 .tbadge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px}
 .bov{background:#FFE0E0;color:var(--ot)}
 .btd{background:rgba(232,184,75,0.2);color:var(--gd)}
@@ -975,110 +1023,244 @@ function closePopover(){
   if(ov)ov.remove();
 }
 
+// Planner pill click → quick popover (lightweight)
 function openTaskPopover(taskId,anchor){
+  openTaskEditModal(taskId);
+}
+
+// ── Full task edit modal ───────────────────────────────────────────────────────
+// editScope: 'this' = this instance only, 'all' = whole recurring series
+function openTaskEditModal(taskId, editScope){
   closePopover();
   var tasks=lsGet(TK);
   var t=tasks[taskId];if(!t)return;
+  editScope=editScope||(t.recurrence?null:'this'); // null = ask user for recurring
 
   var overlay=document.createElement('div');
   overlay.className='pop-overlay';overlay.id='pop-overlay';
   overlay.addEventListener('click',closePopover);
   document.body.appendChild(overlay);
 
-  var pop=document.createElement('div');
-  pop.className='task-popover';
+  var modal=document.createElement('div');
+  modal.className='edit-modal';
+  activePopover=modal;
 
   // Header
   var h4=document.createElement('h4');
-  h4.textContent='Edit Task ';
-  var xBtn=document.createElement('button');
-  xBtn.textContent='✕';xBtn.addEventListener('click',closePopover);
-  h4.appendChild(xBtn);pop.appendChild(h4);
+  var isRecurring=!!t.recurrenceGroupId;
+  h4.innerHTML=(isRecurring?'Edit Recurring Task':'Edit Task')+' ';
+  var xBtn=document.createElement('button');xBtn.textContent='✕';
+  xBtn.addEventListener('click',closePopover);h4.appendChild(xBtn);
+  modal.appendChild(h4);
+
+  // ── Scope selector for recurring tasks ────────────────────────────────
+  var scope='this'; // default
+  if(isRecurring&&!editScope){
+    var scopeDiv=document.createElement('div');scopeDiv.className='edit-scope';
+    var scopeNote=document.createElement('div');
+    scopeNote.style.cssText='font-size:11px;color:var(--inkl);margin-bottom:7px;width:100%';
+    scopeNote.textContent='What do you want to edit?';
+    scopeDiv.appendChild(scopeNote);
+    var btnThis=document.createElement('button');btnThis.className='edit-scope-btn active';
+    btnThis.textContent='This instance only';
+    var btnAll=document.createElement('button');btnAll.className='edit-scope-btn';
+    btnAll.textContent='All instances in series';
+    btnThis.addEventListener('click',function(){
+      scope='this';
+      btnThis.classList.add('active');btnAll.classList.remove('active');
+    });
+    btnAll.addEventListener('click',function(){
+      scope='all';
+      btnAll.classList.add('active');btnThis.classList.remove('active');
+    });
+    scopeDiv.appendChild(btnThis);scopeDiv.appendChild(btnAll);
+    modal.appendChild(scopeDiv);
+  } else {
+    scope=editScope||'this';
+  }
+
+  // ── Fields ────────────────────────────────────────────────────────────
+  var inp={}; // collect all inputs
 
   // Title
-  var tWrap=document.createElement('div');tWrap.className='pop-field';
-  var tLbl=document.createElement('div');tLbl.className='pop-lbl';tLbl.textContent='Title';
-  var tInp=document.createElement('input');tInp.className='pop-inp';tInp.type='text';
-  tInp.value=t.title||'';tInp.placeholder='Task title...';
-  tWrap.appendChild(tLbl);tWrap.appendChild(tInp);pop.appendChild(tWrap);
+  var titleF=document.createElement('div');titleF.className='edit-field';
+  var titleL=document.createElement('div');titleL.className='edit-lbl';titleL.textContent='Title';
+  inp.title=document.createElement('input');inp.title.className='edit-inp';
+  inp.title.type='text';inp.title.value=t.title||'';inp.title.placeholder='Task title...';
+  titleF.appendChild(titleL);titleF.appendChild(inp.title);modal.appendChild(titleF);
 
-  // Date + time
-  var metaRow=document.createElement('div');metaRow.className='pop-meta';
-  var dInp=document.createElement('input');dInp.type='date';dInp.value=toInputDate(t.date);
-  dInp.style.cssText='font-family:DM Sans,sans-serif;font-size:12px;background:#FBF0D0;border:1px solid #F5D98B;border-radius:6px;padding:4px 7px;outline:none;color:#3D2C0A';
-  var tmInp=document.createElement('input');tmInp.type='time';tmInp.value=t.time||'';
-  tmInp.style.cssText=dInp.style.cssText;
-  metaRow.appendChild(dInp);metaRow.appendChild(tmInp);pop.appendChild(metaRow);
+  // Start date + time
+  var startF=document.createElement('div');startF.className='edit-field';
+  var startL=document.createElement('div');startL.className='edit-lbl';startL.textContent='Start';
+  var startRow=document.createElement('div');startRow.className='edit-row';
+  inp.date=document.createElement('input');inp.date.className='edit-inp';
+  inp.date.type='date';inp.date.value=toInputDate(t.date);
+  inp.time=document.createElement('input');inp.time.className='edit-inp';
+  inp.time.type='time';inp.time.value=t.time||'';
+  startRow.appendChild(inp.date);startRow.appendChild(inp.time);
+  startF.appendChild(startL);startF.appendChild(startRow);modal.appendChild(startF);
 
-  // Done + priority
-  var ctrlRow=document.createElement('div');ctrlRow.className='pop-row';
-  var doneLbl=document.createElement('label');doneLbl.className='pop-chk-lbl';
-  var doneChk=document.createElement('input');doneChk.type='checkbox';doneChk.className='pop-chk';doneChk.checked=!!t.done;
-  doneLbl.appendChild(doneChk);doneLbl.append(' Mark as done');
-  var priSel=document.createElement('select');priSel.className='pop-sel';
+  // End date/time toggle
+  var endToggle=document.createElement('label');endToggle.className='edit-end-toggle';
+  var endChkEl=document.createElement('input');endChkEl.type='checkbox';
+  endChkEl.checked=!!(t.endDate||t.endTime);
+  endToggle.appendChild(endChkEl);
+  endToggle.appendChild(document.createTextNode(' Add end date / time'));
+  modal.appendChild(endToggle);
+
+  var endSection=document.createElement('div');
+  endSection.className='edit-end-section'+(endChkEl.checked?' show':'');
+  var endL=document.createElement('div');endL.className='edit-lbl';endL.textContent='End';
+  var endRow=document.createElement('div');endRow.className='edit-row';
+  inp.endDate=document.createElement('input');inp.endDate.className='edit-inp';
+  inp.endDate.type='date';inp.endDate.value=t.endDate?toInputDate(t.endDate):'';
+  inp.endTime=document.createElement('input');inp.endTime.className='edit-inp';
+  inp.endTime.type='time';inp.endTime.value=t.endTime||'';
+  endRow.appendChild(inp.endDate);endRow.appendChild(inp.endTime);
+  endSection.appendChild(endL);endSection.appendChild(endRow);
+  // Duration display
+  var durEl=document.createElement('div');
+  durEl.style.cssText='font-size:11px;color:var(--inkl);font-style:italic;margin-top:5px;';
+  endSection.appendChild(durEl);
+  modal.appendChild(endSection);
+
+  endChkEl.addEventListener('change',function(){
+    endSection.classList.toggle('show',endChkEl.checked);
+    if(!endChkEl.checked){inp.endDate.value='';inp.endTime.value='';durEl.textContent='';}
+  });
+  function updateDur(){
+    if(!inp.date.value||!inp.endDate.value){durEl.textContent='';return;}
+    var sd=new Date(inp.date.value+(inp.time.value?'T'+inp.time.value:'T00:00'));
+    var ed=new Date(inp.endDate.value+(inp.endTime.value?'T'+inp.endTime.value:'T23:59'));
+    if(ed<=sd){durEl.textContent='';return;}
+    var diff=ed-sd,mins=Math.round(diff/60000),hrs=Math.floor(mins/60),days=Math.floor(hrs/24);
+    var parts=[];
+    if(days>0)parts.push(days+'d');
+    var rh=hrs%24;var rm=mins%60;
+    if(rh>0)parts.push(rh+'h');
+    if(rm>0&&days===0)parts.push(rm+'m');
+    durEl.textContent=parts.length?'Duration: '+parts.join(' '):'';
+  }
+  [inp.date,inp.time,inp.endDate,inp.endTime].forEach(function(el){
+    el.addEventListener('change',updateDur);
+  });
+  setTimeout(updateDur,0);
+
+  // Priority
+  var priF=document.createElement('div');priF.className='edit-field';
+  var priL=document.createElement('div');priL.className='edit-lbl';priL.textContent='Priority';
+  inp.priority=document.createElement('select');inp.priority.className='edit-inp';
   [['high','🔴 High'],['medium','🟡 Medium'],['low','🟢 Low']].forEach(function(pair){
     var o=document.createElement('option');o.value=pair[0];o.textContent=pair[1];
-    if(t.priority===pair[0])o.selected=true;priSel.appendChild(o);
+    if(t.priority===pair[0])o.selected=true;inp.priority.appendChild(o);
   });
-  ctrlRow.appendChild(doneLbl);ctrlRow.appendChild(priSel);pop.appendChild(ctrlRow);
+  priF.appendChild(priL);priF.appendChild(inp.priority);modal.appendChild(priF);
 
-  // Buttons
-  var actRow=document.createElement('div');actRow.className='pop-acts';
-  var delBtn=document.createElement('button');delBtn.className='pop-btn dan';delBtn.textContent='🗑 Delete';
-  var saveBtn=document.createElement('button');saveBtn.className='pop-btn pri';saveBtn.textContent='Save';
+  // Notes
+  var notesF=document.createElement('div');notesF.className='edit-field';
+  var notesL=document.createElement('div');notesL.className='edit-lbl';notesL.textContent='Notes';
+  inp.notes=document.createElement('textarea');inp.notes.className='edit-inp';
+  inp.notes.rows=3;inp.notes.value=t.notes||'';
+  inp.notes.placeholder='Add notes...';inp.notes.style.resize='vertical';
+  notesF.appendChild(notesL);notesF.appendChild(inp.notes);modal.appendChild(notesF);
 
+  // Done
+  var doneRow=document.createElement('div');doneRow.className='pop-row';doneRow.style.marginBottom='10px';
+  var doneLbl=document.createElement('label');doneLbl.className='pop-chk-lbl';
+  var doneChk=document.createElement('input');doneChk.type='checkbox';
+  doneChk.className='pop-chk';doneChk.checked=!!t.done;
+  doneLbl.appendChild(doneChk);doneLbl.append(' Mark as done');
+  doneRow.appendChild(doneLbl);modal.appendChild(doneRow);
+
+  // ── Action buttons ────────────────────────────────────────────────────
+  var actRow=document.createElement('div');actRow.className='edit-acts';
+
+  var delBtn=document.createElement('button');delBtn.className='pop-btn dan';
+  delBtn.textContent=isRecurring?'🗑 Delete occurrence':'🗑 Delete';
   delBtn.addEventListener('click',function(){
-    if(!confirm('Delete this task?'))return;
+    var msg=isRecurring?'Delete this occurrence only?':'Delete this task?';
+    if(!confirm(msg))return;
+    if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(taskId);
     var tasks2=lsGet(TK);delete tasks2[taskId];lsSet(TK,tasks2);
     FB.deleteTask(taskId);
     closePopover();buildGrid();
     if(currentTab==='tasks')renderTasks();
   });
+
+  var saveBtn=document.createElement('button');saveBtn.className='pop-btn pri';
+  saveBtn.textContent='Save';
   saveBtn.addEventListener('click',function(){
     var tasks2=lsGet(TK);if(!tasks2[taskId])return;
-    tasks2[taskId].title=tInp.value||'';
-    tasks2[taskId].date=fromInputDate(dInp.value);
-    tasks2[taskId].time=tmInp.value||'';
-    tasks2[taskId].done=doneChk.checked;
-    tasks2[taskId].priority=priSel.value;
+    var newTitle=inp.title.value||'';
+    var newDate=fromInputDate(inp.date.value)||t.date;
+    var newTime=inp.time.value||'';
+    var newEndDate=endChkEl.checked?fromInputDate(inp.endDate.value)||'':'';
+    var newEndTime=endChkEl.checked?inp.endTime.value||'':'';
+    var newPriority=inp.priority.value;
+    var newNotes=inp.notes.value||'';
+    var newDone=doneChk.checked;
+
+    var effectiveScope=scope;
+    // Determine if editing all series or this instance
+    if(isRecurring&&effectiveScope==='all'){
+      // Apply to all non-done instances in the series
+      var groupId=t.recurrenceGroupId;
+      Object.values(tasks2).forEach(function(task){
+        if(task.recurrenceGroupId!==groupId) return;
+        task.title=newTitle;
+        task.time=newTime;
+        task.endDate=newEndDate;
+        task.endTime=newEndTime;
+        task.priority=newPriority;
+        task.notes=newNotes;
+        // Don't change done status for all — only current
+        FB.saveTask(task.id,task);
+      });
+      // Update done on this instance only
+      tasks2[taskId].done=newDone;
+      tasks2[taskId].date=newDate; // date only changes for this instance
+      FB.saveTask(taskId,tasks2[taskId]);
+    } else {
+      // Edit this instance only
+      tasks2[taskId].title=newTitle;
+      tasks2[taskId].date=newDate;
+      tasks2[taskId].time=newTime;
+      tasks2[taskId].endDate=newEndDate;
+      tasks2[taskId].endTime=newEndTime;
+      tasks2[taskId].priority=newPriority;
+      tasks2[taskId].notes=newNotes;
+      tasks2[taskId].done=newDone;
+      FB.saveTask(taskId,tasks2[taskId]);
+    }
+    FB.ignoreNextTaskSync=true;
     lsSet(TK,tasks2);
-    FB.saveTask(taskId,tasks2[taskId]);
     closePopover();buildGrid();
     if(currentTab==='tasks')renderTasks();
   });
-  actRow.appendChild(delBtn);actRow.appendChild(saveBtn);pop.appendChild(actRow);
 
-  // Go to tasks
-  var gotoBtn=document.createElement('button');gotoBtn.className='pop-goto';
-  gotoBtn.textContent='Open in Tasks tab →';
-  gotoBtn.addEventListener('click',function(){
-    closePopover();
-    document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active')});
-    document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
-    document.querySelector('[data-tab="tasks"]').classList.add('active');
-    document.getElementById('tab-tasks').classList.add('active');
-    currentTab='tasks';
-    renderTasks();
-    setTimeout(function(){
-      var el=document.getElementById('tt-'+taskId);
-      if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus();}
-    },100);
-  });
-  pop.appendChild(gotoBtn);
+  actRow.appendChild(delBtn);actRow.appendChild(saveBtn);modal.appendChild(actRow);
 
-  document.body.appendChild(pop);
-  activePopover=pop;
+  // Open in tasks tab link
+  if(currentTab!=='tasks'){
+    var gotoBtn=document.createElement('button');gotoBtn.className='pop-goto';
+    gotoBtn.textContent='Open in Tasks tab →';
+    gotoBtn.addEventListener('click',function(){
+      closePopover();
+      document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active')});
+      document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
+      document.querySelector('[data-tab="tasks"]').classList.add('active');
+      document.getElementById('tab-tasks').classList.add('active');
+      currentTab='tasks';renderTasks();
+      setTimeout(function(){
+        var el=document.getElementById('tt-'+taskId);
+        if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus();}
+      },100);
+    });
+    modal.appendChild(gotoBtn);
+  }
 
-  // Position
-  var rect=anchor.getBoundingClientRect();
-  var pw=310,ph=280;
-  var left=Math.min(rect.left,window.innerWidth-pw-10);
-  var top=rect.bottom+6;
-  if(top+ph>window.innerHeight-10)top=Math.max(10,rect.top-ph-6);
-  pop.style.left=Math.max(6,left)+'px';
-  pop.style.top=top+'px';
-
-  setTimeout(function(){tInp.focus();},30);
+  document.body.appendChild(modal);
+  setTimeout(function(){inp.title.focus();inp.title.select();},30);
 }
 
 // ════════════════════════════════════════════════════════
@@ -1192,6 +1374,7 @@ function generateRecurringInstances(base, count){
         var id=genId();
         instances.push({
           id:id,title:base.title,date:cDateStr,time:base.time||'',
+          endDate:base.taskEndDate||'',endTime:base.taskEndTime||'',
           notes:base.notes||'',done:false,priority:base.priority||'medium',
           recurrence:'custom-weekly',
           recurrenceGroupId:base.recurrenceGroupId,
@@ -1221,6 +1404,8 @@ function generateRecurringInstances(base, count){
       title:base.title,
       date:currentDate,
       time:base.time||'',
+      endDate:base.taskEndDate||'',
+      endTime:base.taskEndTime||'',
       notes:base.notes||'',
       done:false,
       priority:base.priority||'medium',
@@ -1252,7 +1437,7 @@ function taskStatus(t){
 
 document.getElementById('addTaskBtn').addEventListener('click',function(){
   var tasks=lsGet(TK);var id=genId();
-  tasks[id]={id:id,title:'',date:'',time:'',notes:'',done:false,priority:'medium',created:Date.now()};
+  tasks[id]={id:id,title:'',date:'',time:'',endDate:'',endTime:'',notes:'',done:false,priority:'medium',created:Date.now()};
   lsSet(TK,tasks);
   FB.saveTask(id,tasks[id]);
   renderTasks();
@@ -1318,6 +1503,38 @@ function openRecurringSetupModal(existingGroupId){
   tmInp.value=baseTask?baseTask.time:'09:00';
   tmWrap.appendChild(tmLbl);tmWrap.appendChild(tmInp);
   dtRow.appendChild(dWrap);dtRow.appendChild(tmWrap);modal.appendChild(dtRow);
+
+  // End date/time toggle row for recurring modal
+  var endToggleWrap=document.createElement('div');
+  endToggleWrap.style.cssText='margin-bottom:8px;';
+  var endToggleLbl=document.createElement('label');
+  endToggleLbl.className='task-end-toggle';
+  var endToggleChk=document.createElement('input');endToggleChk.type='checkbox';
+  endToggleChk.className='task-end-chk';
+  var curHasEnd=(baseTask&&(baseTask.endDate||baseTask.endTime));
+  endToggleChk.checked=!!curHasEnd;
+  var endToggleTxt=document.createElement('span');endToggleTxt.textContent='+ End date / time (timeblock)';
+  endToggleLbl.appendChild(endToggleChk);endToggleLbl.appendChild(endToggleTxt);
+  endToggleWrap.appendChild(endToggleLbl);
+
+  var recEndRow=document.createElement('div');
+  recEndRow.className='task-end-row'+(curHasEnd?' show':'');
+  recEndRow.style.cssText='gap:7px;margin-top:4px;padding:8px;background:rgba(196,148,42,0.06);border:1px dashed var(--gp);border-radius:6px;';
+  var reDLbl=document.createElement('span');reDLbl.className='task-time-lbl';reDLbl.textContent='End';
+  var reDInp=document.createElement('input');reDInp.type='date';
+  reDInp.style.cssText='font-family:DM Sans,sans-serif;font-size:12px;background:var(--gc);border:1px solid var(--gp);border-radius:6px;padding:4px 7px;outline:none;flex:1;';
+  reDInp.value=(baseTask&&baseTask.endDate)?toInputDate(baseTask.endDate):'';
+  var reTInp=document.createElement('input');reTInp.type='time';
+  reTInp.style.cssText=reDInp.style.cssText;
+  reTInp.value=(baseTask&&baseTask.endTime)||'';
+  recEndRow.appendChild(reDLbl);recEndRow.appendChild(reDInp);recEndRow.appendChild(reTInp);
+  endToggleWrap.appendChild(recEndRow);
+  modal.appendChild(endToggleWrap);
+
+  endToggleChk.addEventListener('change',function(){
+    recEndRow.classList.toggle('show',endToggleChk.checked);
+    if(!endToggleChk.checked){reDInp.value='';reTInp.value='';}
+  });
 
   // Recurrence type
   var rWrap=document.createElement('div');rWrap.className='pop-field';rWrap.style.marginBottom='8px';
@@ -1572,13 +1789,17 @@ function openRecurringSetupModal(existingGroupId){
       finalRecType='custom-weekly';
       finalWeekDays=selectedDays.slice().sort(function(a,b){return a-b;});
     }
+    var taskEndDate=fromInputDate(reDInp?reDInp.value:'')||'';
+    var taskEndTime=reTInp?reTInp.value:'';
     var base={
       title:title,date:startDate,time:time,notes:'',
       priority:priority,recurrence:finalRecType,recurrenceGroupId:groupId,
       endType:activeEndType,
       endCount:activeEndType==='count'?endCount:null,
       endDate:activeEndType==='date'?endDate:null,
-      weekDays:finalWeekDays
+      weekDays:finalWeekDays,
+      taskEndDate:taskEndDate,
+      taskEndTime:taskEndTime
     };
     var instances=generateRecurringInstances(base);
     instances.forEach(function(inst){tasks2[inst.id]=inst;FB.saveTask(inst.id,inst);});
@@ -1671,9 +1892,24 @@ function renderTasks(){
         '<input type="checkbox" class="task-chk"'+(t.done?' checked':'')+'>'+
         '<div class="task-bd'+(t.done?' task-done':'')+'">'+
           '<input id="tt-'+t.id+'" class="task-ti" type="text" value="'+((t.title||'').replace(/"/g,'&quot;'))+'" placeholder="Task title...">'+
-          '<div class="task-meta">'+
-            '<input type="date" class="task-di" value="'+dateVal+'">'+
-            '<input type="time" class="task-tmi" value="'+(t.time||'')+'">'+
+          '<div class="task-time-block">'+
+            '<div class="task-time-row">'+
+              '<span class="task-time-lbl">Start</span>'+
+              '<input type="date" class="task-di" value="'+dateVal+'">'+
+              '<input type="time" class="task-tmi" value="'+(t.time||'')+'">'+
+            '</div>'+
+            '<label class="task-end-toggle">'+
+              '<input type="checkbox" class="task-end-chk"'+(t.endDate||t.endTime?' checked':'')+'>'+
+              '<span>+ End date / time</span>'+
+            '</label>'+
+            '<div class="task-end-row'+(t.endDate||t.endTime?' show':'')+'">'+
+              '<span class="task-time-lbl">End</span>'+
+              '<input type="date" class="task-edi" value="'+(t.endDate?toInputDate(t.endDate):'')+'">'+
+              '<input type="time" class="task-etmi" value="'+(t.endTime||'')+'">'+
+              (t.endDate||t.endTime?'<span class="task-duration" id="dur-'+t.id+'"></span>':'<span class="task-duration" id="dur-'+t.id+'"></span>')+
+            '</div>'+
+          '</div>'+
+          '<div class="task-meta" style="margin-top:4px">'+
             badge+
             '<select class="task-sel">'+
               '<option value="high"'+(t.priority==='high'?' selected':'')+'>🔴 High</option>'+
@@ -1709,7 +1945,10 @@ function renderTasks(){
             :'')+
           '</div>'+
         '</div>'+
-        '<div class="task-acts"><button class="bni task-del" title="'+(t.recurrence?'Delete this occurrence':'Delete task')+'">🗑️</button></div>'+
+        '<div class="task-acts">'+
+        '<button class="bni edit-btn task-edit" title="Edit task">✏️</button>'+
+        '<button class="bni task-del" title="'+(t.recurrence?'Delete this occurrence':'Delete task')+'">🗑️</button>'+
+        '</div>'+
       '</div>';
 
     list.appendChild(card);
@@ -1770,6 +2009,71 @@ function renderTasks(){
     });
     sel.addEventListener('change',function(){saveField('priority',sel.value);});
 
+    // ── End date / time bindings ──────────────────────────────────────────
+    var edi  = card.querySelector('.task-edi');
+    var etmi = card.querySelector('.task-etmi');
+    var endChk  = card.querySelector('.task-end-chk');
+    var endRow  = card.querySelector('.task-end-row');
+    var durSpan = card.querySelector('.task-duration');
+
+    function calcDuration(){
+      if(!durSpan) return;
+      var sd=di.value, st=tmi.value, ed=edi?edi.value:'', et=etmi?etmi.value:'';
+      if(!sd||(sd===ed&&!et&&!st)){durSpan.textContent='';return;}
+      var startMs, endMs;
+      if(sd){
+        var sp=sd.split('-');
+        startMs=new Date(sp[0],sp[1]-1,sp[2],
+          st?parseInt(st.split(':')[0]):0,
+          st?parseInt(st.split(':')[1]):0).getTime();
+      }
+      if(ed){
+        var ep=ed.split('-');
+        endMs=new Date(ep[0],ep[1]-1,ep[2],
+          et?parseInt(et.split(':')[0]):23,
+          et?parseInt(et.split(':')[1]):59).getTime();
+      }
+      if(!startMs||!endMs||endMs<=startMs){durSpan.textContent='';return;}
+      var diff=endMs-startMs;
+      var mins=Math.round(diff/60000);
+      var hrs=Math.floor(mins/60);
+      var days=Math.floor(hrs/24);
+      var remHrs=hrs%24;
+      var remMins=mins%60;
+      var parts=[];
+      if(days>0) parts.push(days+'d');
+      if(remHrs>0) parts.push(remHrs+'h');
+      if(remMins>0&&days===0) parts.push(remMins+'m');
+      durSpan.textContent=parts.length?'Duration: '+parts.join(' '):'';
+    }
+
+    if(endChk){
+      endChk.addEventListener('change',function(){
+        if(endRow) endRow.classList.toggle('show', endChk.checked);
+        if(!endChk.checked){
+          saveField('endDate','');
+          saveField('endTime','');
+          if(edi) edi.value='';
+          if(etmi) etmi.value='';
+          if(durSpan) durSpan.textContent='';
+        }
+      });
+    }
+    if(edi){
+      edi.addEventListener('change',function(){
+        saveField('endDate', fromInputDate(edi.value));
+        calcDuration();
+      });
+    }
+    if(etmi){
+      etmi.addEventListener('change',function(){
+        saveField('endTime', etmi.value);
+        calcDuration();
+      });
+    }
+    // Calculate duration on render
+    setTimeout(calcDuration, 0);
+
     chk.addEventListener('change',function(){
       saveField('done',chk.checked);
       card.querySelector('.task-bd').className='task-bd'+(chk.checked?' task-done':'');
@@ -1781,16 +2085,23 @@ function renderTasks(){
     });
 
     del.addEventListener('click',function(){
-      // For recurring tasks, only delete THIS occurrence
       var msg=t.recurrence?'Delete this occurrence only? (Other occurrences remain)':'Delete this task?';
       if(!confirm(msg))return;
-      // Remove from Google Calendar if it was synced
       if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(t.id);
       var tasks2=lsGet(TK);delete tasks2[t.id];lsSet(TK,tasks2);
       FB.deleteTask(t.id);
       card.remove();
       buildGrid();
     });
+
+    // ── Edit button ───────────────────────────────────────────────────────
+    var editBtn=card.querySelector('.task-edit');
+    if(editBtn){
+      editBtn.addEventListener('click',function(e){
+        e.stopPropagation();
+        openTaskEditModal(t.id);
+      });
+    }
 
     // Frequency change handled by repeat-toggle section above
 
@@ -1885,13 +2196,36 @@ function renderTasks(){
       });
 
       tmi.addEventListener('blur',function(){
-        // On blur, propagate time to all instances in series
         var tasks2=lsGet(TK);
         Object.values(tasks2).forEach(function(task){
           if(task.recurrenceGroupId===t.recurrenceGroupId)task.time=tmi.value;
         });
+        lsSet(TK,tasks2);buildGrid();
+        FB.ignoreNextTaskSync=true;
+        Object.values(tasks2).filter(function(task){
+          return task.recurrenceGroupId===t.recurrenceGroupId;
+        }).forEach(function(task){FB.saveTask(task.id,task);});
+      });
+      // Propagate endTime/endDate to series on blur
+      if(etmi) etmi.addEventListener('blur',function(){
+        if(!t.recurrenceGroupId) return;
+        var tasks2=lsGet(TK);
+        Object.values(tasks2).forEach(function(task){
+          if(task.recurrenceGroupId===t.recurrenceGroupId) task.endTime=etmi.value;
+        });
         lsSet(TK,tasks2);
-        buildGrid();
+        FB.ignoreNextTaskSync=true;
+        Object.values(tasks2).filter(function(task){
+          return task.recurrenceGroupId===t.recurrenceGroupId;
+        }).forEach(function(task){FB.saveTask(task.id,task);});
+      });
+      if(edi) edi.addEventListener('blur',function(){
+        if(!t.recurrenceGroupId) return;
+        var tasks2=lsGet(TK);
+        Object.values(tasks2).forEach(function(task){
+          if(task.recurrenceGroupId===t.recurrenceGroupId) task.endDate=fromInputDate(edi.value);
+        });
+        lsSet(TK,tasks2);
         FB.ignoreNextTaskSync=true;
         Object.values(tasks2).filter(function(task){
           return task.recurrenceGroupId===t.recurrenceGroupId;
