@@ -299,28 +299,47 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .btn-dis{margin-top:12px;background:var(--gm);border:none;border-radius:6px;padding:7px 16px;
   color:white;font-weight:600;font-size:12px;cursor:pointer;font-family:DM Sans,sans-serif}
 
-/* ── Google Calendar sync ── */
-.gcal-bar{background:var(--gc);border:1px solid var(--gp);border-radius:10px;
-  padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;
-  flex-wrap:wrap;gap:8px}
-.gcal-bar-title{font-size:12px;font-weight:600;color:var(--gd);flex:1;min-width:120px}
+/* ── Google Calendar sync — collapsible dropdown ── */
+.gcal-wrap{margin-bottom:14px}
+.gcal-toggle{display:flex;align-items:center;gap:8px;padding:9px 14px;
+  background:var(--gc);border:1px solid var(--gp);border-radius:10px;
+  cursor:pointer;user-select:none;transition:border-color .15s;
+  -webkit-tap-highlight-color:transparent;width:100%}
+.gcal-toggle:hover{border-color:var(--gm)}
+.gcal-toggle.open{border-radius:10px 10px 0 0;border-bottom-color:transparent}
+.gcal-toggle-icon{font-size:15px;flex-shrink:0}
+.gcal-toggle-label{font-size:12px;font-weight:600;color:var(--gd);flex:1}
+.gcal-toggle-status{font-size:11px;color:var(--inkl);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.gcal-chevron{font-size:11px;color:var(--inkl);transition:transform .2s;flex-shrink:0}
+.gcal-chevron.open{transform:rotate(180deg)}
+.gcal-panel{background:var(--gc);border:1px solid var(--gp);border-top:none;
+  border-radius:0 0 10px 10px;padding:12px 14px;display:none;flex-direction:column;gap:9px}
+.gcal-panel.open{display:flex}
+.gcal-btns{display:flex;gap:8px;flex-wrap:wrap}
 .btn-gcal{display:flex;align-items:center;gap:6px;background:white;border:1.5px solid var(--gp);
-  border-radius:7px;padding:6px 12px;font-family:DM Sans,sans-serif;font-size:12px;
-  font-weight:600;color:var(--inkm);cursor:pointer;transition:all .15s;white-space:nowrap}
-.btn-gcal:hover{border-color:var(--gm);background:var(--gc)}
+  border-radius:7px;padding:8px 14px;font-family:DM Sans,sans-serif;font-size:12px;
+  font-weight:600;color:var(--inkm);cursor:pointer;transition:all .15s;white-space:nowrap;
+  min-height:38px;-webkit-tap-highlight-color:transparent}
+.btn-gcal:hover{border-color:var(--gm);background:white}
+.btn-gcal:active{background:var(--gc)}
 .btn-gcal svg{width:16px;height:16px;flex-shrink:0}
 .btn-gcal.syncing{opacity:.6;pointer-events:none}
-.gcal-status{font-size:11px;color:var(--inkl);width:100%;display:none}
+.gcal-status{font-size:12px;color:var(--inkl);line-height:1.5;
+  padding:7px 10px;background:rgba(255,255,255,0.6);border-radius:6px;
+  border:1px solid var(--gp);display:none}
 .gcal-status.show{display:block}
-.gcal-setup{font-size:11px;color:var(--inkl);padding:8px 12px;background:rgba(232,184,75,0.1);
-  border-radius:6px;border:1px solid var(--gp);width:100%;line-height:1.6}
+.gcal-setup{font-size:11px;color:var(--inkl);padding:8px 12px;
+  background:rgba(232,184,75,0.1);border-radius:6px;border:1px solid var(--gp);line-height:1.6}
 .gcal-setup a{color:var(--gd);font-weight:600}
-/* Export button always visible */
+.gcal-delta-info{font-size:11px;color:var(--inkl);font-style:italic}
 .btn-export{display:flex;align-items:center;gap:5px;background:transparent;
-  border:1.5px solid var(--gp);border-radius:7px;padding:6px 12px;
-  font-family:DM Sans,sans-serif;font-size:11px;font-weight:600;
-  color:var(--inkl);cursor:pointer;transition:all .15s}
+  border:1.5px solid var(--gp);border-radius:7px;padding:8px 14px;
+  font-family:DM Sans,sans-serif;font-size:12px;font-weight:600;
+  color:var(--inkl);cursor:pointer;transition:all .15s;min-height:38px;
+  -webkit-tap-highlight-color:transparent}
 .btn-export:hover{border-color:var(--gm);color:var(--gd)}
+.btn-export:active{background:var(--gc)}
 
 /* ── Footer ── */
 footer{background:var(--gd);color:rgba(255,253,245,0.5);text-align:center;
@@ -444,21 +463,29 @@ footer strong{color:rgba(255,253,245,0.85)}
         <button class="btn-add" id="addRecurringBtn" style="background:rgba(91,155,213,0.85);">🔁 Add Recurring</button>
       </div>
     </div>
-    <!-- Google Calendar sync bar -->
-    <div class="gcal-bar" id="gcalBar">
-      <span class="gcal-bar-title">📅 Google Calendar</span>
-      <button class="btn-gcal" id="gcalSyncBtn" style="display:none">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 4h-1V2h-2v2H8V2H6v2H5C3.9 4 3 4.9 3 6v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h5v5H7z" fill="#4285F4"/>
-        </svg>
-        Sync to Google Calendar
-      </button>
-      <button class="btn-export" id="gcalExportBtn">⬇ Export .ics</button>
-      <div class="gcal-status" id="gcalStatus"></div>
-      <div class="gcal-setup" id="gcalSetup" style="display:none">
-        <strong>Setup needed:</strong> Add your Google Calendar API credentials to enable one-click sync.
-        See instructions below after clicking "How to set up".
-        &nbsp;<a href="#" id="gcalSetupLink">How to set up →</a>
+    <!-- Google Calendar sync — collapsible dropdown -->
+    <div class="gcal-wrap" id="gcalWrap">
+      <div class="gcal-toggle" id="gcalToggle">
+        <span class="gcal-toggle-icon">📅</span>
+        <span class="gcal-toggle-label">Google Calendar</span>
+        <span class="gcal-toggle-status" id="gcalToggleStatus">Tap to sync</span>
+        <span class="gcal-chevron" id="gcalChevron">▼</span>
+      </div>
+      <div class="gcal-panel" id="gcalPanel">
+        <div class="gcal-btns">
+          <button class="btn-gcal" id="gcalSyncBtn" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 4h-1V2h-2v2H8V2H6v2H5C3.9 4 3 4.9 3 6v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h5v5H7z" fill="#4285F4"/>
+            </svg>
+            Sync to Google Calendar
+          </button>
+          <button class="btn-export" id="gcalExportBtn">⬇ Export .ics</button>
+        </div>
+        <div class="gcal-status" id="gcalStatus"></div>
+        <div class="gcal-setup" id="gcalSetup" style="display:none">
+          <strong>Setup needed:</strong> Add your Google Calendar API credentials to enable one-click sync.
+          &nbsp;<a href="#" id="gcalSetupLink">How to set up →</a>
+        </div>
       </div>
     </div>
     <div class="filter-bar" id="filterBar">
@@ -1769,26 +1796,70 @@ function taskToGcalEvent(t){
   };
 }
 
-// ── Local cache of gcal event IDs so we don't re-list on every sync ──────────
-var GCAL_CACHE_KEY = 'cds_gcal_cache_v1';
+// ── Toggle dropdown ──────────────────────────────────────────────────────────
+document.getElementById('gcalToggle').addEventListener('click',function(){
+  var panel=document.getElementById('gcalPanel');
+  var toggle=document.getElementById('gcalToggle');
+  var chev=document.getElementById('gcalChevron');
+  var open=panel.classList.contains('open');
+  panel.classList.toggle('open',!open);
+  toggle.classList.toggle('open',!open);
+  chev.classList.toggle('open',!open);
+});
+
+// ── Local cache: event IDs + content hashes for delta sync ───────────────────
+// Structure: { taskId: { eventId: 'gcal_event_id', hash: 'content_fingerprint' } }
+var GCAL_CACHE_KEY = 'cds_gcal_cache_v2';
 function gcalCacheGet(){ try{return JSON.parse(localStorage.getItem(GCAL_CACHE_KEY)||'{}');}catch(e){return{};} }
 function gcalCacheSet(obj){ try{localStorage.setItem(GCAL_CACHE_KEY,JSON.stringify(obj));}catch(e){} }
 
-// Sync all pending/today/overdue tasks — one task at a time with delay to avoid quota burst
+// Simple hash — combines task fields that matter for Calendar into a short string
+function gcalTaskHash(t){
+  return [t.title||'',t.date||'',t.time||'',t.notes||'',t.priority||'',t.recurrence||''].join('|');
+}
+
+// ── Helper to update the toggle bar status text ─────────────────────────────
+function gcalSetToggleStatus(msg){
+  var el=document.getElementById('gcalToggleStatus');
+  if(el) el.textContent=msg;
+}
+
+// Sync all pending/today/overdue tasks — delta only (skip unchanged), sequential with delay
 function gcalSyncAllTasks(){
   if(!gapiReady){gcalShowStatus('Calendar API loading, try again in a moment...','orange');return;}
   var tasks=lsGet(TK);
-  var toSync=Object.values(tasks).filter(function(t){
+  var allSyncable=Object.values(tasks).filter(function(t){
     return t.date && !t.done &&
       (taskStatus(t)==='today'||taskStatus(t)==='pending'||taskStatus(t)==='overdue');
   });
-  if(toSync.length===0){gcalShowStatus('No pending tasks to sync.');return;}
+  if(allSyncable.length===0){
+    gcalShowStatus('No pending tasks to sync.');
+    gcalSetToggleStatus('No tasks to sync');
+    return;
+  }
+
+  var cache=gcalCacheGet();
+
+  // Delta check — only sync tasks whose content has changed since last sync
+  var toSync=allSyncable.filter(function(t){
+    var cached=cache[t.id];
+    if(!cached) return true;           // never synced — include
+    if(!cached.eventId) return true;   // no event ID cached — include
+    return gcalTaskHash(t)!==cached.hash; // content changed — include
+  });
+
+  if(toSync.length===0){
+    gcalShowStatus('✅ All tasks already up to date — nothing to sync.');
+    gcalSetToggleStatus('Already up to date ✅');
+    return;
+  }
 
   var btn=document.getElementById('gcalSyncBtn');
   if(btn)btn.classList.add('syncing');
-  gcalShowStatus('Syncing '+toSync.length+' tasks...');
+  gcalShowStatus('Syncing '+toSync.length+' changed task'+(toSync.length>1?'s':'')+' ('+
+    (allSyncable.length-toSync.length)+' unchanged, skipped)...');
+  gcalSetToggleStatus('Syncing '+toSync.length+'...');
 
-  var cache=gcalCacheGet();
   var done=0;
   var errors=0;
 
@@ -1797,9 +1868,14 @@ function gcalSyncAllTasks(){
     if(idx>=toSync.length){
       if(btn)btn.classList.remove('syncing');
       if(errors===0){
-        gcalShowStatus('✅ '+done+' tasks synced to Google Calendar!','var(--gd)');
+        var msg='✅ '+done+' task'+(done>1?'s':'')+' synced to Google Calendar!';
+        gcalShowStatus(msg,'var(--gd)');
+        var now=new Date();
+        var timeStr=now.getHours()+':'+(now.getMinutes()<10?'0':'')+now.getMinutes();
+        gcalSetToggleStatus('Synced at '+timeStr+' ✅');
       } else {
         gcalShowStatus('⚠ '+done+' synced, '+errors+' failed. Try again shortly.','orange');
+        gcalSetToggleStatus('⚠ Some failed — retry');
       }
       return;
     }
@@ -1810,11 +1886,11 @@ function gcalSyncAllTasks(){
     gcalShowStatus('Syncing task '+(idx+1)+' of '+toSync.length+'...');
 
     var req;
-    if(cache[t.id]){
+    if(cache[t.id]&&cache[t.id].eventId){
       // We have a cached event ID — update it
       req=gapi.client.calendar.events.patch({
         calendarId:'primary',
-        eventId:cache[t.id],
+        eventId:cache[t.id].eventId,
         resource:{summary:event.summary,description:event.description,start:event.start,end:event.end}
       });
     } else {
@@ -1828,7 +1904,7 @@ function gcalSyncAllTasks(){
     req.then(function(resp){
       // Cache the event ID so next sync updates instead of inserting
       if(resp.result && resp.result.id){
-        cache[t.id]=resp.result.id;
+        cache[t.id]={eventId:resp.result.id, hash:gcalTaskHash(t)};
         gcalCacheSet(cache);
       }
       done++;
@@ -1839,8 +1915,8 @@ function gcalSyncAllTasks(){
       var reason=err.result&&err.result.error&&err.result.error.errors?
         err.result.error.errors[0].reason:'unknown';
       if(code===404){
-        // Cached event was deleted from Calendar — remove cache and retry as insert
-        delete cache[t.id];
+        // Cached event was deleted from Calendar — remove cache entry and retry as insert
+        cache[t.id]={};
         gcalCacheSet(cache);
         setTimeout(function(){syncNext(idx);},500); // retry this task
         return;
