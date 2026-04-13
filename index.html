@@ -249,6 +249,9 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .rec-bar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px dashed var(--gp)}
 .rec-sel{font-family:DM Sans,sans-serif;font-size:11px;background:rgba(91,155,213,0.12);border:1px solid rgba(91,155,213,0.35);border-radius:6px;padding:3px 7px;color:#185FA5;cursor:pointer;outline:none;font-weight:600}
 .rec-lbl{font-size:11px;color:var(--inkl);font-weight:500}
+.rec-freq-display{font-size:11px;font-weight:600;color:#185FA5;
+  background:rgba(91,155,213,0.12);border:1px solid rgba(91,155,213,0.3);
+  border-radius:5px;padding:2px 8px;display:inline-block}
 .rec-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(91,155,213,0.15);color:#185FA5}
 .rec-inst-note{font-size:10px;color:var(--inkl);font-style:italic}
 .repeat-toggle-wrap{display:flex;align-items:center;gap:6px;margin-top:7px;padding-top:7px;border-top:1px solid var(--gp)}
@@ -1687,8 +1690,12 @@ function renderTasks(){
           '</div>'+
           '<div class="repeat-freq-wrap'+(t.recurrence?' visible':'')+'">'+
             '<span class="rec-lbl">Frequency:</span>'+
-            '<select class="rec-sel rec-type-sel">'
-              +'<option value="daily"'+(t.recurrence==='daily'?' selected':'')+'>Daily</option>'+'<option value="every2days"'+(t.recurrence==='every2days'?' selected':'')+'>Every 2 days</option>'+'<option value="every3days"'+(t.recurrence==='every3days'?' selected':'')+'>Every 3 days</option>'+'<option value="weekdays"'+(t.recurrence==='weekdays'?' selected':'')+'>Weekdays (Mon–Fri)</option>'+'<option value="weekends"'+(t.recurrence==='weekends'?' selected':'')+'>Weekends (Sat–Sun)</option>'+'<option value="weekly"'+(t.recurrence==='weekly'?' selected':'')+'>Weekly</option>'+'<option value="fortnightly"'+(t.recurrence==='fortnightly'?' selected':'')+'>Fortnightly (2 weeks)</option>'+'<option value="every3weeks"'+(t.recurrence==='every3weeks'?' selected':'')+'>Every 3 weeks</option>'+'<option value="monthly"'+(t.recurrence==='monthly'?' selected':'')+'>Monthly</option>'+'<option value="every2months"'+(t.recurrence==='every2months'?' selected':'')+'>Every 2 months</option>'+'<option value="quarterly"'+(t.recurrence==='quarterly'?' selected':'')+'>Quarterly (3 months)</option>'+'<option value="halfyearly"'+(t.recurrence==='halfyearly'?' selected':'')+'>Every 6 months</option>'+'<option value="yearly"'+(t.recurrence==='yearly'?' selected':'')+'>Yearly</option>'+'</select>'+
+            '<span class="rec-freq-display">'+
+              (typeof recurrenceLabel==="function" ? recurrenceLabel(t.recurrence) : t.recurrence)+
+              (t.recurrence==='custom-weekly'&&t.recurrenceWeekDays&&t.recurrenceWeekDays.length
+                ? ' · ['+t.recurrenceWeekDays.map(function(d){return["Su","Mo","Tu","We","Th","Fr","Sa"][d];}).join(",")+']'
+                : '')+
+            '</span>'+
             (t.recurrence?'<span class="rec-inst-note">Instance '+((t.recurrenceIndex||0)+1)
   +(t.recurrenceEndType==='forever'?' (forever)'
     :t.recurrenceEndType==='date'?' until '+t.recurrenceEndDate
@@ -1842,26 +1849,7 @@ function renderTasks(){
         }
       });
 
-      // When frequency selector changes, propagate to whole series
-      var freqSel2=freqWrap?freqWrap.querySelector('.rec-type-sel'):null;
-      if(freqSel2){
-        freqSel2.addEventListener('change',function(){
-          var newFreq=freqSel2.value;
-          var tasks2=lsGet(TK);
-          if(t.recurrenceGroupId){
-            // Update all instances in series with new frequency
-            Object.values(tasks2).forEach(function(task){
-              if(task.recurrenceGroupId===t.recurrenceGroupId)task.recurrence=newFreq;
-            });
-            lsSet(TK,tasks2);
-            FB.ignoreNextTaskSync=true;
-            Object.values(tasks2).filter(function(task){
-              return task.recurrenceGroupId===t.recurrenceGroupId;
-            }).forEach(function(task){FB.saveTask(task.id,task);});
-            renderTasks();buildGrid();
-          }
-        });
-      }
+      // Frequency changes are handled via Edit series button only
     }
 
     // ── Propagate title/date/time/notes changes to whole series ────────────
