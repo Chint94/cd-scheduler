@@ -1719,39 +1719,60 @@ function gcalConfigured(){
 // Load GAPI + GIS scripts dynamically
 function loadGcalScripts(){
   if(!gcalConfigured()) return;
-  var s1=document.createElement('script');
-  s1.src='https://apis.google.com/js/api.js';
-  s1.onload=function(){
-    gapi.load('client',function(){
-      gapi.client.init({apiKey:GCAL_API_KEY,discoveryDocs:['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']})
-        .then(function(){gapiReady=true;});
-    });
-  };
-  document.body.appendChild(s1);
+  // Mark gapi as ready immediately — we use fetch() REST calls, not gapi scripts
+  // This avoids loading apis.google.com which is blocked in Android WebView
+  gapiReady=true;
+  gisReady=true;
 
-  var s2=document.createElement('script');
-  s2.src='https://accounts.google.com/gsi/client';
-  s2.onload=function(){
-    var client=google.accounts.oauth2.initTokenClient({
-      client_id:GCAL_CLIENT_ID,
-      scope:GCAL_SCOPES,
-      callback:function(resp){
-        if(resp.error){gcalShowStatus('Auth error: '+resp.error,'red');return;}
-        gcalToken=resp;
-        gapi.client.setToken(resp);
-        gcalSyncAllTasks();
-      }
+  document.getElementById('gcalSyncBtn').addEventListener('click',function(){
+    gcalEnsureToken(function(){
+      gcalSyncAllTasks();
     });
-    gisReady=true;
-    document.getElementById('gcalSyncBtn').addEventListener('click',function(){
-      if(!gcalToken||gcalToken.expires_in<=0){
-        client.requestAccessToken({prompt:''});
-      } else {
-        gcalSyncAllTasks();
-      }
-    });
-  };
-  document.body.appendChild(s2);
+  });
+}
+
+// ── Get a valid Calendar API token ───────────────────────────────────────────
+// Priority: 1) already have a valid token  2) Firebase OAuth token  3) GIS popup (browser only)
+function gcalEnsureToken(callback){
+  // If we already have a valid token, use it
+  if(gcalToken && gcalToken.access_token &&
+     gcalToken.expires_at && Date.now() < gcalToken.expires_at){
+    callback(); return;
+  }
+
+  // Try to use the Firebase OAuth access token (works in WebView + browser)
+  if(window._gcalAccessToken){
+    gcalToken={access_token:window._gcalAccessToken, expires_at:Date.now()+3500000};
+    callback(); return;
+  }
+
+  // Try getting a fresh token from Firebase current user (re-auth path)
+  var fbUser=firebase.auth().currentUser;
+  if(fbUser){
+    // Re-authenticate to get a fresh Google access token
+    var reProvider=new firebase.auth.GoogleAuthProvider();
+    reProvider.addScope('https://www.googleapis.com/auth/calendar.events');
+    if(isWebView()){
+      // WebView: store a flag and use redirect — token captured on return
+      gcalShowStatus('Re-authentication needed. Please sign in again.','orange');
+      auth.signInWithRedirect(reProvider);
+      return;
+    } else {
+      // Browser: use popup to get token with Calendar scope
+      auth.signInWithPopup(reProvider).then(function(result){
+        if(result.credential && result.credential.accessToken){
+          window._gcalAccessToken=result.credential.accessToken;
+          gcalToken={access_token:result.credential.accessToken, expires_at:Date.now()+3500000};
+          callback();
+        }
+      }).catch(function(e){
+        gcalShowStatus('Auth failed: '+e.message,'red');
+      });
+      return;
+    }
+  }
+
+  gcalShowStatus('Please sign in with Google first, then try syncing.','orange');
 }
 
 function gcalShowStatus(msg,color){
@@ -1886,19 +1907,35 @@ function gcalSyncAllTasks(){
     gcalShowStatus('Syncing task '+(idx+1)+' of '+toSync.length+'...');
 
     var req;
+    var token=gcalToken?gcalToken.access_token:'';
     if(cache[t.id]&&cache[t.id].eventId){
-      // We have a cached event ID — update it
-      req=gapi.client.calendar.events.patch({
-        calendarId:'primary',
-        eventId:cache[t.id].eventId,
-        resource:{summary:event.summary,description:event.description,start:event.start,end:event.end}
-      });
+      // We have a cached event ID — update it via REST fetch
+      var patchUrl='https://www.googleapis.com/calendar/v3/calendars/primary/events/'+
+        encodeURIComponent(cache[t.id].eventId)+'?key='+GCAL_API_KEY;
+      req={then:function(ok,fail){
+        fetch(patchUrl,{
+          method:'PATCH',
+          headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+          body:JSON.stringify({summary:event.summary,description:event.description,
+            start:event.start,end:event.end})
+        }).then(function(r){return r.json();}).then(function(d){
+          if(d.error) fail({result:{error:d.error}});
+          else ok({result:d});
+        }).catch(fail);
+      }};
     } else {
-      // New event — insert it
-      req=gapi.client.calendar.events.insert({
-        calendarId:'primary',
-        resource:event
-      });
+      // New event — insert via REST fetch
+      var insertUrl='https://www.googleapis.com/calendar/v3/calendars/primary/events?key='+GCAL_API_KEY;
+      req={then:function(ok,fail){
+        fetch(insertUrl,{
+          method:'POST',
+          headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+          body:JSON.stringify(event)
+        }).then(function(r){return r.json();}).then(function(d){
+          if(d.error) fail({result:{error:d.error}});
+          else ok({result:d});
+        }).catch(fail);
+      }};
     }
 
     req.then(function(resp){
@@ -2040,6 +2077,8 @@ window.updateGcalUI = updateGcalUI;
   var auth     = firebase.auth();
   var db       = firebase.database();
   var provider = new firebase.auth.GoogleAuthProvider();
+  // Request Calendar scope upfront so the access token covers Calendar API
+  provider.addScope('https://www.googleapis.com/auth/calendar.events');
 
   // ── Detect Android WebView ─────────────────────────────────────────────
   // Google blocks signInWithPopup in WebView — use signInWithRedirect instead
@@ -2120,7 +2159,7 @@ window.updateGcalUI = updateGcalUI;
 
   // ── Handle redirect result on page load ───────────────────────────────
   auth.getRedirectResult().then(function(result) {
-    // result.user is set if we just came back from a redirect sign-in
+    if(result && result.credential) captureGoogleToken(result.credential);
     // onAuthStateChanged below handles updating the UI
   }).catch(function(e) {
     if (e.code !== 'auth/no-auth-event') {
@@ -2137,6 +2176,13 @@ window.updateGcalUI = updateGcalUI;
   });
 
   // ── Auth state observer ────────────────────────────────────────────────
+  // Capture Google OAuth access token at sign-in — used for Calendar API in WebView
+  function captureGoogleToken(credential){
+    if(credential && credential.accessToken){
+      window._gcalAccessToken = credential.accessToken;
+    }
+  }
+
   auth.onAuthStateChanged(function(user) {
     if (user) {
       document.getElementById('loginPanel').style.display = 'none';
