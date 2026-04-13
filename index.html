@@ -159,6 +159,21 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   text-align:left;width:calc(100% - 4px);transition:opacity .15s}
 .tpill:hover{opacity:.8}
 .tpill.done-pill{opacity:.4;text-decoration:line-through}
+.tpill.cont-pill{display:none!important} /* hidden — rowspan handles it */
+/* ── Timeblock (Google Calendar style) ── */
+.tb-cell{padding:2px;position:relative;vertical-align:top;border-right:1px solid rgba(196,148,42,0.11)}
+.tb-block{display:flex;flex-direction:column;justify-content:flex-start;
+  border-radius:5px;padding:4px 6px;cursor:pointer;overflow:hidden;height:100%;
+  box-sizing:border-box;transition:opacity .15s;min-height:36px;
+  border-left:3px solid transparent;user-select:none;-webkit-tap-highlight-color:transparent}
+.tb-block:hover{opacity:.85}
+.tb-block:active{opacity:.7}
+.tb-title{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;line-height:1.3}
+.tb-time{font-size:9px;opacity:.75;margin-top:1px;white-space:nowrap}
+.tb-icon{font-size:10px;flex-shrink:0}
+/* Keep pill span indicator */
+.tpill .pspan{font-size:9px;opacity:.65;flex-shrink:0;white-space:nowrap}
 .tpill.ov-pill{background:#FFE0E0!important;border-left:2px solid var(--ot)!important;color:var(--ot)!important}
 .tpill .ptxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .tpill .ptime{font-size:9px;opacity:.7;flex-shrink:0}
@@ -688,30 +703,124 @@ for(var h=5;h<=23;h++){
 }
 var weekStart=null;
 
+// Convert slot to minutes from midnight
+function slotStartMins(slot){ return slot.h*60+slot.m; }
+function slotEndMins(slot){   return slot.h*60+slot.m+30; }
+
+// How many 30-min slots does a task's timeblock span on a given date?
+// Returns 0 if no timeblock or task doesn't start on this date
+function taskSlotSpan(t, colDate){
+  if(!t.time||!t.endTime) return 0;
+  var colStr=fmtDate(colDate);
+  if(fmtDate(parseDate(t.date))!==colStr) return 0;
+  var startM=taskStartMins(t);
+  // End on same day unless endDate is different
+  var endOnSameDay=(!t.endDate||t.endDate===t.date||taskEndDateStr(t)===t.date);
+  if(!endOnSameDay) return 0; // cross-day blocks: just use pills for now
+  var endM=taskEndMins(t);
+  if(endM<=startM) return 0;
+  // Number of 30-min slots covered
+  return Math.ceil((endM-startM)/30);
+}
+
+// Index of SLOTS array for a given hour:minute
+function slotIndex(h,m){
+  return SLOTS.findIndex(function(s){return s.h===h&&s.m===m;});
+}
+
+// Get task start/end as minutes from midnight (for timeblock spanning)
+// endDate defaults to startDate if only endTime given
+function taskStartMins(t){
+  if(!t.time) return 9*60; // default 09:00
+  var p=t.time.split(':');return parseInt(p[0])*60+parseInt(p[1]);
+}
+function taskEndMins(t){
+  if(!t.endTime) return -1; // no end time = single-slot task
+  var p=t.endTime.split(':');return parseInt(p[0])*60+parseInt(p[1]);
+}
+function taskEndDateStr(t){
+  // If endDate given, use it; else treat end as same day as start
+  return t.endDate||t.date||'';
+}
+
 function isSlotOverdue(colDate,slot){
   var now=new Date();
   var se=new Date(colDate.getFullYear(),colDate.getMonth(),colDate.getDate(),slot.h,slot.m+30);
   return se<now;
 }
 
+// Returns array of {task, isStart, isCont, isEnd} for a given slot
 function getTasksForSlot(colDate,slot){
   var tasks=lsGet(TK);
-  return Object.values(tasks).filter(function(t){
-    if(!t.date)return false;
+  var colStr=fmtDate(colDate);
+  var slotS=slotStartMins(slot);
+  var slotE=slotEndMins(slot);
+  var result=[];
+
+  Object.values(tasks).forEach(function(t){
+    if(!t.date) return;
     var td=parseDate(t.date);
-    if(!td)return false;
-    if(fmtDate(td)!==fmtDate(colDate))return false;
-    if(!t.time)return slot.h===9&&slot.m===0;
-    var parts=t.time.split(':');
-    var th=parseInt(parts[0]),tm=parseInt(parts[1]);
-    return th===slot.h&&(slot.m===0?tm<30:tm>=30);
+    if(!td) return;
+    var startStr=fmtDate(td);
+
+    // Task start time in minutes
+    var tStartMins=taskStartMins(t);
+    var tEndMins=taskEndMins(t); // -1 if no end time
+
+    // Determine if task has a multi-slot timeblock
+    var hasBlock=(tEndMins>0);
+    var endStr=taskEndDateStr(t);
+
+    if(!hasBlock){
+      // Simple task (no end time) — show in its start slot only
+      if(startStr!==colStr) return;
+      if(!t.time){
+        if(slot.h===9&&slot.m===0) result.push({task:t,isStart:true,isCont:false,isEnd:false});
+      } else {
+        var p=t.time.split(':');
+        var th=parseInt(p[0]),tm=parseInt(p[1]);
+        if(th===slot.h&&(slot.m===0?tm<30:tm>=30))
+          result.push({task:t,isStart:true,isCont:false,isEnd:false});
+      }
+      return;
+    }
+
+    // Timeblock task — check if this slot overlaps the block
+    // Build start datetime (ms)
+    var startDt=new Date(td.getFullYear(),td.getMonth(),td.getDate(),
+      Math.floor(tStartMins/60),tStartMins%60).getTime();
+    // Build end datetime (ms) — endDate defaults to start date
+    var edStr=endStr||startStr;
+    var edParts=edStr.split('-');
+    // Handle DD-MM-YYYY format
+    var ey,em,ed2;
+    if(edParts[0].length===4){ ey=edParts[0];em=edParts[1];ed2=edParts[2]; }
+    else { ed2=edParts[0];em=edParts[1];ey=edParts[2]; }
+    var endDt=new Date(parseInt(ey),parseInt(em)-1,parseInt(ed2),
+      Math.floor(tEndMins/60),tEndMins%60).getTime();
+
+    // This slot's time range
+    var colDtObj=new Date(colDate.getFullYear(),colDate.getMonth(),colDate.getDate());
+    var slotStartDt=new Date(colDtObj.getTime()+slotS*60000).getTime();
+    var slotEndDt  =new Date(colDtObj.getTime()+slotE*60000).getTime();
+
+    // Overlap: task block overlaps this slot
+    if(startDt>=slotEndDt||endDt<=slotStartDt) return; // no overlap
+
+    var isStart=(startDt>=slotStartDt&&startDt<slotEndDt);
+    var isEnd  =(endDt>slotStartDt&&endDt<=slotEndDt);
+    var isCont =(!isStart);
+    result.push({task:t,isStart:isStart,isCont:isCont,isEnd:isEnd});
   });
+
+  return result;
 }
 
 // ── Drag state ───────────────────────────────────────────────────────────────
 var dragState={taskId:null,touchClone:null,touchTargetCell:null};
 
-function makePill(task){
+function makePill(task,entry){
+  entry=entry||{isStart:true,isCont:false,isEnd:false};
   var btn=document.createElement('button');
   var pc=PRIORITY_COLORS[task.priority]||PRIORITY_COLORS.medium;
   var now=new Date();
@@ -725,10 +834,25 @@ function makePill(task){
       isOv=dl<now;
     }
   }
-  btn.className='tpill'+(task.done?' done-pill':'')+(isOv?' ov-pill':'')+(task.recurrence?' rec-pill':'');
+  btn.className='tpill'+(task.done?' done-pill':'')+(isOv?' ov-pill':'')+(task.recurrence?' rec-pill':'')+(entry.isCont?' cont-pill':'')+(entry.isEnd&&!entry.isStart?' end-pill':'');
   if(!isOv)btn.style.cssText='background:'+pc+'22;border-left:2px solid '+pc+';color:'+pc+';';
   var icon=task.done?'✅':(task.recurrence?'🔁':'📌');
-  var timeHtml=task.time?'<span class="ptime">'+task.time+'</span>':'';
+  var timeHtml='';
+  if(entry.isStart&&task.time){
+    var spanTxt='';
+    if(task.endTime){
+      var eDate=taskEndDateStr(task);
+      var sameDay=(!task.endDate||task.endDate===task.date);
+      spanTxt=task.time+'–'+task.endTime+(sameDay?'':' +');
+    } else {
+      spanTxt=task.time;
+    }
+    timeHtml='<span class="pspan">'+spanTxt+'</span>';
+  } else if(entry.isCont){
+    // Continuation slot shows ↳ and title only
+    icon='↳';
+    timeHtml='';
+  }
   btn.innerHTML='<span style="flex-shrink:0">'+icon+'</span><span class="ptxt">'+(task.title||'(no title)')+'</span>'+timeHtml;
 
   // Click to open popover (only if not a drag)
@@ -920,9 +1044,9 @@ function buildGrid(){
       var td=document.createElement('td');
       td.className='sc'+(ci===todayIdx?' tdy':'')+(ov?' ov':'');
 
-      // Task pills
-      getTasksForSlot(colDate,slot).forEach(function(t){
-        td.appendChild(makePill(t));
+      // Task pills (timeblock-aware)
+      getTasksForSlot(colDate,slot).forEach(function(entry){
+        td.appendChild(makePill(entry.task, entry));
       });
 
       // Drag-over highlighting (desktop)
@@ -2423,7 +2547,35 @@ function buildMobileDay(){
     tc.textContent=slot.label;
     var td=document.createElement('td');
     td.className='sc'+(isToday?' tdy':'')+(ov?' ov':'');
-    getTasksForSlot(colDate,slot).forEach(function(t){td.appendChild(makePill(t));});
+    // Timeblock rendering for mobile
+    var mbTasks=Object.values(lsGet(TK)).filter(function(t){
+      return taskSlotSpan(t,colDate)>=2&&(function(){
+        var p=t.time.split(':');var h=parseInt(p[0]),m=parseInt(p[1]);
+        return h===slot.h&&(m<30?slot.m===0:slot.m===30);
+      })();
+    });
+    mbTasks.forEach(function(t){
+      var span=taskSlotSpan(t,colDate);
+      td.rowSpan=(td.rowSpan||1)+span-1;
+      var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
+      var block=document.createElement('div');
+      block.className='tb-block';
+      block.style.cssText='background:'+pc+'28;border-left-color:'+pc+
+        ';color:'+pc+';height:'+((span*48)-6)+'px;';
+      var titleDiv=document.createElement('div');titleDiv.className='tb-title';
+      titleDiv.textContent=(t.done?'✅':(t.recurrence?'🔁':'📌'))+' '+(t.title||'(no title)');
+      var timeDiv=document.createElement('div');timeDiv.className='tb-time';
+      timeDiv.textContent=t.time+(t.endTime?'–'+t.endTime:'');
+      block.appendChild(titleDiv);block.appendChild(timeDiv);
+      block.addEventListener('click',function(e){e.stopPropagation();openTaskEditModal(t.id);});
+      td.appendChild(block);
+    });
+    // Regular pills for non-timeblock tasks
+    getTasksForSlot(colDate,slot).forEach(function(entry){
+      if(entry.isCont) return;
+      if(taskSlotSpan(entry.task,colDate)>=2) return;
+      td.appendChild(makePill(entry.task,entry));
+    });
     // Desktop drag-over for mobile table cells
     td.addEventListener('dragover',function(e){e.preventDefault();td.classList.add('drag-over');});
     td.addEventListener('dragleave',function(){td.classList.remove('drag-over');});
