@@ -119,6 +119,32 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .ci::placeholder{color:rgba(139,105,20,0.22);font-style:italic}
 .ci:focus{background:rgba(255,230,128,0.22);border-radius:4px}
 
+/* ── Mobile day view ── */
+.day-nav{display:none;align-items:center;justify-content:space-between;
+  background:var(--gc);padding:10px 16px;border-bottom:1px solid var(--gp);gap:8px}
+.day-nav-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;
+  color:var(--gd);text-align:center;flex:1;line-height:1.3}
+.day-nav-title .day-nav-date{display:block;font-family:DM Sans,sans-serif;font-size:11px;
+  font-weight:500;color:var(--inkl);margin-top:1px}
+.btn-day-nav{background:var(--gm);border:none;border-radius:8px;padding:8px 14px;
+  color:white;font-size:16px;font-weight:700;cursor:pointer;flex-shrink:0;min-width:44px;min-height:44px;
+  display:flex;align-items:center;justify-content:center}
+.btn-day-nav:active{background:var(--gd)}
+.day-dots{display:flex;gap:5px;justify-content:center;padding:8px 16px 4px;
+  background:var(--gc);flex-wrap:wrap}
+.day-dot{width:9px;height:9px;border-radius:50%;background:var(--gp);
+  border:1.5px solid var(--gm);cursor:pointer;flex-shrink:0}
+.day-dot.active{background:var(--gm)}
+.day-dot.today-dot{border-color:var(--gold-deep,#8B6914);background:var(--gb)}
+/* Mobile single-day table */
+.sched-mobile{width:100%;border-collapse:separate;border-spacing:0;
+  border-radius:10px;overflow:hidden;box-shadow:0 4px 20px var(--sg)}
+.sched-mobile .tc{min-width:72px;font-size:13px;height:48px;padding:0 10px}
+.sched-mobile .tc.half{font-size:11px}
+.sched-mobile .sc{min-height:48px}
+.sched-mobile .ci{font-size:13px;min-height:44px;padding:6px 8px;line-height:1.5}
+.sched-mobile .tpill{font-size:11px;padding:3px 7px;margin:2px 2px 0}
+
 /* ── Task pills in planner ── */
 .tpill{display:flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:2px 5px;
   margin:1px 2px 0;line-height:1.5;border-radius:4px;cursor:pointer;border:none;
@@ -275,15 +301,26 @@ footer strong{color:rgba(255,253,245,0.85)}
 ::-webkit-scrollbar-track{background:var(--gc)}
 ::-webkit-scrollbar-thumb{background:var(--gm);border-radius:3px}
 
-@media(max-width:600px){
+@media(max-width:700px){
+  /* Show mobile day navigation, hide desktop table */
+  .day-nav{display:flex!important}
+  .day-dots{display:flex!important}
+  .grid-wrap{padding:10px 10px 30px}
+  /* Hide the full 7-col desktop grid */
+  #schedDesktop{display:none}
+  /* Show the mobile single-day view */
+  #schedMobileWrap{display:block!important}
   .tab-btn{padding:11px 12px;font-size:12px}
   .ctrl-bar{gap:5px}
   .wk-inp{width:104px;font-size:12px}
   .wk-lbl{font-size:11px}
   .btn-clr{display:none}
-  .ci{font-size:10px}
   .notes-grid{grid-template-columns:1fr}
   .sw{padding:12px}
+}
+@media(min-width:701px){
+  #schedMobileWrap{display:none!important}
+  #schedDesktop{display:table!important}
 }
 </style>
 </head>
@@ -344,8 +381,22 @@ footer strong{color:rgba(255,253,245,0.85)}
     <div class="legend"><div class="ldot"></div>Overdue &nbsp;·&nbsp; 📌 Click task to edit</div>
     <button class="btn-clr" id="clearWeekBtn">Clear Week</button>
   </div>
+  <!-- Mobile: day navigator (hidden on desktop via CSS) -->
+  <div class="day-nav" id="dayNav" style="display:none">
+    <button class="btn-day-nav" id="prevDay">◀</button>
+    <div class="day-nav-title" id="dayNavTitle">
+      Monday<span class="day-nav-date" id="dayNavDate"></span>
+    </div>
+    <button class="btn-day-nav" id="nextDay">▶</button>
+  </div>
+  <div class="day-dots" id="dayDots" style="display:none"></div>
   <div class="grid-wrap">
-    <table class="sched"><thead id="schedHead"></thead><tbody id="schedBody"></tbody></table>
+    <!-- Desktop: full 7-column table -->
+    <table class="sched" id="schedDesktop"><thead id="schedHead"></thead><tbody id="schedBody"></tbody></table>
+    <!-- Mobile: single-day table -->
+    <div id="schedMobileWrap" style="display:none">
+      <table class="sched sched-mobile"><thead id="schedHeadM"></thead><tbody id="schedBodyM"></tbody></table>
+    </div>
   </div>
 </div>
 
@@ -1392,6 +1443,124 @@ function renderNotes(){
     });
   });
 }
+
+// ── Mobile day view ──────────────────────────────────────────────────────────
+var currentDayIdx=0;
+
+function isMobile(){return window.innerWidth<=700;}
+
+function buildDayDots(){
+  var dots=document.getElementById('dayDots');if(!dots)return;
+  dots.innerHTML='';
+  var today=new Date();today.setHours(0,0,0,0);
+  DAYS.forEach(function(_,i){
+    var d=addDays(weekStart,i);
+    var dot=document.createElement('div');
+    var dc=new Date(d);dc.setHours(0,0,0,0);
+    dot.className='day-dot'+(i===currentDayIdx?' active':'')+(dc.getTime()===today.getTime()?' today-dot':'');
+    dot.addEventListener('click',function(){currentDayIdx=i;buildMobileDay();});
+    dots.appendChild(dot);
+  });
+}
+
+function buildMobileDay(){
+  if(!weekStart)return;
+  var colDate=addDays(weekStart,currentDayIdx);
+  var today=new Date();today.setHours(0,0,0,0);
+  var dc=new Date(colDate);dc.setHours(0,0,0,0);
+  var isToday=dc.getTime()===today.getTime();
+  // Update nav header
+  var titleEl=document.getElementById('dayNavTitle');
+  var dateEl=document.getElementById('dayNavDate');
+  if(titleEl){
+    while(titleEl.firstChild)titleEl.removeChild(titleEl.firstChild);
+    titleEl.appendChild(document.createTextNode(DAYS[currentDayIdx]));
+    if(dateEl){dateEl.textContent=shortD(colDate)+(isToday?' · Today':'');titleEl.appendChild(dateEl);}
+  }
+  buildDayDots();
+  var head=document.getElementById('schedHeadM');
+  var body=document.getElementById('schedBodyM');
+  if(!head||!body)return;
+  head.innerHTML='';
+  var htr=document.createElement('tr');
+  var th0=document.createElement('th');th0.textContent='Time';
+  th0.style.cssText='background:linear-gradient(180deg,var(--gm) 0%,var(--gd) 100%);color:var(--white);font-family:Playfair Display,serif;font-size:14px;font-weight:700;padding:12px 10px;text-align:left;min-width:76px;';
+  var th1=document.createElement('th');th1.textContent=DAYS[currentDayIdx]+' '+shortD(colDate);
+  th1.style.cssText='background:linear-gradient(180deg,'+(isToday?'var(--gb)':'var(--gm)')+' 0%,'+(isToday?'var(--gm)':'var(--gd)')+' 100%);color:'+(isToday?'var(--ink)':'var(--white)')+';font-family:Playfair Display,serif;font-size:14px;font-weight:700;padding:12px 10px;text-align:left;width:100%;';
+  htr.appendChild(th0);htr.appendChild(th1);head.appendChild(htr);
+  body.innerHTML='';
+  var wk=fmtDate(weekStart);
+  var wd=lsGet(SK)[wk]||{};
+  SLOTS.forEach(function(slot,ri){
+    var tr=document.createElement('tr');
+    if(slot.half)tr.classList.add('hr');
+    var tc=document.createElement('td');
+    tc.className='tc'+(slot.half?' half':'');
+    var ov=isOverdue(colDate,slot);
+    if(ov)tc.classList.add('ovt');
+    tc.textContent=slot.label;
+    var td=document.createElement('td');
+    td.className='sc'+(isToday?' tdy':'')+(ov?' ov':'');
+    getTasksForSlot(colDate,slot).forEach(function(t){td.appendChild(makePill(t));});
+    var key='r'+ri+'_c'+currentDayIdx;
+    var ta=document.createElement('textarea');
+    ta.className='ci';ta.setAttribute('data-key',key);ta.rows=2;
+    ta.value=wd[key]||'';ta.placeholder=slot.half?'':'Tap to add...';
+    ta.addEventListener('input',function(){
+      var s=lsGet(SK);if(!s[wk])s[wk]={};
+      s[wk][key]=ta.value;lsSet(SK,s);
+      FB.savePlannerCell(wk,key,ta.value);
+      ta.style.height='auto';
+      ta.style.height=Math.max(ta.scrollHeight,44)+'px';
+    });
+    td.appendChild(ta);tr.appendChild(tc);tr.appendChild(td);
+    body.appendChild(tr);
+  });
+}
+
+document.getElementById('prevDay').addEventListener('click',function(){
+  if(currentDayIdx>0){currentDayIdx--;buildMobileDay();}
+  else{shiftWeek(-1);currentDayIdx=6;setTimeout(buildMobileDay,80);}
+});
+document.getElementById('nextDay').addEventListener('click',function(){
+  if(currentDayIdx<6){currentDayIdx++;buildMobileDay();}
+  else{shiftWeek(1);currentDayIdx=0;setTimeout(buildMobileDay,80);}
+});
+
+// Swipe left/right to change day
+(function(){
+  var sx=0,sy=0;
+  document.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(currentTab!=='planner'||!isMobile())return;
+    var dx=e.changedTouches[0].clientX-sx;
+    var dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)<50||Math.abs(dy)>Math.abs(dx)*0.7)return;
+    if(dx<0){
+      if(currentDayIdx<6){currentDayIdx++;buildMobileDay();}
+      else{shiftWeek(1);currentDayIdx=0;setTimeout(buildMobileDay,80);}
+    } else {
+      if(currentDayIdx>0){currentDayIdx--;buildMobileDay();}
+      else{shiftWeek(-1);currentDayIdx=6;setTimeout(buildMobileDay,80);}
+    }
+  },{passive:true});
+})();
+
+window.addEventListener('resize',function(){if(isMobile())buildMobileDay();});
+
+// Wrap setWeek to sync mobile view + set today's day
+var _origSetWeek=setWeek;
+setWeek=function(d){
+  _origSetWeek(d);
+  var today=new Date();today.setHours(0,0,0,0);
+  var found=false;
+  DAYS.forEach(function(_,i){
+    var col=addDays(weekStart,i);var dc=new Date(col);dc.setHours(0,0,0,0);
+    if(dc.getTime()===today.getTime()){currentDayIdx=i;found=true;}
+  });
+  if(!found)currentDayIdx=0;
+  if(isMobile())setTimeout(buildMobileDay,20);
+};
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 document.getElementById('dismissWarning').addEventListener('click',function(){
