@@ -299,6 +299,29 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .btn-dis{margin-top:12px;background:var(--gm);border:none;border-radius:6px;padding:7px 16px;
   color:white;font-weight:600;font-size:12px;cursor:pointer;font-family:DM Sans,sans-serif}
 
+/* ── Google Calendar sync ── */
+.gcal-bar{background:var(--gc);border:1px solid var(--gp);border-radius:10px;
+  padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;
+  flex-wrap:wrap;gap:8px}
+.gcal-bar-title{font-size:12px;font-weight:600;color:var(--gd);flex:1;min-width:120px}
+.btn-gcal{display:flex;align-items:center;gap:6px;background:white;border:1.5px solid var(--gp);
+  border-radius:7px;padding:6px 12px;font-family:DM Sans,sans-serif;font-size:12px;
+  font-weight:600;color:var(--inkm);cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-gcal:hover{border-color:var(--gm);background:var(--gc)}
+.btn-gcal svg{width:16px;height:16px;flex-shrink:0}
+.btn-gcal.syncing{opacity:.6;pointer-events:none}
+.gcal-status{font-size:11px;color:var(--inkl);width:100%;display:none}
+.gcal-status.show{display:block}
+.gcal-setup{font-size:11px;color:var(--inkl);padding:8px 12px;background:rgba(232,184,75,0.1);
+  border-radius:6px;border:1px solid var(--gp);width:100%;line-height:1.6}
+.gcal-setup a{color:var(--gd);font-weight:600}
+/* Export button always visible */
+.btn-export{display:flex;align-items:center;gap:5px;background:transparent;
+  border:1.5px solid var(--gp);border-radius:7px;padding:6px 12px;
+  font-family:DM Sans,sans-serif;font-size:11px;font-weight:600;
+  color:var(--inkl);cursor:pointer;transition:all .15s}
+.btn-export:hover{border-color:var(--gm);color:var(--gd)}
+
 /* ── Footer ── */
 footer{background:var(--gd);color:rgba(255,253,245,0.5);text-align:center;
   font-size:11px;padding:11px 18px;letter-spacing:.5px}
@@ -419,6 +442,23 @@ footer strong{color:rgba(255,253,245,0.85)}
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn-add" id="addTaskBtn">＋ Add Task</button>
         <button class="btn-add" id="addRecurringBtn" style="background:rgba(91,155,213,0.85);">🔁 Add Recurring</button>
+      </div>
+    </div>
+    <!-- Google Calendar sync bar -->
+    <div class="gcal-bar" id="gcalBar">
+      <span class="gcal-bar-title">📅 Google Calendar</span>
+      <button class="btn-gcal" id="gcalSyncBtn" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 4h-1V2h-2v2H8V2H6v2H5C3.9 4 3 4.9 3 6v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h5v5H7z" fill="#4285F4"/>
+        </svg>
+        Sync to Google Calendar
+      </button>
+      <button class="btn-export" id="gcalExportBtn">⬇ Export .ics</button>
+      <div class="gcal-status" id="gcalStatus"></div>
+      <div class="gcal-setup" id="gcalSetup" style="display:none">
+        <strong>Setup needed:</strong> Add your Google Calendar API credentials to enable one-click sync.
+        See instructions below after clicking "How to set up".
+        &nbsp;<a href="#" id="gcalSetupLink">How to set up →</a>
       </div>
     </div>
     <div class="filter-bar" id="filterBar">
@@ -1623,6 +1663,229 @@ renderTasks();
 renderNotes();
 setInterval(markOverdue,60000);
 setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
+
+// ════════════════════════════════════════════════════════
+// GOOGLE CALENDAR SYNC
+// ════════════════════════════════════════════════════════
+
+// ── REPLACE with your Google Calendar API credentials ──────────────────────
+// Steps to get these:
+// 1. Go to console.cloud.google.com → New Project → "CD Scheduler Calendar"
+// 2. APIs & Services → Enable "Google Calendar API"
+// 3. APIs & Services → Credentials → Create OAuth 2.0 Client ID (Web app)
+//    → Add https://chint94.github.io as authorised origin
+// 4. Also create an API Key under Credentials
+// 5. Paste both values below
+var GCAL_CLIENT_ID = '1033903916825-vtnp7v0t4qcnmkpbplgb40kg5resk93j.apps.googleusercontent.com';
+var GCAL_API_KEY   = 'AIzaSyB6rv6EA5sMUcJ1yRZSMrFK_e4CfX-Oyis';
+// ──────────────────────────────────────────────────────────────────────────
+
+var GCAL_SCOPES = 'https://www.googleapis.com/auth/calendar.events';
+var gapiReady   = false;
+var gisReady    = false;
+var gcalToken   = null;
+
+function gcalConfigured(){
+  return !GCAL_CLIENT_ID.startsWith('REPLACE') && !GCAL_API_KEY.startsWith('REPLACE');
+}
+
+// Load GAPI + GIS scripts dynamically
+function loadGcalScripts(){
+  if(!gcalConfigured()) return;
+  var s1=document.createElement('script');
+  s1.src='https://apis.google.com/js/api.js';
+  s1.onload=function(){
+    gapi.load('client',function(){
+      gapi.client.init({apiKey:GCAL_API_KEY,discoveryDocs:['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']})
+        .then(function(){gapiReady=true;});
+    });
+  };
+  document.body.appendChild(s1);
+
+  var s2=document.createElement('script');
+  s2.src='https://accounts.google.com/gsi/client';
+  s2.onload=function(){
+    var client=google.accounts.oauth2.initTokenClient({
+      client_id:GCAL_CLIENT_ID,
+      scope:GCAL_SCOPES,
+      callback:function(resp){
+        if(resp.error){gcalShowStatus('Auth error: '+resp.error,'red');return;}
+        gcalToken=resp;
+        gapi.client.setToken(resp);
+        gcalSyncAllTasks();
+      }
+    });
+    gisReady=true;
+    document.getElementById('gcalSyncBtn').addEventListener('click',function(){
+      if(!gcalToken||gcalToken.expires_in<=0){
+        client.requestAccessToken({prompt:''});
+      } else {
+        gcalSyncAllTasks();
+      }
+    });
+  };
+  document.body.appendChild(s2);
+}
+
+function gcalShowStatus(msg,color){
+  var el=document.getElementById('gcalStatus');
+  if(!el)return;
+  el.textContent=msg;
+  el.style.color=color||'var(--inkl)';
+  el.classList.add('show');
+  if(color!=='red') setTimeout(function(){el.classList.remove('show');},4000);
+}
+
+// Convert a task to a Google Calendar event object
+function taskToGcalEvent(t){
+  var td=parseDate(t.date);
+  if(!td)return null;
+  var startDT,endDT;
+  if(t.time){
+    var tp=t.time.split(':');
+    var h=parseInt(tp[0]),m=parseInt(tp[1]);
+    // Event: start = task time, end = 1 hour later
+    var startD=new Date(td.getFullYear(),td.getMonth(),td.getDate(),h,m);
+    var endD  =new Date(td.getFullYear(),td.getMonth(),td.getDate(),h+1,m);
+    startDT={dateTime:startD.toISOString(),timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone};
+    endDT  ={dateTime:endD.toISOString(),  timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone};
+  } else {
+    // All-day event
+    var ymd=td.getFullYear()+'-'+pad(td.getMonth()+1)+'-'+pad(td.getDate());
+    startDT={date:ymd};
+    endDT  ={date:ymd};
+  }
+  var desc='Priority: '+(t.priority||'medium');
+  if(t.notes) desc+='\n\nNotes: '+t.notes;
+  if(t.recurrence) desc+='\n\nRecurrence: '+t.recurrence+' (CD Scheduler)';
+  return {
+    summary:'[CD] '+(t.title||'Untitled task'),
+    description:desc,
+    start:startDT,
+    end:endDT,
+    colorId:t.priority==='high'?'11':t.priority==='low'?'10':'5',
+    // Store our task ID so we can update instead of duplicate
+    extendedProperties:{private:{cdTaskId:t.id,cdScheduler:'true'}}
+  };
+}
+
+// Sync all pending+today tasks to Google Calendar
+function gcalSyncAllTasks(){
+  if(!gapiReady){gcalShowStatus('Calendar API loading, try again in a moment...','orange');return;}
+  var tasks=lsGet(TK);
+  var toSync=Object.values(tasks).filter(function(t){
+    return t.date && !t.done && (taskStatus(t)==='today'||taskStatus(t)==='pending'||taskStatus(t)==='overdue');
+  });
+  if(toSync.length===0){gcalShowStatus('No pending tasks to sync.');return;}
+
+  var btn=document.getElementById('gcalSyncBtn');
+  if(btn)btn.classList.add('syncing');
+  gcalShowStatus('Syncing '+toSync.length+' tasks...');
+
+  // First fetch existing CD Scheduler events to avoid duplicates
+  gapi.client.calendar.events.list({
+    calendarId:'primary',
+    privateExtendedProperty:'cdScheduler=true',
+    maxResults:250,
+    singleEvents:true
+  }).then(function(resp){
+    var existing={};
+    (resp.result.items||[]).forEach(function(ev){
+      if(ev.extendedProperties&&ev.extendedProperties.private&&ev.extendedProperties.private.cdTaskId){
+        existing[ev.extendedProperties.private.cdTaskId]=ev.id;
+      }
+    });
+    // Create or update each task
+    var promises=toSync.map(function(t){
+      var event=taskToGcalEvent(t);
+      if(!event)return Promise.resolve();
+      if(existing[t.id]){
+        // Update existing event
+        return gapi.client.calendar.events.update({calendarId:'primary',eventId:existing[t.id],resource:event});
+      } else {
+        // Create new event
+        return gapi.client.calendar.events.insert({calendarId:'primary',resource:event});
+      }
+    });
+    return Promise.all(promises);
+  }).then(function(){
+    if(btn)btn.classList.remove('syncing');
+    gcalShowStatus('✅ '+toSync.length+' tasks synced to Google Calendar!','var(--gd)');
+  }).catch(function(err){
+    if(btn)btn.classList.remove('syncing');
+    gcalShowStatus('Sync error: '+(err.result&&err.result.error?err.result.error.message:err.message||'Unknown error'),'red');
+  });
+}
+
+// ── Export to .ics (always available, no API key needed) ─────────────────────
+document.getElementById('gcalExportBtn').addEventListener('click',function(){
+  var tasks=lsGet(TK);
+  var items=Object.values(tasks).filter(function(t){return t.date&&!t.done;});
+  if(items.length===0){alert('No tasks with dates to export.');return;}
+
+  var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//CD Scheduler//EN','CALSCALE:GREGORIAN'];
+  var now=new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+
+  items.forEach(function(t){
+    var td=parseDate(t.date);if(!td)return;
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:'+t.id+'@cdscheduler');
+    lines.push('DTSTAMP:'+now);
+    lines.push('SUMMARY:[CD] '+(t.title||'Untitled'));
+    if(t.notes) lines.push('DESCRIPTION:'+t.notes.replace(/[\r\n]+/g,'\\n'));
+
+    if(t.time){
+      var tp=t.time.split(':');
+      var h=parseInt(tp[0]),m=parseInt(tp[1]);
+      var st=new Date(td.getFullYear(),td.getMonth(),td.getDate(),h,m);
+      var et=new Date(td.getFullYear(),td.getMonth(),td.getDate(),h+1,m);
+      var fmt=function(d){return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'T'+pad(d.getHours())+pad(d.getMinutes())+'00';};
+      lines.push('DTSTART:'+fmt(st));
+      lines.push('DTEND:'+fmt(et));
+    } else {
+      var ymd=td.getFullYear()+pad(td.getMonth()+1)+pad(td.getDate());
+      lines.push('DTSTART;VALUE=DATE:'+ymd);
+      lines.push('DTEND;VALUE=DATE:'+ymd);
+    }
+    if(t.recurrence){
+      var freq=t.recurrence==='daily'?'DAILY':t.recurrence==='weekly'?'WEEKLY':'MONTHLY';
+      lines.push('RRULE:FREQ='+freq+';COUNT=20');
+    }
+    lines.push('PRIORITY:'+(t.priority==='high'?'1':t.priority==='low'?'9':'5'));
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+
+  var blob=new Blob([lines.join('\r\n')],{type:'text/calendar;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='cd-scheduler-tasks.ics';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// Setup link — show instructions in an alert for now
+document.getElementById('gcalSetupLink').addEventListener('click',function(e){
+  e.preventDefault();
+  alert('To enable one-click Google Calendar sync:\n\n1. Go to console.cloud.google.com\n2. Create a new project called "CD Scheduler"\n3. Enable "Google Calendar API"\n4. Create an OAuth 2.0 Client ID (Web application)\n   Authorised origins: https://chint94.github.io\n5. Create an API Key\n6. Open index.html in a text editor\n7. Replace GCAL_CLIENT_ID and GCAL_API_KEY near the bottom of the file\n\nAfter setup, the Sync to Google Calendar button will appear when you are signed in.');
+});
+
+// Show/hide sync button based on login state and config
+function updateGcalUI(loggedIn){
+  var syncBtn  = document.getElementById('gcalSyncBtn');
+  var setupDiv = document.getElementById('gcalSetup');
+  if(!syncBtn||!setupDiv)return;
+  if(gcalConfigured()){
+    syncBtn.style.display  = loggedIn ? 'flex' : 'none';
+    setupDiv.style.display = 'none';
+    if(loggedIn) loadGcalScripts();
+  } else {
+    syncBtn.style.display  = 'none';
+    setupDiv.style.display = 'block';
+  }
+}
+// Called from Firebase auth state — expose globally
+window.updateGcalUI = updateGcalUI;
 </script>
 
 <!-- Firebase compat SDKs — work in ALL browsers and Android WebView -->
@@ -1764,6 +2027,7 @@ setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
       if (user.photoURL) { av.src = user.photoURL; av.style.display = 'block'; }
       var lbl = document.getElementById('signInLabel');
       if (lbl) lbl.textContent = 'Sign in with Google';
+      if(window.updateGcalUI) window.updateGcalUI(true);
 
       // Planner listener
       var wk = window.weekStart ? fmtDate(window.weekStart) : null;
@@ -1812,6 +2076,7 @@ setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
       document.getElementById('loginPanel').style.display = 'flex';
       document.getElementById('userInfo').style.display = 'none';
       document.getElementById('syncBadge').style.display = 'none';
+      if(window.updateGcalUI) window.updateGcalUI(false);
     }
   });
 
