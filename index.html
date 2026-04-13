@@ -1053,6 +1053,7 @@ function openRecurringSetupModal(existingGroupId){
       var tasks2=lsGet(TK);
       var toDelete=Object.keys(tasks2).filter(function(k){return tasks2[k].recurrenceGroupId===existingGroupId;});
       toDelete.forEach(function(k){
+        if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(k); // remove from Google Calendar
         FB.deleteTask(k); // remove from Firebase
         delete tasks2[k];
       });
@@ -1262,12 +1263,18 @@ function renderTasks(){
       saveField('done',chk.checked);
       card.querySelector('.task-bd').className='task-bd'+(chk.checked?' task-done':'');
       buildGrid();
+      // Auto-remove from Google Calendar when task is marked done
+      if(chk.checked && typeof gcalDeleteEvent==='function'){
+        gcalDeleteEvent(t.id);
+      }
     });
 
     del.addEventListener('click',function(){
       // For recurring tasks, only delete THIS occurrence
       var msg=t.recurrence?'Delete this occurrence only? (Other occurrences remain)':'Delete this task?';
       if(!confirm(msg))return;
+      // Remove from Google Calendar if it was synced
+      if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(t.id);
       var tasks2=lsGet(TK);delete tasks2[t.id];lsSet(TK,tasks2);
       FB.deleteTask(t.id);
       card.remove();
@@ -1698,6 +1705,45 @@ var GCAL_CK = 'cds_gcal_v3';
 function gcalCacheGet(){ try{return JSON.parse(localStorage.getItem(GCAL_CK)||'{}')}catch(e){return{}} }
 function gcalCacheSet(o){ try{localStorage.setItem(GCAL_CK,JSON.stringify(o))}catch(e){} }
 function gcalHash(t){ return [t.title||'',t.date||'',t.time||'',t.notes||'',t.priority||'',t.recurrence||''].join('|') }
+
+// Delete a task's Google Calendar event silently (fire-and-forget)
+// Called when a task is marked Done or deleted from CD Scheduler
+function gcalDeleteEvent(taskId){
+  var cache=gcalCacheGet();
+  var cv=cache[taskId];
+  if(!cv||!cv.eventId) return; // never synced — nothing to delete
+  var eventId=cv.eventId;
+  // Remove from cache immediately so it won't be re-synced
+  delete cache[taskId];
+  gcalCacheSet(cache);
+  // Need a valid token to call the API
+  function doDelete(token){
+    var url='https://www.googleapis.com/calendar/v3/calendars/primary/events/'
+      +encodeURIComponent(eventId)+'?key='+GCAL_API_KEY;
+    fetch(url,{
+      method:'DELETE',
+      headers:{'Authorization':'Bearer '+token}
+    }).then(function(r){
+      if(r.status===204||r.status===200){
+        // Successfully deleted
+        console.log('GCal event deleted for task',taskId);
+      } else if(r.status===404){
+        // Already gone from Calendar — that's fine
+      } else {
+        console.warn('GCal delete failed for task',taskId,'status:',r.status);
+      }
+    }).catch(function(e){
+      console.warn('GCal delete error for task',taskId,e.message);
+    });
+  }
+  // Use cached token if valid, otherwise skip silently (don't bother user)
+  if(gcalToken&&gcalToken.access_token&&Date.now()<gcalToken.expires_at){
+    doDelete(gcalToken.access_token);
+  }
+  // If no token available, the event stays in Calendar
+  // (user can sync again to clean up, or it will be removed next time they
+  //  mark it done after a sync session)
+}
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
 function gcalMsg(msg,type){
