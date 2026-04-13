@@ -1404,19 +1404,16 @@ setInterval(markOverdue,60000);
 setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
 </script>
 
-<!-- ══════════════════════════════════════════════════════
-     FIREBASE — loads independently, never breaks the app
-     ══════════════════════════════════════════════════════ -->
-<script type="module">
-try {
-  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
-  const { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged }
-    = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
-  const { getDatabase, ref, set, onValue, off, remove }
-    = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
+<!-- Firebase compat SDKs — work in ALL browsers and Android WebView -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+(function() {
+  'use strict';
 
   // ── REPLACE these 7 values with your Firebase project config ──────────
-  const firebaseConfig = {
+  var firebaseConfig = {
     apiKey:            "AIzaSyBfxXR0i6qevze2lGTQyFR7XkeCxxAZBnc",
     authDomain:        "cd-scheduler-3fdad.firebaseapp.com",
     databaseURL:       "https://cd-scheduler-3fdad-default-rtdb.firebaseio.com",
@@ -1428,161 +1425,168 @@ try {
   // ──────────────────────────────────────────────────────────────────────
 
   // Bail out silently if still using placeholder values
-  if (firebaseConfig.apiKey.startsWith('REPLACE')) throw new Error('no-config');
+  if (firebaseConfig.apiKey.startsWith('REPLACE')) return;
 
-  const app  = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db   = getDatabase(app);
-  const provider = new GoogleAuthProvider();
-
-  // Detect if running inside an Android WebView (WebIntoApp or similar wrapper)
-  // Google blocks signInWithPopup in WebView — must use signInWithRedirect instead
-  function isWebView() {
-    var ua = navigator.userAgent || '';
-    // Android WebView always has 'wv' in the user agent string
-    // Also catches WebIntoApp, Capacitor, Cordova wrappers
-    return /wv/.test(ua) ||
-           /Android.*Version\/[\d.]+.*Chrome\/[\d.]+ Mobile/.test(ua) ||
-           (typeof window.Android !== 'undefined') ||
-           (typeof window.webkit !== 'undefined' && typeof window.webkit.messageHandlers !== 'undefined');
+  try {
+    firebase.initializeApp(firebaseConfig);
+  } catch(e) {
+    if (e.code !== 'app/duplicate-app') { console.warn('Firebase init error:', e); return; }
   }
 
-  let plannerPath = null, plannerCb = null;
-  let tasksCb = null, notesCb = null;
+  var auth     = firebase.auth();
+  var db       = firebase.database();
+  var provider = new firebase.auth.GoogleAuthProvider();
 
-  function uid() { return auth.currentUser ? auth.currentUser.uid : null; }
+  // ── Detect Android WebView ─────────────────────────────────────────────
+  // Google blocks signInWithPopup in WebView — use signInWithRedirect instead
+  function isWebView() {
+    var ua = navigator.userAgent || '';
+    return /; wv\)/.test(ua) ||
+           /Android.*Version\/[\d.]+.*Chrome\/[\d.]+ Mobile/.test(ua) ||
+           typeof window.Android !== 'undefined';
+  }
 
-  // Wire up FB hooks used by the main app
+  var plannerPath = null, plannerCb = null;
+  var tasksCb = null, notesCb = null;
+
+  function uid() {
+    return auth.currentUser ? auth.currentUser.uid : null;
+  }
+
+  // ── Wire up FB hooks ───────────────────────────────────────────────────
   window.FB.savePlannerCell = function(wk, key, value) {
     if (!uid()) return;
-    set(ref(db, `users/${uid()}/weeks/${wk}/${key}`), value);
+    db.ref('users/' + uid() + '/weeks/' + wk + '/' + key).set(value);
   };
   window.FB.saveTask = function(id, obj) {
-    if (!uid()) return; set(ref(db, `users/${uid()}/tasks/${id}`), obj);
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/tasks/' + id).set(obj);
   };
   window.FB.deleteTask = function(id) {
-    if (!uid()) return; remove(ref(db, `users/${uid()}/tasks/${id}`));
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/tasks/' + id).remove();
   };
   window.FB.saveNote = function(id, obj) {
-    if (!uid()) return; set(ref(db, `users/${uid()}/notes/${id}`), obj);
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/notes/' + id).set(obj);
   };
   window.FB.deleteNote = function(id) {
-    if (!uid()) return; remove(ref(db, `users/${uid()}/notes/${id}`));
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/notes/' + id).remove();
   };
   window.FB.reattachPlanner = function(wk) {
     if (!uid()) return;
-    if (plannerCb && plannerPath) off(ref(db, plannerPath), 'value', plannerCb);
-    plannerPath = `users/${uid()}/weeks/${wk}`;
-    plannerCb = onValue(ref(db, plannerPath), snap => {
-      const remote = snap.val() || {};
-      Object.entries(remote).forEach(([key, val]) => {
-        const cell = document.querySelector('[data-key="'+key+'"]');
-        if (cell && cell.value !== val) cell.value = val;
+    if (plannerCb && plannerPath) db.ref(plannerPath).off('value', plannerCb);
+    plannerPath = 'users/' + uid() + '/weeks/' + wk;
+    plannerCb = db.ref(plannerPath).on('value', function(snap) {
+      var remote = snap.val() || {};
+      Object.keys(remote).forEach(function(key) {
+        var cell = document.querySelector('[data-key="' + key + '"]');
+        if (cell && cell.value !== remote[key]) cell.value = remote[key];
       });
       markOverdue();
     });
   };
 
-  // Auth UI — use redirect in WebView, popup in browser
-  document.getElementById('signInBtn').addEventListener('click', async () => {
-    try {
-      if (isWebView()) {
-        // In Android WebView: redirect flow (page reloads then resumes)
-        const lbl = document.getElementById('signInLabel');
-        if (lbl) lbl.textContent = 'Redirecting...';
-        await signInWithRedirect(auth, provider);
-      } else {
-        // In browser: popup flow (no page reload)
-        await signInWithPopup(auth, provider);
-      }
-    } catch(e) {
-      // If popup is blocked, fall back to redirect automatically
-      if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
-        try { await signInWithRedirect(auth, provider); }
-        catch(e2) { alert('Sign-in error: ' + e2.message); }
-      } else if (e.code === 'auth/configuration-not-found' || e.code === 'auth/invalid-api-key') {
-        document.getElementById('configWarning').style.display = 'flex';
-      } else {
+  // ── Sign In ────────────────────────────────────────────────────────────
+  document.getElementById('signInBtn').addEventListener('click', function() {
+    var lbl = document.getElementById('signInLabel');
+    if (isWebView()) {
+      // Android WebView: must use redirect (popup is blocked by Google)
+      if (lbl) lbl.textContent = 'Signing in...';
+      auth.signInWithRedirect(provider).catch(function(e) {
+        if (lbl) lbl.textContent = 'Sign in with Google';
         alert('Sign-in error: ' + e.message);
-      }
+      });
+    } else {
+      // Browser: use popup
+      auth.signInWithPopup(provider).catch(function(e) {
+        if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
+          // Auto-fallback to redirect if popup blocked
+          if (lbl) lbl.textContent = 'Signing in...';
+          auth.signInWithRedirect(provider);
+        } else if (e.code === 'auth/configuration-not-found' || e.code === 'auth/invalid-api-key') {
+          document.getElementById('configWarning').style.display = 'flex';
+        } else {
+          alert('Sign-in error: ' + e.message);
+        }
+      });
     }
   });
 
-  // Handle the redirect result when the page reloads after signInWithRedirect
-  // This fires automatically after Google redirects back to the app
-  try {
-    const redirectResult = await getRedirectResult(auth);
-    if (redirectResult && redirectResult.user) {
-      // User signed in via redirect — onAuthStateChanged will handle the rest
-      console.log('Signed in via redirect:', redirectResult.user.email);
+  // ── Handle redirect result on page load ───────────────────────────────
+  auth.getRedirectResult().then(function(result) {
+    // result.user is set if we just came back from a redirect sign-in
+    // onAuthStateChanged below handles updating the UI
+  }).catch(function(e) {
+    if (e.code !== 'auth/no-auth-event') {
+      console.warn('Redirect result:', e.message);
     }
-  } catch(e) {
-    if (e.code !== 'auth/no-auth-event' && e.code !== 'auth/null-user') {
-      console.warn('Redirect result error:', e.message);
-    }
-  }
-  document.getElementById('signOutBtn').addEventListener('click', async () => {
-    if (plannerCb && plannerPath) off(ref(db, plannerPath), 'value', plannerCb);
-    if (tasksCb) off(ref(db, `users/${uid()}/tasks`), 'value', tasksCb);
-    if (notesCb) off(ref(db, `users/${uid()}/notes`), 'value', notesCb);
-    await signOut(auth);
   });
 
-  onAuthStateChanged(auth, user => {
+  // ── Sign Out ───────────────────────────────────────────────────────────
+  document.getElementById('signOutBtn').addEventListener('click', function() {
+    if (plannerCb && plannerPath) db.ref(plannerPath).off('value', plannerCb);
+    if (tasksCb) db.ref('users/' + uid() + '/tasks').off('value', tasksCb);
+    if (notesCb) db.ref('users/' + uid() + '/notes').off('value', notesCb);
+    auth.signOut();
+  });
+
+  // ── Auth state observer ────────────────────────────────────────────────
+  auth.onAuthStateChanged(function(user) {
     if (user) {
       document.getElementById('loginPanel').style.display = 'none';
       document.getElementById('userInfo').style.display = 'flex';
       document.getElementById('syncBadge').style.display = 'flex';
       document.getElementById('userName').textContent = user.displayName || user.email;
-      const av = document.getElementById('userAvatar');
+      var av = document.getElementById('userAvatar');
       if (user.photoURL) { av.src = user.photoURL; av.style.display = 'block'; }
+      var lbl = document.getElementById('signInLabel');
+      if (lbl) lbl.textContent = 'Sign in with Google';
 
       // Planner listener
-      const wk = window.weekStart ? fmtDate(window.weekStart) : null;
+      var wk = window.weekStart ? fmtDate(window.weekStart) : null;
       if (wk) window.FB.reattachPlanner(wk);
 
-      // Tasks listener — skip own echoes, patch only non-focused fields
-      if (tasksCb) off(ref(db, `users/${uid()}/tasks`), 'value', tasksCb);
-      let firstTaskSync = true;
-      tasksCb = onValue(ref(db, `users/${uid()}/tasks`), snap => {
-        const remote = snap.val() || {};
-        // Skip the echo of our own write — but always process the first sync (initial load)
+      // Tasks listener
+      if (tasksCb) db.ref('users/' + uid() + '/tasks').off('value', tasksCb);
+      var firstTaskSync = true;
+      tasksCb = db.ref('users/' + uid() + '/tasks').on('value', function(snap) {
+        var remote = snap.val() || {};
         if (!firstTaskSync && window.FB.ignoreNextTaskSync) {
           window.FB.ignoreNextTaskSync = false;
           return;
         }
         firstTaskSync = false;
         lsSet(TK, remote);
-        // Patch individual DOM fields without rebuilding
-        Object.values(remote).forEach(t => {
-          const ti = document.getElementById('tt-'+t.id);
+        Object.values(remote).forEach(function(t) {
+          var ti = document.getElementById('tt-' + t.id);
           if (ti && document.activeElement !== ti) ti.value = t.title || '';
-          const ni = document.querySelector('[data-notes-id="'+t.id+'"]');
+          var ni = document.querySelector('[data-notes-id="' + t.id + '"]');
           if (ni && document.activeElement !== ni) ni.value = t.notes || '';
         });
         buildGrid();
       });
 
-      // Notes listener — skip own echoes, patch only non-focused fields
-      if (notesCb) off(ref(db, `users/${uid()}/notes`), 'value', notesCb);
-      let firstNoteSync = true;
-      notesCb = onValue(ref(db, `users/${uid()}/notes`), snap => {
-        const remote = snap.val() || {};
-        // Skip the echo of our own write — but always process the first sync (initial load)
+      // Notes listener
+      if (notesCb) db.ref('users/' + uid() + '/notes').off('value', notesCb);
+      var firstNoteSync = true;
+      notesCb = db.ref('users/' + uid() + '/notes').on('value', function(snap) {
+        var remote = snap.val() || {};
         if (!firstNoteSync && window.FB.ignoreNextNoteSync) {
           window.FB.ignoreNextNoteSync = false;
           return;
         }
         firstNoteSync = false;
         lsSet(NK, remote);
-        // Patch individual DOM fields without rebuilding
-        Object.values(remote).forEach(n => {
-          const ti = document.getElementById('nt-'+n.id);
+        Object.values(remote).forEach(function(n) {
+          var ti = document.getElementById('nt-' + n.id);
           if (ti && document.activeElement !== ti) ti.value = n.title || '';
-          const bi = document.querySelector('[data-note-body="'+n.id+'"]');
+          var bi = document.querySelector('[data-note-body="' + n.id + '"]');
           if (bi && document.activeElement !== bi) bi.value = n.body || '';
         });
       });
+
     } else {
       document.getElementById('loginPanel').style.display = 'flex';
       document.getElementById('userInfo').style.display = 'none';
@@ -1590,10 +1594,7 @@ try {
     }
   });
 
-} catch(e) {
-  if (e.message !== 'no-config') console.warn('Firebase unavailable:', e.message);
-  // App continues working fully offline — no action needed
-}
+})();
 </script>
 </body>
 </html>
