@@ -29,7 +29,7 @@
   --white:#FFFDF5;--sg:rgba(139,105,20,0.22);
   --obg:#FFF0F0;--ot:#B32020;
 }
-html,body{height:100%;background:#FDF8EA;color:var(--ink);font-family:DM Sans,sans-serif;font-size:14px;overflow-x:hidden}
+html,body{height:100%;background:#FDF8EA;color:var(--ink);font-family:DM Sans,sans-serif;font-size:14px;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(232,184,75,0.15) 0%,transparent 70%),
   repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(196,148,42,0.05) 39px,rgba(196,148,42,0.05) 40px)}
@@ -71,6 +71,11 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .tab-btn.active{color:var(--gd);border-bottom-color:var(--gd)}
 .tab-panel{display:none;flex:1;flex-direction:column}
 .tab-panel.active{display:flex}
+/* Mobile: allow the whole tab to scroll vertically */
+@media(max-width:700px){
+  .tab-panel.active{overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .grid-wrap{overflow-y:visible;overflow-x:visible;padding:10px 12px 30px}
+}
 
 /* ── Planner controls ── */
 .ctrl-bar{background:var(--gc);border-bottom:1px solid var(--gp);padding:9px 18px;
@@ -90,7 +95,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .btn-clr:hover{background:var(--gm);color:white}
 
 /* ── Planner grid ── */
-.grid-wrap{flex:1;overflow-x:auto;padding:12px 18px 36px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.grid-wrap{flex:1;overflow-x:auto;padding:12px 18px 36px;-webkit-overflow-scrolling:touch}
 .sched{min-width:700px;border-collapse:separate;border-spacing:0;width:100%;
   border-radius:10px;overflow:hidden;box-shadow:0 6px 28px var(--sg)}
 .sched thead th{background:linear-gradient(180deg,var(--gm) 0%,var(--gd) 100%);color:var(--white);
@@ -312,9 +317,15 @@ footer strong{color:rgba(255,253,245,0.85)}
   .notes-grid{grid-template-columns:1fr}
   .sw{padding:12px}
   .grid-wrap{padding:10px 12px 30px}
-  .sched-mobile{width:100%;border-radius:10px;overflow:hidden}
-  #schedMobileWrap{border-radius:10px;overflow:hidden;box-shadow:0 4px 20px var(--sg)}
+  /* Wrapper clips corners cleanly without blocking scroll */
+  #schedMobileWrap{border-radius:10px;box-shadow:0 4px 20px var(--sg);overflow:hidden}
+  .sched-mobile{width:100%;border-radius:0}
+  /* Top-left and top-right corner cells */
+  .sched-mobile thead th:first-child{border-radius:10px 0 0 0}
   .sched-mobile thead th:last-child{border-radius:0 10px 0 0}
+  /* Bottom-left and bottom-right corner cells */
+  .sched-mobile tbody tr:last-child .tc{border-radius:0 0 0 10px}
+  .sched-mobile tbody tr:last-child .sc:last-child{border-radius:0 0 10px 0}
   .sched-mobile .sc:last-child{border-right:none}
   /* iOS requires font-size >= 16px to prevent zoom on focus which dismisses keyboard */
   .ci{font-size:16px;padding:6px 8px;min-height:44px;line-height:1.5}
@@ -1500,9 +1511,9 @@ function buildMobileDay(){
   head.innerHTML='';
   var htr=document.createElement('tr');
   var th0=document.createElement('th');th0.textContent='Time';
-  th0.style.cssText='background:linear-gradient(180deg,var(--gm) 0%,var(--gd) 100%);color:var(--white);font-family:Playfair Display,serif;font-size:14px;font-weight:700;padding:12px 10px;text-align:left;min-width:76px;';
+  th0.style.cssText='background:linear-gradient(180deg,var(--gm) 0%,var(--gd) 100%);color:var(--white);font-family:Playfair Display,serif;font-size:14px;font-weight:700;padding:12px 10px;text-align:center;min-width:76px;border-radius:10px 0 0 0;';
   var th1=document.createElement('th');th1.textContent=DAYS[currentDayIdx]+' '+shortD(colDate);
-  th1.style.cssText='background:linear-gradient(180deg,'+(isToday?'var(--gb)':'var(--gm)')+' 0%,'+(isToday?'var(--gm)':'var(--gd)')+' 100%);color:'+(isToday?'var(--ink)':'var(--white)')+';font-family:Playfair Display,serif;font-size:14px;font-weight:700;padding:12px 10px;text-align:left;width:100%;';
+  th1.style.cssText='background:linear-gradient(180deg,'+(isToday?'var(--gb)':'var(--gm)')+' 0%,'+(isToday?'var(--gm)':'var(--gd)')+' 100%);color:'+(isToday?'var(--ink)':'var(--white)')+';font-family:Playfair Display,serif;font-size:15px;font-weight:700;padding:12px 10px;text-align:center;width:100%;letter-spacing:0.3px;border-radius:0 10px 0 0;';
   htr.appendChild(th0);htr.appendChild(th1);head.appendChild(htr);
   body.innerHTML='';
   var wk=fmtDate(weekStart);
@@ -1534,6 +1545,15 @@ function buildMobileDay(){
     td.appendChild(ta);tr.appendChild(tc);tr.appendChild(td);
     body.appendChild(tr);
   });
+  // Round the bottom corners of the last row
+  var lastRow=body.lastElementChild;
+  if(lastRow){
+    var cells=lastRow.querySelectorAll('td');
+    if(cells.length>=2){
+      cells[0].style.borderRadius='0 0 0 10px';
+      cells[cells.length-1].style.borderRadius='0 0 10px 0';
+    }
+  }
 }
 
 document.getElementById('prevDay').addEventListener('click',function(){
@@ -1547,13 +1567,22 @@ document.getElementById('nextDay').addEventListener('click',function(){
 
 // Swipe left/right to change day
 (function(){
-  var sx=0,sy=0;
-  document.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+  var sx=0,sy=0,st=0;
+  document.addEventListener('touchstart',function(e){
+    sx=e.touches[0].clientX;
+    sy=e.touches[0].clientY;
+    st=Date.now();
+  },{passive:true});
   document.addEventListener('touchend',function(e){
     if(currentTab!=='planner'||!isMobile())return;
     var dx=e.changedTouches[0].clientX-sx;
     var dy=e.changedTouches[0].clientY-sy;
-    if(Math.abs(dx)<50||Math.abs(dy)>Math.abs(dx)*0.7)return;
+    var dt=Date.now()-st;
+    // Only trigger day-change on fast, clearly horizontal swipe (not a scroll)
+    // dx must be > 80px, clearly more horizontal than vertical, and fast (< 400ms)
+    if(Math.abs(dx)<80)return;           // too short — probably a scroll
+    if(Math.abs(dy)>Math.abs(dx)*0.5)return; // too vertical — is a scroll
+    if(dt>400)return;                    // too slow — is a scroll
     if(dx<0){
       if(currentDayIdx<6){currentDayIdx++;buildMobileDay();}
       else{shiftWeek(1);currentDayIdx=0;setTimeout(buildMobileDay,80);}
