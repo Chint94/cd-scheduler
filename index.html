@@ -966,11 +966,28 @@ function renderTasks(){
   var tasks=lsGet(TK);
   var list=document.getElementById('tasksList');
   var po={high:0,medium:1,low:2};
+  // Build a numeric sort key: milliseconds of the task's datetime.
+  // Tasks with no date go to the very end.
+  // Done tasks always sink below undone tasks.
+  function taskSortKey(t){
+    if(!t.date)return 9999999999999; // no date → end
+    var d=parseDate(t.date);
+    if(!d)return 9999999999999;
+    var h=0,m=0;
+    if(t.time){var tp=t.time.split(':');h=parseInt(tp[0])||0;m=parseInt(tp[1])||0;}
+    return new Date(d.getFullYear(),d.getMonth(),d.getDate(),h,m).getTime();
+  }
+
   var items=Object.values(tasks).sort(function(a,b){
-    // Sort recurring by date then index
+    // 1. Done tasks always go below undone tasks
+    if(a.done!==b.done)return a.done?1:-1;
+    // 2. Sort chronologically by date + time
+    var ka=taskSortKey(a), kb=taskSortKey(b);
+    if(ka!==kb)return ka-kb;
+    // 3. Within same datetime: recurring instances in order
     if(a.recurrenceGroupId&&b.recurrenceGroupId&&a.recurrenceGroupId===b.recurrenceGroupId)
       return (a.recurrenceIndex||0)-(b.recurrenceIndex||0);
-    if(a.done!==b.done)return a.done?1:-1;
+    // 4. Tiebreak by priority
     return (po[a.priority]||1)-(po[b.priority]||1);
   });
   if(curFilter!=='all'){
