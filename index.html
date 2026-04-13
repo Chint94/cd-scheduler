@@ -1717,14 +1717,20 @@ function gcalConfigured(){
 }
 
 // Load GAPI + GIS scripts dynamically
+var gcalScriptsLoaded=false;
 function loadGcalScripts(){
   if(!gcalConfigured()) return;
-  // Mark gapi as ready immediately — we use fetch() REST calls, not gapi scripts
-  // This avoids loading apis.google.com which is blocked in Android WebView
+  if(gcalScriptsLoaded) return; // Only bind once — prevents duplicate listeners
+  gcalScriptsLoaded=true;
   gapiReady=true;
   gisReady=true;
 
   document.getElementById('gcalSyncBtn').addEventListener('click',function(){
+    // Open the panel if it's not already open
+    var panel=document.getElementById('gcalPanel');
+    if(panel && !panel.classList.contains('open')){
+      document.getElementById('gcalToggle').click();
+    }
     gcalEnsureToken(function(){
       gcalSyncAllTasks();
     });
@@ -1734,45 +1740,58 @@ function loadGcalScripts(){
 // ── Get a valid Calendar API token ───────────────────────────────────────────
 // Priority: 1) already have a valid token  2) Firebase OAuth token  3) GIS popup (browser only)
 function gcalEnsureToken(callback){
-  // If we already have a valid token, use it
+  // Step 1: Already have a valid cached token?
   if(gcalToken && gcalToken.access_token &&
      gcalToken.expires_at && Date.now() < gcalToken.expires_at){
     callback(); return;
   }
 
-  // Try to use the Firebase OAuth access token (works in WebView + browser)
+  // Step 2: Token captured at sign-in time?
   if(window._gcalAccessToken){
-    gcalToken={access_token:window._gcalAccessToken, expires_at:Date.now()+3500000};
+    gcalToken={access_token:window._gcalAccessToken,
+               expires_at:Date.now()+3500000};
     callback(); return;
   }
 
-  // Try getting a fresh token from Firebase current user (re-auth path)
-  var fbUser=firebase.auth().currentUser;
-  if(fbUser){
-    // Re-authenticate to get a fresh Google access token
+  // Step 3: No token — user must re-authenticate to grant Calendar scope
+  // Show clear message first
+  gcalShowStatus('Calendar access needed. A sign-in popup will appear — please Allow calendar access.','orange');
+  gcalSetToggleStatus('Requesting calendar access...');
+
+  setTimeout(function(){
     var reProvider=new firebase.auth.GoogleAuthProvider();
     reProvider.addScope('https://www.googleapis.com/auth/calendar.events');
+    // Force consent screen so user can grant Calendar scope
+    reProvider.setCustomParameters({prompt:'consent'});
+
     if(isWebView()){
-      // WebView: store a flag and use redirect — token captured on return
-      gcalShowStatus('Re-authentication needed. Please sign in again.','orange');
-      auth.signInWithRedirect(reProvider);
-      return;
+      gcalShowStatus('Redirecting for calendar access — please sign in and click Allow...','orange');
+      firebase.auth().signInWithRedirect(reProvider);
     } else {
-      // Browser: use popup to get token with Calendar scope
-      auth.signInWithPopup(reProvider).then(function(result){
+      firebase.auth().signInWithPopup(reProvider).then(function(result){
+        var token=null;
         if(result.credential && result.credential.accessToken){
-          window._gcalAccessToken=result.credential.accessToken;
-          gcalToken={access_token:result.credential.accessToken, expires_at:Date.now()+3500000};
+          token=result.credential.accessToken;
+        }
+        if(token){
+          window._gcalAccessToken=token;
+          gcalToken={access_token:token, expires_at:Date.now()+3500000};
+          gcalShowStatus('Calendar access granted! Syncing now...','var(--gd)');
           callback();
+        } else {
+          gcalShowStatus('Could not get calendar access token. Try signing out and back in.','red');
         }
       }).catch(function(e){
-        gcalShowStatus('Auth failed: '+e.message,'red');
+        if(e.code==='auth/popup-closed-by-user'){
+          gcalShowStatus('Popup closed. Please try again and click Allow.','orange');
+        } else if(e.code==='auth/cancelled-popup-request'){
+          // Another popup was already open — ignore
+        } else {
+          gcalShowStatus('Sign-in error: '+e.message,'red');
+        }
       });
-      return;
     }
-  }
-
-  gcalShowStatus('Please sign in with Google first, then try syncing.','orange');
+  },300);
 }
 
 function gcalShowStatus(msg,color){
@@ -1781,7 +1800,17 @@ function gcalShowStatus(msg,color){
   el.textContent=msg;
   el.style.color=color||'var(--inkl)';
   el.classList.add('show');
-  if(color!=='red') setTimeout(function(){el.classList.remove('show');},4000);
+  // Keep error messages visible; auto-hide success/info after 6s
+  if(color!=='red') setTimeout(function(){el.classList.remove('show');},6000);
+  // Ensure panel is open so user sees the status
+  var panel=document.getElementById('gcalPanel');
+  var toggle=document.getElementById('gcalToggle');
+  var chev=document.getElementById('gcalChevron');
+  if(panel && !panel.classList.contains('open')){
+    panel.classList.add('open');
+    if(toggle) toggle.classList.add('open');
+    if(chev) chev.classList.add('open');
+  }
 }
 
 // Convert a task to a Google Calendar event object
@@ -2035,7 +2064,13 @@ function updateGcalUI(loggedIn){
   if(gcalConfigured()){
     syncBtn.style.display  = loggedIn ? 'flex' : 'none';
     setupDiv.style.display = 'none';
-    if(loggedIn) loadGcalScripts();
+    if(loggedIn){
+      loadGcalScripts(); // safe — has internal guard against double-binding
+    } else {
+      // Reset token on sign-out so next sign-in gets a fresh one
+      gcalToken=null;
+      window._gcalAccessToken=null;
+    }
   } else {
     syncBtn.style.display  = 'none';
     setupDiv.style.display = 'block';
