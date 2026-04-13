@@ -719,8 +719,9 @@ function taskSlotSpan(t, colDate){
   if(!endOnSameDay) return 0; // cross-day blocks: just use pills for now
   var endM=taskEndMins(t);
   if(endM<=startM) return 0;
-  // Number of 30-min slots covered
-  return Math.ceil((endM-startM)/30);
+  // Number of 30-min slots covered — minimum 1 so even 15-min blocks render
+  var slots = Math.ceil((endM-startM)/30);
+  return Math.max(slots, 1);
 }
 
 // Index of SLOTS array for a given hour:minute
@@ -1044,9 +1045,42 @@ function buildGrid(){
       var td=document.createElement('td');
       td.className='sc'+(ci===todayIdx?' tdy':'')+(ov?' ov':'');
 
-      // Task pills (timeblock-aware)
+      // ── Timeblock tasks: render as colour block with rowspan ──────────
+      var allTasks=lsGet(TK);
+      var tbTasksD=Object.values(allTasks).filter(function(t){
+        if(taskSlotSpan(t,colDate)<1) return false;
+        var p=t.time.split(':');var h=parseInt(p[0]),m=parseInt(p[1]);
+        return h===slot.h&&(m<30?slot.m===0:slot.m===30);
+      });
+      tbTasksD.forEach(function(t){
+        var span=taskSlotSpan(t,colDate);
+        if(span>1) td.rowSpan=(td.rowSpan||1)+span-1;
+        var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
+        var diffM=taskEndMins(t)-taskStartMins(t);
+        var cellH=span===1?Math.max(Math.round((diffM/30)*40)-4,20):((span*40)-6);
+        var block=document.createElement('div');
+        block.className='tb-block';
+        block.style.cssText='background:'+pc+'28;border-left-color:'+pc+
+          ';color:'+pc+';height:'+cellH+'px;';
+        var icon=t.done?'✅':(t.recurrence?'🔁':'📌');
+        var titleDiv=document.createElement('div');titleDiv.className='tb-title';
+        titleDiv.textContent=icon+' '+(t.title||'(no title)');
+        var timeDiv=document.createElement('div');timeDiv.className='tb-time';
+        timeDiv.textContent=t.time+(t.endTime?'–'+t.endTime:'');
+        block.appendChild(titleDiv);block.appendChild(timeDiv);
+        block.addEventListener('click',function(e){e.stopPropagation();openTaskEditModal(t.id);});
+        block.setAttribute('draggable','true');
+        block.addEventListener('dragstart',function(e){
+          dragState.taskId=t.id;e.dataTransfer.effectAllowed='move';
+          e.dataTransfer.setData('text/plain',t.id);
+        });
+        td.appendChild(block);
+      });
+      // Regular pills for tasks with no end time
       getTasksForSlot(colDate,slot).forEach(function(entry){
-        td.appendChild(makePill(entry.task, entry));
+        if(entry.isCont) return;
+        if(taskSlotSpan(entry.task,colDate)>=1) return;
+        td.appendChild(makePill(entry.task,entry));
       });
 
       // Drag-over highlighting (desktop)
@@ -2549,7 +2583,7 @@ function buildMobileDay(){
     td.className='sc'+(isToday?' tdy':'')+(ov?' ov':'');
     // Timeblock rendering for mobile
     var mbTasks=Object.values(lsGet(TK)).filter(function(t){
-      return taskSlotSpan(t,colDate)>=2&&(function(){
+      return taskSlotSpan(t,colDate)>=1&&(function(){
         var p=t.time.split(':');var h=parseInt(p[0]),m=parseInt(p[1]);
         return h===slot.h&&(m<30?slot.m===0:slot.m===30);
       })();
@@ -2560,8 +2594,10 @@ function buildMobileDay(){
       var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
       var block=document.createElement('div');
       block.className='tb-block';
+      var mbDiff=taskEndMins(t)-taskStartMins(t);
+      var mbH=span===1?Math.max(Math.round((mbDiff/30)*48)-4,20):((span*48)-6);
       block.style.cssText='background:'+pc+'28;border-left-color:'+pc+
-        ';color:'+pc+';height:'+((span*48)-6)+'px;';
+        ';color:'+pc+';height:'+mbH+'px;';
       var titleDiv=document.createElement('div');titleDiv.className='tb-title';
       titleDiv.textContent=(t.done?'✅':(t.recurrence?'🔁':'📌'))+' '+(t.title||'(no title)');
       var timeDiv=document.createElement('div');timeDiv.className='tb-time';
@@ -2573,7 +2609,7 @@ function buildMobileDay(){
     // Regular pills for non-timeblock tasks
     getTasksForSlot(colDate,slot).forEach(function(entry){
       if(entry.isCont) return;
-      if(taskSlotSpan(entry.task,colDate)>=2) return;
+      if(taskSlotSpan(entry.task,colDate)>=1) return; // already rendered as block
       td.appendChild(makePill(entry.task,entry));
     });
     // Desktop drag-over for mobile table cells
