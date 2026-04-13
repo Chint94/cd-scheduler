@@ -301,6 +301,46 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 
 
 
+/* ── Google Calendar sync dropdown ── */
+.gcal-wrap{margin-bottom:14px}
+.gcal-toggle{display:flex;align-items:center;gap:9px;padding:10px 14px;
+  background:var(--gc);border:1px solid var(--gp);border-radius:10px;
+  cursor:pointer;user-select:none;transition:border-color .15s;
+  -webkit-tap-highlight-color:transparent;width:100%;text-align:left}
+.gcal-toggle:hover,.gcal-toggle:active{border-color:var(--gm)}
+.gcal-toggle.open{border-radius:10px 10px 0 0;border-bottom-color:transparent}
+.gcal-toggle-lbl{font-size:12px;font-weight:600;color:var(--gd);flex:1}
+.gcal-toggle-status{font-size:11px;color:var(--inkl);white-space:nowrap;
+  max-width:180px;overflow:hidden;text-overflow:ellipsis}
+.gcal-chev{font-size:11px;color:var(--inkl);transition:transform .2s;flex-shrink:0}
+.gcal-chev.open{transform:rotate(180deg)}
+.gcal-panel{background:var(--gc);border:1px solid var(--gp);border-top:none;
+  border-radius:0 0 10px 10px;padding:13px 14px;gap:10px;
+  display:none;flex-direction:column}
+.gcal-panel.open{display:flex}
+.gcal-btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn-gcal{display:flex;align-items:center;gap:6px;background:white;
+  border:1.5px solid var(--gp);border-radius:8px;padding:8px 14px;
+  font-family:DM Sans,sans-serif;font-size:12px;font-weight:600;
+  color:var(--inkm);cursor:pointer;transition:all .15s;
+  white-space:nowrap;min-height:38px;-webkit-tap-highlight-color:transparent}
+.btn-gcal:hover{border-color:var(--gm);background:var(--gc)}
+.btn-gcal:active{opacity:.8}
+.btn-gcal.syncing{opacity:.55;pointer-events:none}
+.btn-gcal svg{width:15px;height:15px;flex-shrink:0}
+.btn-export{display:flex;align-items:center;gap:6px;background:transparent;
+  border:1.5px solid var(--gp);border-radius:8px;padding:8px 14px;
+  font-family:DM Sans,sans-serif;font-size:12px;font-weight:600;
+  color:var(--inkl);cursor:pointer;transition:all .15s;min-height:38px;
+  -webkit-tap-highlight-color:transparent}
+.btn-export:hover{border-color:var(--gm);color:var(--gd)}
+.gcal-msg{font-size:12px;color:var(--inkl);padding:8px 11px;line-height:1.6;
+  background:rgba(255,255,255,0.55);border:1px solid var(--gp);
+  border-radius:7px;display:none}
+.gcal-msg.show{display:block}
+.gcal-msg.err{color:#B32020;background:#FFF0F0;border-color:#F5C0C0}
+.gcal-msg.ok{color:#2E7D32;background:#E8F5E9;border-color:#A5D6A7}
+
 /* ── Footer ── */
 footer{background:var(--gd);color:rgba(255,253,245,0.5);text-align:center;
   font-size:11px;padding:11px 18px;letter-spacing:.5px}
@@ -424,6 +464,25 @@ footer strong{color:rgba(255,253,245,0.85)}
       </div>
     </div>
 
+    <!-- Google Calendar sync dropdown -->
+    <div class="gcal-wrap" id="gcalWrap">
+      <div class="gcal-toggle" id="gcalToggle">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M19 4h-1V2h-2v2H8V2H6v2H5C3.9 4 3 4.9 3 6v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h5v5H7z" fill="#4285F4"/></svg>
+        <span class="gcal-toggle-lbl">Google Calendar</span>
+        <span class="gcal-toggle-status" id="gcalStatus2">Tap to sync tasks</span>
+        <span class="gcal-chev" id="gcalChev">▼</span>
+      </div>
+      <div class="gcal-panel" id="gcalPanel">
+        <div class="gcal-btns">
+          <button class="btn-gcal" id="gcalSyncBtn">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M19 4h-1V2h-2v2H8V2H6v2H5C3.9 4 3 4.9 3 6v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h5v5H7z" fill="#4285F4"/></svg>
+            Sync to Google Calendar
+          </button>
+          <button class="btn-export" id="gcalExportBtn">⬇ Export .ics</button>
+        </div>
+        <div class="gcal-msg" id="gcalMsg"></div>
+      </div>
+    </div>
     <div class="filter-bar" id="filterBar">
       <button class="fb active" data-filter="all">All</button>
       <button class="fb" data-filter="pending">Pending</button>
@@ -1624,6 +1683,258 @@ setWeek(new Date());
 applyPlannerLayout();
 renderTasks();
 renderNotes();
+// ════════════════════════════════════════════════════════
+// GOOGLE CALENDAR SYNC
+// ════════════════════════════════════════════════════════
+var GCAL_CLIENT_ID = '1033903916825-vtnp7v0t4qcnmkpbplgb40kg5resk93j.apps.googleusercontent.com';
+var GCAL_API_KEY   = 'AIzaSyB6rv6EA5sMUcJ1yRZSMrFK_e4CfX-Oyis';
+var GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
+var GCAL_CAL       = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+var gcalToken      = null;  // {access_token, expires_at}
+var gcalBound      = false; // prevent double-binding
+
+// ── Cache: {taskId: {eventId, hash}} ─────────────────────────────────────────
+var GCAL_CK = 'cds_gcal_v3';
+function gcalCacheGet(){ try{return JSON.parse(localStorage.getItem(GCAL_CK)||'{}')}catch(e){return{}} }
+function gcalCacheSet(o){ try{localStorage.setItem(GCAL_CK,JSON.stringify(o))}catch(e){} }
+function gcalHash(t){ return [t.title||'',t.date||'',t.time||'',t.notes||'',t.priority||'',t.recurrence||''].join('|') }
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function gcalMsg(msg,type){
+  var el=document.getElementById('gcalMsg');
+  if(!el)return;
+  el.textContent=msg;
+  el.className='gcal-msg show'+(type==='err'?' err':type==='ok'?' ok':'');
+  // Keep errors visible; auto-clear others after 6s
+  if(type!=='err') setTimeout(function(){el.classList.remove('show')},6000);
+}
+function gcalStatus2(msg){
+  var el=document.getElementById('gcalStatus2');
+  if(el) el.textContent=msg;
+}
+function gcalPanelOpen(){
+  var p=document.getElementById('gcalPanel'),
+      t=document.getElementById('gcalToggle'),
+      c=document.getElementById('gcalChev');
+  if(p&&!p.classList.contains('open')){
+    p.classList.add('open');t.classList.add('open');c.classList.add('open');
+  }
+}
+
+// ── Toggle ────────────────────────────────────────────────────────────────────
+document.getElementById('gcalToggle').addEventListener('click',function(){
+  var p=document.getElementById('gcalPanel'),
+      t=document.getElementById('gcalToggle'),
+      ch=document.getElementById('gcalChev'),
+      open=p.classList.contains('open');
+  p.classList.toggle('open',!open);
+  t.classList.toggle('open',!open);
+  ch.classList.toggle('open',!open);
+});
+
+// ── Build a Calendar event object from a task ─────────────────────────────────
+function taskToGcalEvent(t){
+  var td=parseDate(t.date); if(!td) return null;
+  var tz=Intl.DateTimeFormat().resolvedOptions().timeZone;
+  var startDT,endDT;
+  if(t.time){
+    var tp=t.time.split(':'),h=parseInt(tp[0]),m=parseInt(tp[1]);
+    var s=new Date(td.getFullYear(),td.getMonth(),td.getDate(),h,m);
+    var e=new Date(td.getFullYear(),td.getMonth(),td.getDate(),h+1,m);
+    startDT={dateTime:s.toISOString(),timeZone:tz};
+    endDT  ={dateTime:e.toISOString(),timeZone:tz};
+  } else {
+    var ymd=td.getFullYear()+'-'+pad(td.getMonth()+1)+'-'+pad(td.getDate());
+    startDT={date:ymd}; endDT={date:ymd};
+  }
+  var desc='Priority: '+(t.priority||'medium');
+  if(t.notes) desc+='\n\nNotes: '+t.notes;
+  return {
+    summary:'[CD] '+(t.title||'Untitled'),
+    description:desc,
+    start:startDT, end:endDT,
+    colorId:t.priority==='high'?'11':t.priority==='low'?'10':'5',
+    extendedProperties:{private:{cdTaskId:t.id,cdScheduler:'true'}}
+  };
+}
+
+// ── Get OAuth token then run callback ─────────────────────────────────────────
+// Uses signInWithPopup every time — if scope already granted, resolves silently.
+function gcalGetToken(callback){
+  // Use cached token if still valid
+  if(gcalToken&&gcalToken.access_token&&Date.now()<gcalToken.expires_at){
+    callback(gcalToken.access_token); return;
+  }
+  var p=new firebase.auth.GoogleAuthProvider();
+  p.addScope(GCAL_SCOPE);
+  p.setCustomParameters({prompt:'select_account'});
+  firebase.auth().signInWithPopup(p).then(function(result){
+    var tok=result&&result.credential&&result.credential.accessToken||null;
+    if(tok){
+      gcalToken={access_token:tok,expires_at:Date.now()+3500000};
+      callback(tok);
+    } else {
+      gcalMsg('Calendar permission not granted. Please click Allow in the popup.','err');
+      gcalStatus2('Permission needed');
+    }
+  }).catch(function(e){
+    if(e.code==='auth/popup-closed-by-user'){
+      gcalMsg('Popup closed — click Sync again and select Allow.','');
+      gcalStatus2('Tap to try again');
+    } else if(e.code==='auth/cancelled-popup-request'){
+      // ignore
+    } else if(e.code==='auth/popup-blocked'){
+      gcalMsg('Popup blocked by browser. Allow popups for this site, then try again.','err');
+      gcalStatus2('Popup blocked');
+    } else {
+      gcalMsg('Auth error: '+e.message,'err');
+    }
+  });
+}
+
+// ── Sync all pending/today/overdue tasks (delta — skip unchanged) ─────────────
+function gcalSyncAllTasks(){
+  var tasks=lsGet(TK);
+  var eligible=Object.values(tasks).filter(function(t){
+    return t.date&&!t.done&&
+      (taskStatus(t)==='today'||taskStatus(t)==='pending'||taskStatus(t)==='overdue');
+  });
+  if(eligible.length===0){
+    gcalMsg('No pending tasks with dates to sync.','');
+    gcalStatus2('Nothing to sync');
+    return;
+  }
+  var cache=gcalCacheGet();
+  var toSync=eligible.filter(function(t){
+    var cv=cache[t.id];
+    return !cv||!cv.eventId||gcalHash(t)!==cv.hash;
+  });
+  if(toSync.length===0){
+    gcalMsg('All tasks already up to date — nothing to sync.','ok');
+    gcalStatus2('Already up to date ✓');
+    return;
+  }
+
+  gcalGetToken(function(token){
+    var btn=document.getElementById('gcalSyncBtn');
+    if(btn) btn.classList.add('syncing');
+    gcalMsg('Syncing '+toSync.length+' task'+(toSync.length>1?'s':'')+
+      '… ('+eligible.length+' total, '+(eligible.length-toSync.length)+' unchanged)','');
+    gcalStatus2('Syncing '+toSync.length+'…');
+    var done=0,errs=0;
+
+    function next(i){
+      if(i>=toSync.length){
+        if(btn) btn.classList.remove('syncing');
+        var now=new Date(),hm=now.getHours()+':'+(now.getMinutes()<10?'0':'')+now.getMinutes();
+        if(errs===0){
+          gcalMsg('✓ '+done+' task'+(done>1?'s':'')+' synced to Google Calendar!','ok');
+          gcalStatus2('Synced at '+hm+' ✓');
+        } else {
+          gcalMsg('⚠ '+done+' synced, '+errs+' failed. Try again shortly.','err');
+          gcalStatus2('⚠ Some failed');
+        }
+        return;
+      }
+      var t=toSync[i];
+      var ev=taskToGcalEvent(t);
+      if(!ev){ next(i+1); return; }
+      var cv=cache[t.id];
+      var url,method;
+      if(cv&&cv.eventId){
+        url=GCAL_CAL+'/'+encodeURIComponent(cv.eventId)+'?key='+GCAL_API_KEY;
+        method='PATCH';
+      } else {
+        url=GCAL_CAL+'?key='+GCAL_API_KEY;
+        method='POST';
+      }
+      fetch(url,{
+        method:method,
+        headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+        body:JSON.stringify(ev)
+      }).then(function(r){return r.json();}).then(function(d){
+        if(d.error){
+          if(d.error.code===404){
+            // Event deleted from Calendar — retry as insert
+            cache[t.id]={};gcalCacheSet(cache);
+            setTimeout(function(){next(i);},400); return;
+          }
+          if(d.error.code===401){
+            // Token expired — clear and stop
+            gcalToken=null;
+            if(btn) btn.classList.remove('syncing');
+            gcalMsg('Session expired. Click Sync again to re-authenticate.','err');
+            return;
+          }
+          errs++;
+        } else {
+          cache[t.id]={eventId:d.id,hash:gcalHash(t)};
+          gcalCacheSet(cache);
+          done++;
+        }
+        setTimeout(function(){next(i+1);},300);
+      }).catch(function(){
+        errs++;
+        setTimeout(function(){next(i+1);},300);
+      });
+    }
+    next(0);
+  });
+}
+
+// ── Export .ics ───────────────────────────────────────────────────────────────
+document.getElementById('gcalExportBtn').addEventListener('click',function(){
+  var tasks=lsGet(TK);
+  var items=Object.values(tasks).filter(function(t){return t.date&&!t.done;});
+  if(items.length===0){alert('No tasks with dates to export.');return;}
+  var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//CD Scheduler//EN','CALSCALE:GREGORIAN'];
+  var now=new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  items.forEach(function(t){
+    var td=parseDate(t.date);if(!td)return;
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:'+t.id+'@cdscheduler');
+    lines.push('DTSTAMP:'+now);
+    lines.push('SUMMARY:[CD] '+(t.title||'Untitled'));
+    if(t.notes) lines.push('DESCRIPTION:'+t.notes.split('\n').join('\\n'));
+    if(t.time){
+      var tp=t.time.split(':'),h=parseInt(tp[0]),m=parseInt(tp[1]);
+      var fmt=function(d){return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'T'+pad(d.getHours())+pad(d.getMinutes())+'00';};
+      var s=new Date(td.getFullYear(),td.getMonth(),td.getDate(),h,m);
+      var e=new Date(td.getFullYear(),td.getMonth(),td.getDate(),h+1,m);
+      lines.push('DTSTART:'+fmt(s));
+      lines.push('DTEND:'+fmt(e));
+    } else {
+      var ymd=td.getFullYear()+pad(td.getMonth()+1)+pad(td.getDate());
+      lines.push('DTSTART;VALUE=DATE:'+ymd);
+      lines.push('DTEND;VALUE=DATE:'+ymd);
+    }
+    if(t.recurrence){
+      var freq=t.recurrence==='daily'?'DAILY':t.recurrence==='weekly'?'WEEKLY':'MONTHLY';
+      lines.push('RRULE:FREQ='+freq+';COUNT=20');
+    }
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  var blob=new Blob([lines.join('\r\n')],{type:'text/calendar;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='cd-scheduler-tasks.ics';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ── Wire Sync button ──────────────────────────────────────────────────────────
+(function(){
+  var btn=document.getElementById('gcalSyncBtn');
+  if(!btn||gcalBound) return;
+  gcalBound=true;
+  btn.addEventListener('click',function(){
+    gcalPanelOpen();
+    gcalMsg('Requesting calendar access…','');
+    gcalSyncAllTasks();
+  });
+})();
+
 setInterval(markOverdue,60000);
 setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
 
