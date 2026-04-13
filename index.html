@@ -482,11 +482,13 @@ header {
   border-radius: 4px;
 }
 
-/* Overdue */
-.overdue .sched-cell { background: var(--overdue-bg) !important; }
+/* Overdue — per cell */
+.sched-cell.overdue-cell { background: var(--overdue-bg) !important; }
+.sched-cell.overdue-cell .cell-input { color: var(--overdue-text); font-weight: 600; }
+.time-cell.overdue-time { color: var(--overdue-text); font-weight: 700; }
+/* Whole row past (all 7 days done) */
+.overdue .sched-cell { background: #FFF0F0 !important; }
 .overdue .time-cell { color: var(--overdue-text); }
-.overdue .cell-input { color: var(--overdue-text); font-weight: 600; }
-.overdue .cell-input:not(:empty) { text-decoration: underline wavy rgba(179,32,32,0.3); }
 
 /* ── Footer ──────────────────────────────────────────────────────── */
 footer {
@@ -696,15 +698,17 @@ function buildGrid() {
     tc.textContent = slot.label;
     tr.appendChild(tc);
 
-    // Check overdue for whole row (all cols in past)
-    let rowOverdue = true;
+    let anyOverdue = false;
 
     cols.forEach((colDate, ci) => {
       const cellOverdue = isSlotOverdue(colDate, slot);
-      if (!cellOverdue) rowOverdue = false;
+      if (cellOverdue) anyOverdue = true;
 
       const td = document.createElement('td');
-      td.className = 'sched-cell' + (ci === todayIdx ? ' today-col' : '');
+      // Mark individual cell red if its date+time is in the past
+      td.className = 'sched-cell'
+        + (ci === todayIdx ? ' today-col' : '')
+        + (cellOverdue ? ' overdue-cell' : '');
 
       const key = `r${ri}_c${ci}`;
       const ta = document.createElement('textarea');
@@ -720,7 +724,6 @@ function buildGrid() {
         localStore[wk][key] = ta.value;
         saveLocal();
         if (window._saveCell) window._saveCell(key, ta.value);
-        markOverdue();
       });
 
       // Mobile: tab-like behaviour
@@ -737,8 +740,8 @@ function buildGrid() {
       tr.appendChild(td);
     });
 
-    // Mark row if ALL columns in the past
-    if (rowOverdue) tr.classList.add('overdue');
+    // Mark time label red if any cell in this row is overdue
+    if (anyOverdue) tc.classList.add('overdue-time');
 
     body.appendChild(tr);
   });
@@ -746,14 +749,22 @@ function buildGrid() {
 
 function markOverdue() {
   if (!weekStart) return;
+  const cols = DAYS.map((_,i) => addDays(weekStart, i));
   const rows = document.querySelectorAll('#schedBody tr');
   rows.forEach((tr, ri) => {
     const slot = SLOTS[ri];
     if (!slot) return;
-    const cols = weekStart ? DAYS.map((_,i) => addDays(weekStart, i)) : [];
-    let allPast = true;
-    cols.forEach(d => { if (!isSlotOverdue(d, slot)) allPast = false; });
-    if (allPast) tr.classList.add('overdue'); else tr.classList.remove('overdue');
+    const timeTd = tr.querySelector('.time-cell');
+    let anyOverdue = false;
+    tr.querySelectorAll('.sched-cell').forEach((td, ci) => {
+      const overdue = isSlotOverdue(cols[ci], slot);
+      if (overdue) { td.classList.add('overdue-cell'); anyOverdue = true; }
+      else td.classList.remove('overdue-cell');
+    });
+    if (timeTd) {
+      if (anyOverdue) timeTd.classList.add('overdue-time');
+      else timeTd.classList.remove('overdue-time');
+    }
   });
 }
 
