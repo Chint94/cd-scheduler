@@ -145,13 +145,13 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .day-dot.active{background:var(--gm)}
 .day-dot.today-dot{border-color:var(--gold-deep,#8B6914);background:var(--gb)}
 /* Mobile single-day table */
-.sched-mobile{width:100%;border-collapse:separate;border-spacing:0;
+.sched-mobile{width:100%;max-width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;
   border-radius:10px;overflow:hidden;box-shadow:0 4px 20px var(--sg)}
-.sched-mobile .tc{min-width:72px;font-size:13px;height:48px;padding:0 10px}
+.sched-mobile .tc{width:74px;min-width:74px;max-width:74px;font-size:13px;height:48px;padding:0 8px}
 .sched-mobile .tc.half{font-size:11px}
-.sched-mobile .sc{min-height:48px}
-.sched-mobile .ci{font-size:13px;min-height:44px;padding:6px 8px;line-height:1.5}
-.sched-mobile .tpill{font-size:11px;padding:6px 8px 5px;margin:2px 2px 0;border-radius:14px}
+.sched-mobile .sc{min-height:48px;overflow:hidden;padding:0}
+.sched-mobile .ci{font-size:13px;min-height:44px;padding:6px 8px;line-height:1.5;overflow:hidden}
+.sched-mobile .tpill{font-size:11px;padding:6px 8px 5px;margin:2px 2px 0;border-radius:14px;max-width:100%}
 
 /* ── Task pills in planner ── */
 .tpill{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
@@ -463,7 +463,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .planner-timeblock.time-only .tb-time{font-size:11px;font-weight:700}
 .planner-timeblock.recurring .tb-title:before{content:'🔁 ';font-weight:400}
 @media(max-width:700px){
-  .planner-timeblock{padding:6px 8px 5px;border-radius:12px}
+  .planner-timeblock{padding:6px 7px 5px;border-radius:12px;box-shadow:0 2px 0 rgba(0,0,0,.8), 0 6px 12px rgba(0,0,0,.08)}
   .planner-timeblock .tb-title{font-size:10px}
   .planner-timeblock .tb-time{font-size:9px}
   .planner-timeblock.compact .tb-title{font-size:9px}
@@ -487,10 +487,10 @@ footer strong{color:rgba(255,253,245,0.85)}
   .btn-clr{display:none}
   .notes-grid{grid-template-columns:1fr}
   .sw{padding:12px}
-  .grid-wrap{padding:10px 12px 30px}
+  .grid-wrap{padding:8px 10px 24px}
   /* Wrapper clips corners cleanly without blocking scroll */
-  #schedMobileWrap{border-radius:10px;box-shadow:0 4px 20px var(--sg);overflow:hidden}
-  .sched-mobile{width:100%;border-radius:0}
+  #schedMobileWrap{border-radius:12px;box-shadow:0 4px 20px var(--sg);overflow:hidden;max-width:100%;width:100%;box-sizing:border-box;background:var(--white)}
+  .sched-mobile{width:100%;max-width:100%;border-radius:0;table-layout:fixed}
   /* Top-left and top-right corner cells */
   .sched-mobile thead th:first-child{border-radius:10px 0 0 0}
   .sched-mobile thead th:last-child{border-radius:0 10px 0 0}
@@ -498,6 +498,8 @@ footer strong{color:rgba(255,253,245,0.85)}
   .sched-mobile tbody tr:last-child .tc{border-radius:0 0 0 10px}
   .sched-mobile tbody tr:last-child .sc:last-child{border-radius:0 0 10px 0}
   .sched-mobile .sc:last-child{border-right:none}
+  .sched-mobile .tc{width:72px;min-width:72px;max-width:72px;padding:0 8px}
+  .sched-mobile .sc{overflow:hidden}
   /* iOS requires font-size >= 16px to prevent zoom on focus which dismisses keyboard */
   .ci{font-size:16px;padding:6px 8px;min-height:44px;line-height:1.5}
   .sched-mobile .ci{font-size:16px;padding:8px 10px;min-height:48px}
@@ -1127,8 +1129,9 @@ function renderPlannerTimeBlocks(){
         var dayCellM=headCellsM[1];
         if(dayCellM){
           var cellRectM=dayCellM.getBoundingClientRect();
-          var leftBaseM=(cellRectM.left-tableRectM.left)+3;
-          var totalWidthM=Math.max(0, cellRectM.width-6);
+          var mobileInset=8;
+          var leftBaseM=(cellRectM.left-tableRectM.left)+mobileInset;
+          var totalWidthM=Math.max(0, cellRectM.width-(mobileInset*2));
           var dayTasksM=tasks.filter(function(task){
             var d=parseDate(task.date); if(!d) return false;
             return fmtDate(d)===fmtDate(dayDate);
@@ -1142,11 +1145,11 @@ function renderPlannerTimeBlocks(){
             var height=geom.height;
             var cols=Math.max(1,item._cols||1);
             var lane=Math.max(0,item._lane||0);
-            var gutter=4;
-            var laneWidth=Math.max(52,(totalWidthM-((cols-1)*gutter))/cols);
-            var width=(cols===1)?totalWidthM:Math.max(52,laneWidth);
+            var gutter=6;
+            var laneWidth=Math.max(44,(totalWidthM-((cols-1)*gutter))/cols);
+            var width=(cols===1)?totalWidthM:Math.max(44,laneWidth);
             var left=leftBaseM + lane*(laneWidth+gutter);
-            if(left+width>leftBaseM+totalWidthM) width=Math.max(48,(leftBaseM+totalWidthM)-left);
+            if(left+width>leftBaseM+totalWidthM) width=Math.max(40,(leftBaseM+totalWidthM)-left);
             layerM.appendChild(makePlannerTimeBlock(task, top, left, width, height));
           });
         }
