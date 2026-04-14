@@ -167,8 +167,8 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   border-radius:4px;padding:3px 6px;cursor:pointer;overflow:hidden;
   box-sizing:border-box;transition:opacity .15s;
   border-left:3px solid transparent;user-select:none;-webkit-tap-highlight-color:transparent;
-  /* Absolute positioning: fills the cell(s) exactly */
-  position:absolute;left:1px;right:1px;top:1px;
+  /* Position set by JS for sub-slot precision */
+  position:absolute;left:1px;right:2px;
   z-index:2}
 .tb-block:hover{opacity:.85;z-index:3}
 .tb-block:active{opacity:.7}
@@ -1097,11 +1097,20 @@ function buildGrid(){
         if(span>1) td.rowSpan=span; // use absolute rowspan, not cumulative
         var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
         var ROW_H=40; // must match .sc height in CSS
-        var blockH=Math.max(span*ROW_H-2, ROW_H-2);
+        var startM=taskStartMins(t);
+        var endM=taskEndMins(t);
+        var startRow=Math.floor(startM/30); // which 30-min row block starts in
+        var endRow=(endM%30===0)?Math.floor(endM/30)-1:Math.floor(endM/30);
+        // topOffset: how far into the start row the block begins (px)
+        var topOff=Math.round(((startM - startRow*30)/30)*ROW_H);
+        // bottomCrop: space after block ends in last row (px)
+        var lastRowEnd=(endRow+1)*30;
+        var botCrop=endM%30===0?0:Math.round(((lastRowEnd-endM)/30)*ROW_H);
+        var blockH=Math.max(span*ROW_H - topOff - botCrop - 1, 4);
         var block=document.createElement('div');
         block.className='tb-block';
         block.style.cssText='background:'+pc+'28;border-left-color:'+pc+
-          ';color:'+pc+';height:'+blockH+'px;';
+          ';color:'+pc+';height:'+blockH+'px;top:'+topOff+'px;';
         var icon=t.done?'✅':(t.recurrence?'🔁':'📌');
         var titleDiv=document.createElement('div');titleDiv.className='tb-title';
         titleDiv.textContent=icon+' '+(t.title||'(no title)');
@@ -2655,9 +2664,16 @@ function buildMobileDay(){
       var block=document.createElement('div');
       block.className='tb-block';
       var MB_ROW_H=48; // must match mobile .sc height in CSS
-      var mbH=Math.max(span*MB_ROW_H-2, MB_ROW_H-2);
+      var mbStartM=taskStartMins(t);
+      var mbEndM=taskEndMins(t);
+      var mbStartRow=Math.floor(mbStartM/30);
+      var mbEndRow=(mbEndM%30===0)?Math.floor(mbEndM/30)-1:Math.floor(mbEndM/30);
+      var mbTopOff=Math.round(((mbStartM - mbStartRow*30)/30)*MB_ROW_H);
+      var mbLastRowEnd=(mbEndRow+1)*30;
+      var mbBotCrop=mbEndM%30===0?0:Math.round(((mbLastRowEnd-mbEndM)/30)*MB_ROW_H);
+      var mbH=Math.max(span*MB_ROW_H - mbTopOff - mbBotCrop - 1, 4);
       block.style.cssText='background:'+pc+'28;border-left-color:'+pc+
-        ';color:'+pc+';height:'+mbH+'px;';
+        ';color:'+pc+';height:'+mbH+'px;top:'+mbTopOff+'px;';
       var titleDiv=document.createElement('div');titleDiv.className='tb-title';
       titleDiv.textContent=(t.done?'✅':(t.recurrence?'🔁':'📌'))+' '+(t.title||'(no title)');
       var timeDiv=document.createElement('div');timeDiv.className='tb-time';
