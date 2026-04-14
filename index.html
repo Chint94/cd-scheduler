@@ -1029,6 +1029,30 @@ function buildGrid(){
   body.innerHTML='';
   var wk=fmtDate(weekStart);
   var wd=lsGet(SK)[wk]||{};
+  var allTasks=lsGet(TK);
+
+  // ── Pre-compute rowspan skips ─────────────────────────────────────────
+  // skipped[ri][ci] = true means this cell is consumed by a rowspan from above
+  var skipped=[];
+  for(var si=0;si<SLOTS.length;si++) skipped[si]={};
+  cols.forEach(function(colDate,ci){
+    Object.values(allTasks).forEach(function(t){
+      var span=taskSlotSpan(t,colDate);
+      if(span<1) return;
+      // Find the row index where this task starts
+      if(!t.time) return;
+      var tp=t.time.split(':');
+      var th=parseInt(tp[0]),tm=parseInt(tp[1]);
+      var startRi=SLOTS.findIndex(function(s){
+        return s.h===th&&(tm<30?s.m===0:s.m===30);
+      });
+      if(startRi<0) return;
+      // Mark rows startRi+1 … startRi+span-1 as skipped for this column
+      for(var sk=1;sk<span&&(startRi+sk)<SLOTS.length;sk++){
+        skipped[startRi+sk][ci]=true;
+      }
+    });
+  });
 
   SLOTS.forEach(function(slot,ri){
     var tr=document.createElement('tr');
@@ -1040,24 +1064,29 @@ function buildGrid(){
     var anyOv=false;
 
     cols.forEach(function(colDate,ci){
+      // ── Skip cells consumed by a rowspan from above ───────────────────
+      if(skipped[ri][ci]) return;
+
       var ov=isSlotOverdue(colDate,slot);
       if(ov)anyOv=true;
       var td=document.createElement('td');
       td.className='sc'+(ci===todayIdx?' tdy':'')+(ov?' ov':'');
 
       // ── Timeblock tasks: render as colour block with rowspan ──────────
-      var allTasks=lsGet(TK);
       var tbTasksD=Object.values(allTasks).filter(function(t){
         if(taskSlotSpan(t,colDate)<1) return false;
+        if(!t.time) return false;
         var p=t.time.split(':');var h=parseInt(p[0]),m=parseInt(p[1]);
         return h===slot.h&&(m<30?slot.m===0:slot.m===30);
       });
       tbTasksD.forEach(function(t){
         var span=taskSlotSpan(t,colDate);
-        if(span>1) td.rowSpan=(td.rowSpan||1)+span-1;
+        if(span>1) td.rowSpan=span; // use absolute rowspan, not cumulative
         var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
         var diffM=taskEndMins(t)-taskStartMins(t);
-        var cellH=span===1?Math.max(Math.round((diffM/30)*40)-4,20):((span*40)-6);
+        var cellH=span===1
+          ? Math.max(Math.round((diffM/30)*40)-4,20)
+          : Math.max((span*40)-6, 20);
         var block=document.createElement('div');
         block.className='tb-block';
         block.style.cssText='background:'+pc+'28;border-left-color:'+pc+
@@ -1113,7 +1142,6 @@ function buildGrid(){
         s[wk][key]=ta.value;
         lsSet(SK,s);
         FB.savePlannerCell(wk,key,ta.value);
-        // Use requestAnimationFrame to avoid keyboard-dismissing layout reflow on mobile
         var newH=Math.max(ta.scrollHeight,36);
         if(parseInt(ta.style.height||'0')<newH){
           requestAnimationFrame(function(){ta.style.height=newH+'px';});
@@ -2571,6 +2599,18 @@ function buildMobileDay(){
   body.innerHTML='';
   var wk=fmtDate(weekStart);
   var wd=lsGet(SK)[wk]||{};
+  // Pre-compute skipped rows for mobile (single column)
+  var mbAllTasks=Object.values(lsGet(TK));
+  var mbSkipped={};
+  mbAllTasks.forEach(function(t){
+    var span=taskSlotSpan(t,colDate);
+    if(span<1||!t.time) return;
+    var tp=t.time.split(':');var th=parseInt(tp[0]),tm=parseInt(tp[1]);
+    var startRi=SLOTS.findIndex(function(s){return s.h===th&&(tm<30?s.m===0:s.m===30);});
+    if(startRi<0) return;
+    for(var sk=1;sk<span&&(startRi+sk)<SLOTS.length;sk++) mbSkipped[startRi+sk]=true;
+  });
+
   SLOTS.forEach(function(slot,ri){
     var tr=document.createElement('tr');
     if(slot.half)tr.classList.add('hr');
@@ -2579,23 +2619,34 @@ function buildMobileDay(){
     var ov=isSlotOverdue(colDate,slot);
     if(ov)tc.classList.add('ovt');
     tc.textContent=slot.label;
+
+    // Skip cells consumed by a rowspan from above
+    if(mbSkipped[ri]){
+      tr.appendChild(tc);
+      body.appendChild(tr);
+      return;
+    }
+
     var td=document.createElement('td');
     td.className='sc'+(isToday?' tdy':'')+(ov?' ov':'');
     // Timeblock rendering for mobile
-    var mbTasks=Object.values(lsGet(TK)).filter(function(t){
+    var mbTasks=mbAllTasks.filter(function(t){
       return taskSlotSpan(t,colDate)>=1&&(function(){
+        if(!t.time) return false;
         var p=t.time.split(':');var h=parseInt(p[0]),m=parseInt(p[1]);
         return h===slot.h&&(m<30?slot.m===0:slot.m===30);
       })();
     });
     mbTasks.forEach(function(t){
       var span=taskSlotSpan(t,colDate);
-      td.rowSpan=(td.rowSpan||1)+span-1;
+      if(span>1) td.rowSpan=span;
       var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
       var block=document.createElement('div');
       block.className='tb-block';
       var mbDiff=taskEndMins(t)-taskStartMins(t);
-      var mbH=span===1?Math.max(Math.round((mbDiff/30)*48)-4,20):((span*48)-6);
+      var mbH=span===1
+        ? Math.max(Math.round((mbDiff/30)*48)-4,20)
+        : Math.max((span*48)-6,20);
       block.style.cssText='background:'+pc+'28;border-left-color:'+pc+
         ';color:'+pc+';height:'+mbH+'px;';
       var titleDiv=document.createElement('div');titleDiv.className='tb-title';
@@ -2609,10 +2660,10 @@ function buildMobileDay(){
     // Regular pills for non-timeblock tasks
     getTasksForSlot(colDate,slot).forEach(function(entry){
       if(entry.isCont) return;
-      if(taskSlotSpan(entry.task,colDate)>=1) return; // already rendered as block
+      if(taskSlotSpan(entry.task,colDate)>=1) return;
       td.appendChild(makePill(entry.task,entry));
     });
-    // Desktop drag-over for mobile table cells
+    // Drag-over for mobile table cells
     td.addEventListener('dragover',function(e){e.preventDefault();td.classList.add('drag-over');});
     td.addEventListener('dragleave',function(){td.classList.remove('drag-over');});
     td.addEventListener('drop',function(e){
