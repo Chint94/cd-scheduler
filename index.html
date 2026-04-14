@@ -791,6 +791,13 @@ function taskEndDateStr(t){
   return t.endDate||t.date||'';
 }
 
+function taskVisualEndMins(t){
+  var start=taskStartMins(t);
+  if(t.endTime) return taskEndMins(t);
+  var nextBoundary=(Math.floor(start/30)+1)*30;
+  return Math.max(start+8, Math.min(nextBoundary-2, start+26));
+}
+
 function isSlotOverdue(colDate,slot){
   var now=new Date();
   var se=new Date(colDate.getFullYear(),colDate.getMonth(),colDate.getDate(),slot.h,slot.m+30);
@@ -839,15 +846,11 @@ function getTasksForSlot(colDate,slot){
     var td=parseDate(t.date);
     if(!td) return;
     if(fmtDate(td)!==colStr) return;
-    if(t.endTime) return; // timed blocks render as planner overlays
+    if(t.time) return; // any task with a start time renders on the planner overlay
     if(!t.time){
       if(slot.h===9&&slot.m===0) result.push({task:t,isStart:true,isCont:false,isEnd:false});
       return;
     }
-    var p=t.time.split(':');
-    var th=parseInt(p[0]),tm=parseInt(p[1]);
-    if(th===slot.h&&(slot.m===0?tm<30:tm>=30))
-      result.push({task:t,isStart:true,isCont:false,isEnd:false});
   });
   // Sort by start time (minutes) first, then by priority
   result.sort(function(a,b){
@@ -976,9 +979,10 @@ function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
   el.style.borderLeftColor=pc;
   el.style.borderRightColor=pc;
   el.style.pointerEvents='auto';
+  var timeLabel=(task.time||'')+(task.endTime?(' - '+task.endTime):'');
   el.innerHTML='<div class="tb-title">'+(task.title||'(no title)')+'</div>'
-    +'<div class="tb-time">'+(task.time||'')+' - '+(task.endTime||'')+'</div>';
-  el.title=(task.title||'(no title)')+' ('+(task.time||'')+' - '+(task.endTime||'')+')';
+    +'<div class="tb-time">'+timeLabel+'</div>';
+  el.title=(task.title||'(no title)')+' ('+timeLabel+')';
   el.addEventListener('click', function(e){
     e.stopPropagation();
     if(el.classList.contains('dragging')) return;
@@ -992,13 +996,13 @@ function buildOverlapLayout(tasks){
   var sorted=(tasks||[]).slice().sort(function(a,b){
     var sa=taskStartMins(a.task), sb=taskStartMins(b.task);
     if(sa!==sb) return sa-sb;
-    return taskEndMins(a.task)-taskEndMins(b.task);
+    return taskVisualEndMins(a.task)-taskVisualEndMins(b.task);
   });
   var groups=[];
   var current=[];
   var currentMax=-1;
   sorted.forEach(function(item){
-    var s=taskStartMins(item.task), e=taskEndMins(item.task);
+    var s=taskStartMins(item.task), e=taskVisualEndMins(item.task);
     if(!current.length || s<currentMax){
       current.push(item);
       currentMax=Math.max(currentMax,e);
@@ -1013,7 +1017,7 @@ function buildOverlapLayout(tasks){
   groups.forEach(function(group){
     var laneEnds=[];
     group.forEach(function(item){
-      var s=taskStartMins(item.task), e=taskEndMins(item.task);
+      var s=taskStartMins(item.task), e=taskVisualEndMins(item.task);
       var lane=0;
       while(lane<laneEnds.length && laneEnds[lane]>s) lane++;
       if(lane===laneEnds.length) laneEnds.push(e);
@@ -1030,7 +1034,9 @@ function renderPlannerTimeBlocks(){
   clearPlannerTimeBlocks();
   if(!weekStart) return;
   var tasks=Object.values(lsGet(TK)||{}).filter(function(t){
-    return !!(t && t.date && t.time && t.endTime && taskSlotSpan(t, parseDate(t.date))>0);
+    if(!(t && t.date && t.time)) return false;
+    if(t.endTime) return taskSlotSpan(t, parseDate(t.date))>0;
+    return true;
   });
   if(!tasks.length) return;
 
@@ -1065,7 +1071,7 @@ function renderPlannerTimeBlocks(){
           }).map(function(task){ return {task:task}; });
           buildOverlapLayout(dayTasks).forEach(function(item){
             var task=item.task;
-            var startM=taskStartMins(task), endM=taskEndMins(task);
+            var startM=taskStartMins(task), endM=taskVisualEndMins(task);
             if(endM<=startM) return;
             var geom=blockGeometryForTask(startM, endM, rowMetrics);
             var top=geom.top;
@@ -1115,7 +1121,7 @@ function renderPlannerTimeBlocks(){
           }).map(function(task){ return {task:task}; });
           buildOverlapLayout(dayTasksM).forEach(function(item){
             var task=item.task;
-            var startM=taskStartMins(task), endM=taskEndMins(task);
+            var startM=taskStartMins(task), endM=taskVisualEndMins(task);
             if(endM<=startM) return;
             var geom=blockGeometryForTask(startM, endM, rowMetricsM);
             var top=geom.top;
