@@ -98,7 +98,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 /* ── Planner grid ── */
 .grid-wrap{flex:1;overflow-x:auto;padding:12px 18px 36px;-webkit-overflow-scrolling:touch}
 .sched{min-width:700px;border-collapse:separate;border-spacing:0;width:100%;
-  border-radius:10px;overflow:visible;box-shadow:0 6px 28px var(--sg)}
+  border-radius:10px;overflow:hidden;box-shadow:0 6px 28px var(--sg)}
 .sched thead th{background:linear-gradient(180deg,var(--gm) 0%,var(--gd) 100%);color:var(--white);
   font-family:'Playfair Display',serif;font-size:12px;font-weight:700;padding:10px 5px;
   text-align:center;border-right:1px solid rgba(255,255,255,0.14);white-space:nowrap}
@@ -110,9 +110,8 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   border-bottom:1px solid rgba(196,148,42,0.14);white-space:nowrap;min-width:68px;vertical-align:middle;height:40px}
 .tc.half{color:var(--gm);font-size:10px;font-weight:500}
 .tc.ovt{color:var(--ot);font-weight:700}
-.sc{padding:2px 2px 2px 3px;border-right:1px solid rgba(196,148,42,0.11);border-bottom:1px solid rgba(196,148,42,0.18);
-  height:40px;min-height:40px;vertical-align:top;background:white;
-  box-sizing:content-box}
+.sc{padding:2px;border-right:1px solid rgba(196,148,42,0.11);border-bottom:1px solid rgba(196,148,42,0.18);
+  height:40px;min-height:40px;vertical-align:top;background:white;overflow:hidden}
 .sc:last-child{border-right:none}
 .sched tbody tr:nth-child(4n+3) .sc,
 .sched tbody tr:nth-child(4n+4) .sc{background:#FFFBEE}
@@ -150,7 +149,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   border-radius:10px;overflow:hidden;box-shadow:0 4px 20px var(--sg)}
 .sched-mobile .tc{min-width:72px;font-size:13px;height:48px;padding:0 10px}
 .sched-mobile .tc.half{font-size:11px}
-.sched-mobile .sc{height:48px;min-height:48px}
+.sched-mobile .sc{height:48px;min-height:48px;overflow:hidden}
 .sched-mobile .ci{font-size:13px;min-height:44px;padding:6px 8px;line-height:1.5}
 .sched-mobile .tpill{font-size:11px;padding:3px 7px;margin:2px 2px 0}
 
@@ -160,21 +159,10 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   text-align:left;width:calc(100% - 4px);transition:opacity .15s}
 .tpill:hover{opacity:.8}
 .tpill.done-pill{opacity:.4;text-decoration:line-through}
-.tpill.cont-pill{display:none!important} /* hidden — rowspan handles it */
-/* ── Timeblock (Google Calendar style) ── */
+
 .tb-cell{padding:2px;position:relative;vertical-align:top;border-right:1px solid rgba(196,148,42,0.11)}
-.tb-block{display:flex;flex-direction:column;justify-content:flex-start;
-  border-radius:4px;padding:3px 6px;cursor:pointer;overflow:hidden;
-  box-sizing:border-box;transition:opacity .15s;
-  border-left:3px solid transparent;user-select:none;-webkit-tap-highlight-color:transparent;
-  position:absolute;pointer-events:all;z-index:3}
-.tb-block:hover{opacity:.85;z-index:4}
-.tb-block:active{opacity:.7}
-.tb-title{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis;line-height:1.3}
-.tb-time{font-size:9px;opacity:.75;margin-top:1px;white-space:nowrap}
-/* Keep pill span indicator */
-.tpill .pspan{font-size:9px;opacity:.65;flex-shrink:0;white-space:nowrap}
+
+
 .tpill.ov-pill{background:#FFE0E0!important;border-left:2px solid var(--ot)!important;color:var(--ot)!important}
 .tpill .ptxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .tpill .ptime{font-size:9px;opacity:.7;flex-shrink:0}
@@ -432,6 +420,18 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .day-pills-wrap{display:none;margin-top:6px}
 .day-pills-wrap.show{display:block}
 
+/* ── Timeblock overlay ── */
+.tb-layer{position:absolute;top:0;left:0;pointer-events:none;overflow:visible;z-index:5}
+.tb-blk{position:absolute;display:flex;flex-direction:column;justify-content:flex-start;
+  border-radius:4px;border-left:3px solid transparent;padding:2px 5px;
+  overflow:hidden;box-sizing:border-box;pointer-events:all;cursor:pointer;
+  transition:opacity .15s;user-select:none;-webkit-tap-highlight-color:transparent}
+.tb-blk:hover{opacity:.85}
+.tb-blk:active{opacity:.7}
+.tb-blk-title{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;line-height:1.3}
+.tb-blk-time{font-size:9px;opacity:.8;margin-top:1px;white-space:nowrap}
+
 /* ── Footer ── */
 footer{background:var(--gd);color:rgba(255,253,245,0.5);text-align:center;
   font-size:11px;padding:11px 18px;letter-spacing:.5px}
@@ -534,18 +534,14 @@ footer strong{color:rgba(255,253,245,0.85)}
     <button class="btn-day-nav" id="nextDay">▶</button>
   </div>
   <div class="day-dots" id="dayDots" style="display:none"></div>
-  <div class="grid-wrap">
+  <div class="grid-wrap" style="position:relative">
     <!-- Desktop: full 7-column table -->
-    <div class="sched-wrap" id="schedWrap" style="position:relative">
-      <table class="sched" id="schedDesktop"><thead id="schedHead"></thead><tbody id="schedBody"></tbody></table>
-      <div id="tbBlockLayer" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible"></div>
-    </div>
+    <table class="sched" id="schedDesktop"><thead id="schedHead"></thead><tbody id="schedBody"></tbody></table>
+    <div class="tb-layer" id="tbLayer"></div>
     <!-- Mobile: single-day table -->
-    <div id="schedMobileWrap" style="display:none">
-      <div style="position:relative">
-        <table class="sched sched-mobile"><thead id="schedHeadM"></thead><tbody id="schedBodyM"></tbody></table>
-        <div id="tbBlockLayerM" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible"></div>
-      </div>
+    <div id="schedMobileWrap" style="display:none;position:relative">
+      <table class="sched sched-mobile"><thead id="schedHeadM"></thead><tbody id="schedBodyM"></tbody></table>
+      <div class="tb-layer" id="tbLayerM"></div>
     </div>
   </div>
 </div>
@@ -765,70 +761,27 @@ function isSlotOverdue(colDate,slot){
   return se<now;
 }
 
-// Returns array of {task, isStart, isCont, isEnd} for a given slot
+// Returns array of {task} for a given slot — simple pill rendering
 function getTasksForSlot(colDate,slot){
   var tasks=lsGet(TK);
   var colStr=fmtDate(colDate);
-  var slotS=slotStartMins(slot);
-  var slotE=slotEndMins(slot);
   var result=[];
-
   Object.values(tasks).forEach(function(t){
     if(!t.date) return;
     var td=parseDate(t.date);
     if(!td) return;
-    var startStr=fmtDate(td);
-
-    // Task start time in minutes
-    var tStartMins=taskStartMins(t);
-    var tEndMins=taskEndMins(t); // -1 if no end time
-
-    // Determine if task has a multi-slot timeblock
-    var hasBlock=(tEndMins>0);
-    var endStr=taskEndDateStr(t);
-
-    if(!hasBlock){
-      // Simple task (no end time) — show in its start slot only
-      if(startStr!==colStr) return;
-      if(!t.time){
-        if(slot.h===9&&slot.m===0) result.push({task:t,isStart:true,isCont:false,isEnd:false});
-      } else {
-        var p=t.time.split(':');
-        var th=parseInt(p[0]),tm=parseInt(p[1]);
-        if(th===slot.h&&(slot.m===0?tm<30:tm>=30))
-          result.push({task:t,isStart:true,isCont:false,isEnd:false});
-      }
+    if(fmtDate(td)!==colStr) return;
+    // Skip tasks with endTime — they render as timeblocks on the overlay
+    if(t.endTime) return;
+    if(!t.time){
+      if(slot.h===9&&slot.m===0) result.push({task:t,isStart:true,isCont:false,isEnd:false});
       return;
     }
-
-    // Timeblock task — check if this slot overlaps the block
-    // Build start datetime (ms)
-    var startDt=new Date(td.getFullYear(),td.getMonth(),td.getDate(),
-      Math.floor(tStartMins/60),tStartMins%60).getTime();
-    // Build end datetime (ms) — endDate defaults to start date
-    var edStr=endStr||startStr;
-    var edParts=edStr.split('-');
-    // Handle DD-MM-YYYY format
-    var ey,em,ed2;
-    if(edParts[0].length===4){ ey=edParts[0];em=edParts[1];ed2=edParts[2]; }
-    else { ed2=edParts[0];em=edParts[1];ey=edParts[2]; }
-    var endDt=new Date(parseInt(ey),parseInt(em)-1,parseInt(ed2),
-      Math.floor(tEndMins/60),tEndMins%60).getTime();
-
-    // This slot's time range
-    var colDtObj=new Date(colDate.getFullYear(),colDate.getMonth(),colDate.getDate());
-    var slotStartDt=new Date(colDtObj.getTime()+slotS*60000).getTime();
-    var slotEndDt  =new Date(colDtObj.getTime()+slotE*60000).getTime();
-
-    // Overlap: task block overlaps this slot
-    if(startDt>=slotEndDt||endDt<=slotStartDt) return; // no overlap
-
-    var isStart=(startDt>=slotStartDt&&startDt<slotEndDt);
-    var isEnd  =(endDt>slotStartDt&&endDt<=slotEndDt);
-    var isCont =(!isStart);
-    result.push({task:t,isStart:isStart,isCont:isCont,isEnd:isEnd});
+    var p=t.time.split(':');
+    var th=parseInt(p[0]),tm=parseInt(p[1]);
+    if(th===slot.h&&(slot.m===0?tm<30:tm>=30))
+      result.push({task:t,isStart:true,isCont:false,isEnd:false});
   });
-
   return result;
 }
 
@@ -854,20 +807,9 @@ function makePill(task,entry){
   if(!isOv)btn.style.cssText='background:'+pc+'22;border-left:2px solid '+pc+';color:'+pc+';';
   var icon=task.done?'✅':(task.recurrence?'🔁':'📌');
   var timeHtml='';
-  if(entry.isStart&&task.time){
-    var spanTxt='';
-    if(task.endTime){
-      var eDate=taskEndDateStr(task);
-      var sameDay=(!task.endDate||task.endDate===task.date);
-      spanTxt=task.time+'–'+task.endTime+(sameDay?'':' +');
-    } else {
-      spanTxt=task.time;
-    }
-    timeHtml='<span class="pspan">'+spanTxt+'</span>';
-  } else if(entry.isCont){
-    // Continuation slot shows ↳ and title only
-    icon='↳';
-    timeHtml='';
+  if(task.time){
+    var tStr=task.time+(task.endTime?'–'+task.endTime:'');
+    timeHtml='<span class="ptime">'+tStr+'</span>';
   }
   btn.innerHTML='<span style="flex-shrink:0">'+icon+'</span><span class="ptxt">'+(task.title||'(no title)')+'</span>'+timeHtml;
 
@@ -1062,10 +1004,9 @@ function buildGrid(){
       td.className='sc'+(ci===todayIdx?' tdy':'')+(ov?' ov':'');
 
       // Regular pills only (timeblocks rendered on overlay after table built)
+      // Task pills
       getTasksForSlot(colDate,slot).forEach(function(entry){
-        if(entry.isCont) return;
-        if(taskSlotSpan(entry.task,colDate)>=1) return;
-        td.appendChild(makePill(entry.task,entry));
+        td.appendChild(makePill(entry.task, entry));
       });
 
       // Drag-over highlighting (desktop)
@@ -1118,65 +1059,124 @@ function buildGrid(){
     body.appendChild(tr);
   });
 
-  // ── Render timeblocks on overlay layer ────────────────────────────────
-  // We do this AFTER the table is built so we can measure column positions
-  var layer=document.getElementById('tbBlockLayer');
-  if(layer){
+}
+
+// ── Render timeblocks on overlay ─────────────────────────────────────────────
+// Called after buildGrid()/buildMobileDay(). Uses fixed row heights.
+var TB_ROW_H_D=40;  // must match .sc height:40px desktop
+var TB_ROW_H_M=48;  // must match .sc height:48px mobile
+var TB_START_H=5;   // planner starts at 05:00
+
+function renderTimeblocks(){
+  // ── Desktop ──────────────────────────────────────────────────────────
+  var layer=document.getElementById('tbLayer');
+  var table=document.getElementById('schedDesktop');
+  if(layer&&table&&table.style.display!=='none'){
     layer.innerHTML='';
-    // Use requestAnimationFrame so table has been laid out
-    requestAnimationFrame(function(){
-      var ROW_H=40;
-      var theadH=document.getElementById('schedHead').offsetHeight||38;
-      // Column widths: get from actual header th elements
-      var ths=document.querySelectorAll('#schedHead th');
-      var tcW=ths[0]?ths[0].offsetWidth:68; // time column width
+    // Position layer exactly over the tbody (below thead)
+    var theadEl=document.getElementById('schedHead');
+    var theadH=theadEl?theadEl.offsetHeight:38;
+    layer.style.top=theadH+'px';
+    layer.style.height=(SLOTS.length*TB_ROW_H_D)+'px';
+    // Get column positions from header ths
+    var ths=Array.from(theadEl?theadEl.querySelectorAll('th'):[]);
+    if(ths.length<2) return;
+    var tcW=ths[0].offsetWidth; // time-label column
+    // Build colLeft[] and colW[] arrays
+    var colLefts=[],colWidths=[];
+    var cum=tcW;
+    for(var ci=1;ci<ths.length;ci++){
+      colLefts.push(cum);
+      colWidths.push(ths[ci].offsetWidth);
+      cum+=ths[ci].offsetWidth;
+    }
+    layer.style.width=cum+'px';
+    // Render blocks
+    var tasks=lsGet(TK);
+    if(weekStart){
+      var cols=DAYS.map(function(_,i){return addDays(weekStart,i);});
       cols.forEach(function(colDate,ci){
-        Object.values(allTasks).forEach(function(t){
-          if(taskSlotSpan(t,colDate)<1) return;
-          if(!t.time) return;
-          var startM=taskStartMins(t);
-          var endM=taskEndMins(t);
-          // Top position: theadH + (startM - PLANNER_START_M)/30 * ROW_H + offset within slot
-          var plannerStartM=5*60; // 05:00
-          var startSlotIdx=(startM-plannerStartM)/30; // float slot index
-          var topPx=theadH+startSlotIdx*ROW_H;
-          // Height: (endM - startM)/30 * ROW_H
-          var heightPx=Math.max(((endM-startM)/30)*ROW_H-1,4);
-          // Left: tcW + ci*(colW) + 1px gap
-          var colW=ths[ci+1]?ths[ci+1].offsetWidth:100;
-          var leftPx=tcW;
-          for(var j=0;j<ci;j++) leftPx+=(ths[j+1]?ths[j+1].offsetWidth:100);
-          leftPx+=2; // small gap from border
-          var rightPx=leftPx+colW-4;
-          var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
-          var block=document.createElement('div');
-          block.className='tb-block';
-          block.style.top=topPx+'px';
-          block.style.left=leftPx+'px';
-          block.style.width=(colW-4)+'px';
-          block.style.height=heightPx+'px';
-          block.style.background=pc+'28';
-          block.style.borderLeftColor=pc;
-          block.style.color=pc;
-          var icon=t.done?'✅':(t.recurrence?'🔁':'📌');
-          var titleDiv=document.createElement('div');titleDiv.className='tb-title';
-          titleDiv.textContent=icon+' '+(t.title||'(no title)');
-          var timeDiv=document.createElement('div');timeDiv.className='tb-time';
-          timeDiv.textContent=t.time+(t.endTime?'–'+t.endTime:'');
-          block.appendChild(titleDiv);block.appendChild(timeDiv);
-          (function(taskId){
-            block.addEventListener('click',function(e){e.stopPropagation();openTaskEditModal(taskId);});
-            block.setAttribute('draggable','true');
-            block.addEventListener('dragstart',function(e){
-              dragState.taskId=taskId;e.dataTransfer.effectAllowed='move';
-              e.dataTransfer.setData('text/plain',taskId);
-            });
-          })(t.id);
-          layer.appendChild(block);
-        });
+        if(ci>=colLefts.length) return;
+        placeBlocks(layer,tasks,colDate,colLefts[ci],colWidths[ci],TB_ROW_H_D,false);
       });
-    });
+    }
   }
+}
+
+function renderTimeblocksM(){
+  // ── Mobile ───────────────────────────────────────────────────────────
+  var layerM=document.getElementById('tbLayerM');
+  var tableM=document.querySelector('#schedMobileWrap .sched-mobile');
+  if(!layerM||!tableM) return;
+  layerM.innerHTML='';
+  var theadM=document.getElementById('schedHeadM');
+  var theadHM=theadM?theadM.offsetHeight:44;
+  layerM.style.top=theadHM+'px';
+  layerM.style.height=(SLOTS.length*TB_ROW_H_M)+'px';
+  var thsM=Array.from(theadM?theadM.querySelectorAll('th'):[]);
+  if(thsM.length<2) return;
+  var tcWM=thsM[0].offsetWidth;
+  var colWM=thsM[1].offsetWidth;
+  layerM.style.width=(tcWM+colWM)+'px';
+  var tasks=lsGet(TK);
+  if(weekStart){
+    var colDate=addDays(weekStart,currentDayIdx);
+    placeBlocks(layerM,tasks,colDate,tcWM,colWM,TB_ROW_H_M,true);
+  }
+}
+
+function placeBlocks(layer,tasks,colDate,colLeft,colW,ROW_H,isMobile){
+  var colStr=fmtDate(colDate);
+  Object.values(tasks).forEach(function(t){
+    if(!t.time||!t.endTime) return;   // pills only when no endTime
+    if(!t.date) return;
+    var td=parseDate(t.date);
+    if(!td||fmtDate(td)!==colStr) return;
+    // Enforce same-day end (cross-day blocks not supported yet)
+    if(t.endDate&&t.endDate!==t.date) return;
+    var startM=parseInt(t.time.split(':')[0])*60+parseInt(t.time.split(':')[1]);
+    var endM  =parseInt(t.endTime.split(':')[0])*60+parseInt(t.endTime.split(':')[1]);
+    if(endM<=startM) return;
+    var plannerStartM=TB_START_H*60;
+    if(startM<plannerStartM) return;
+    // Pixel positions — pure math, no DOM reads
+    var topPx  =((startM-plannerStartM)/30)*ROW_H;
+    var heightPx=Math.max(((endM-startM)/30)*ROW_H,4);
+    var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
+    var blk=document.createElement('div');
+    blk.className='tb-blk';
+    blk.style.top    =topPx+'px';
+    blk.style.left   =(colLeft+2)+'px';
+    blk.style.width  =(colW-5)+'px';
+    blk.style.height =heightPx+'px';
+    blk.style.background   =pc+'22';
+    blk.style.borderLeftColor=pc;
+    blk.style.color  =pc;
+    var icon=t.done?'✅':(t.recurrence?'🔁':'📌');
+    var titleEl=document.createElement('div');
+    titleEl.className='tb-blk-title';
+    titleEl.textContent=icon+' '+(t.title||'(no title)');
+    var timeEl=document.createElement('div');
+    timeEl.className='tb-blk-time';
+    timeEl.textContent=t.time+'–'+t.endTime;
+    blk.appendChild(titleEl);
+    if(heightPx>=20) blk.appendChild(timeEl);
+    (function(tid){
+      blk.addEventListener('click',function(e){
+        e.stopPropagation();
+        openTaskEditModal(tid);
+      });
+      blk.setAttribute('draggable','true');
+      blk.addEventListener('dragstart',function(e){
+        dragState.taskId=tid;
+        e.dataTransfer.effectAllowed='move';
+        e.dataTransfer.setData('text/plain',tid);
+      });
+    })(t.id);
+    layer.appendChild(blk);
+  });
+  // Render timeblocks on overlay (uses fixed row heights — no DOM measurement needed)
+  setTimeout(renderTimeblocks, 0);
 }
 
 function markOverdue(){
@@ -2646,12 +2646,7 @@ function buildMobileDay(){
     var td=document.createElement('td');
     td.className='sc'+(isToday?' tdy':'')+(ov?' ov':'');
     // Timeblock rendering for mobile
-    // Regular pills only (timeblocks on overlay layer)
-    getTasksForSlot(colDate,slot).forEach(function(entry){
-      if(entry.isCont) return;
-      if(taskSlotSpan(entry.task,colDate)>=1) return;
-      td.appendChild(makePill(entry.task,entry));
-    });
+    getTasksForSlot(colDate,slot).forEach(function(t){td.appendChild(makePill(t.task,t));});
     // Drag-over for mobile table cells
     td.addEventListener('dragover',function(e){e.preventDefault();td.classList.add('drag-over');});
     td.addEventListener('dragleave',function(){td.classList.remove('drag-over');});
@@ -2684,55 +2679,7 @@ function buildMobileDay(){
       cells[cells.length-1].style.borderRadius='0 0 10px 0';
     }
   }
-
-  // ── Render timeblocks on mobile overlay layer ─────────────────────────
-  var layerM=document.getElementById('tbBlockLayerM');
-  if(layerM){
-    layerM.innerHTML='';
-    requestAnimationFrame(function(){
-      var ROW_H=48;
-      var theadH=document.getElementById('schedHeadM').offsetHeight||44;
-      // Mobile has one task column only
-      var ths=document.querySelectorAll('#schedHeadM th');
-      var tcW=ths[0]?ths[0].offsetWidth:72;
-      var colW=ths[1]?ths[1].offsetWidth:200;
-      mbAllTasks.forEach(function(t){
-        if(taskSlotSpan(t,colDate)<1) return;
-        if(!t.time) return;
-        var startM=taskStartMins(t);
-        var endM=taskEndMins(t);
-        var plannerStartM=5*60;
-        var startSlotIdx=(startM-plannerStartM)/30;
-        var topPx=theadH+startSlotIdx*ROW_H;
-        var heightPx=Math.max(((endM-startM)/30)*ROW_H-1,4);
-        var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
-        var block=document.createElement('div');
-        block.className='tb-block';
-        block.style.top=topPx+'px';
-        block.style.left=(tcW+2)+'px';
-        block.style.width=(colW-4)+'px';
-        block.style.height=heightPx+'px';
-        block.style.background=pc+'28';
-        block.style.borderLeftColor=pc;
-        block.style.color=pc;
-        var icon=t.done?'✅':(t.recurrence?'🔁':'📌');
-        var titleDiv=document.createElement('div');titleDiv.className='tb-title';
-        titleDiv.textContent=icon+' '+(t.title||'(no title)');
-        var timeDiv=document.createElement('div');timeDiv.className='tb-time';
-        timeDiv.textContent=t.time+(t.endTime?'–'+t.endTime:'');
-        block.appendChild(titleDiv);block.appendChild(timeDiv);
-        (function(taskId){
-          block.addEventListener('click',function(e){e.stopPropagation();openTaskEditModal(taskId);});
-          block.setAttribute('draggable','true');
-          block.addEventListener('dragstart',function(e){
-            dragState.taskId=taskId;e.dataTransfer.effectAllowed='move';
-            e.dataTransfer.setData('text/plain',taskId);
-          });
-        })(t.id);
-        layerM.appendChild(block);
-      });
-    });
-  }
+  setTimeout(renderTimeblocksM, 0);
 }
 
 document.getElementById('prevDay').addEventListener('click',function(){
