@@ -757,6 +757,7 @@ function getTasksForSlot(colDate,slot){
   var tasks=lsGet(TK);
   var colStr=fmtDate(colDate);
   var result=[];
+  var prioOrder={high:0,medium:1,low:2};
   Object.values(tasks).forEach(function(t){
     if(!t.date) return;
     var td=parseDate(t.date);
@@ -770,6 +771,16 @@ function getTasksForSlot(colDate,slot){
     var th=parseInt(p[0]),tm=parseInt(p[1]);
     if(th===slot.h&&(slot.m===0?tm<30:tm>=30))
       result.push({task:t,isStart:true,isCont:false,isEnd:false});
+  });
+  // Sort by start time (minutes) first, then by priority
+  result.sort(function(a,b){
+    var ta=a.task,tb=b.task;
+    // Time sort
+    var ma=ta.time?(parseInt(ta.time.split(':')[0])*60+parseInt(ta.time.split(':')[1])):0;
+    var mb=tb.time?(parseInt(tb.time.split(':')[0])*60+parseInt(tb.time.split(':')[1])):0;
+    if(ma!==mb) return ma-mb;
+    // Priority sort (high first)
+    return (prioOrder[ta.priority]||1)-(prioOrder[tb.priority]||1);
   });
   return result;
 }
@@ -1081,8 +1092,35 @@ function setWeek(d){
 document.getElementById('prevWeek').addEventListener('click',function(){if(weekStart)setWeek(addDays(weekStart,-7))});
 document.getElementById('nextWeek').addEventListener('click',function(){if(weekStart)setWeek(addDays(weekStart,7))});
 document.getElementById('clearWeekBtn').addEventListener('click',function(){
-  if(!weekStart||!confirm('Clear all planner entries for this week?'))return;
-  var wk=fmtDate(weekStart);var s=lsGet(SK);s[wk]={};lsSet(SK,s);buildGrid();
+  if(!weekStart) return;
+  // Build list of task IDs scheduled in this week
+  var tasks=lsGet(TK);
+  var weekDates=[];
+  for(var di=0;di<7;di++) weekDates.push(fmtDate(addDays(weekStart,di)));
+  var toDelete=Object.keys(tasks).filter(function(id){
+    return weekDates.indexOf(tasks[id].date)>=0;
+  });
+  var taskCount=toDelete.length;
+  var msg='Clear all planner text notes for this week?';
+  if(taskCount>0) msg='This will delete '+taskCount+' task'+(taskCount>1?'s':'')+' scheduled this week and clear all planner notes. Cannot be undone.';
+  if(!confirm(msg)) return;
+  // Delete tasks
+  toDelete.forEach(function(id){
+    if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(id); // remove from Google Calendar
+    FB.deleteTask(id);
+    delete tasks[id];
+  });
+  if(toDelete.length>0){
+    lsSet(TK,tasks);
+    renderTasks();
+  }
+  // Clear planner text notes
+  var wk=fmtDate(weekStart);
+  var s=lsGet(SK);s[wk]={};lsSet(SK,s);
+  FB.savePlannerCell&&Object.keys(s[wk]||{}).forEach(function(k){
+    FB.savePlannerCell(wk,k,'');
+  });
+  buildGrid();
 });
 document.getElementById('weekStartInput').addEventListener('change',function(){
   var d=parseDate(this.value);if(d)setWeek(d);else this.value=weekStart?fmtDate(weekStart):'';
