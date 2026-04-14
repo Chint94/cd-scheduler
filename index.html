@@ -121,7 +121,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .sc.ov .ci{color:var(--ot);font-weight:600}
 .ci{width:100%;min-height:36px;font-family:DM Sans,sans-serif;font-size:11px;color:var(--ink);
   background:transparent;border:none;outline:none;resize:none;padding:3px 5px;line-height:1.4;
-  cursor:text;overflow:hidden;display:block;
+  cursor:text;overflow:hidden;display:block;text-align:left;
   /* Prevent iOS from zooming in on focus (font-size must be >= 16px on iOS) */
   -webkit-text-size-adjust:100%}
 .ci::placeholder{color:rgba(139,105,20,0.22);font-style:italic}
@@ -425,12 +425,28 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .day-pills-wrap{display:none;margin-top:6px}
 .day-pills-wrap.show{display:block}
 
-/* ── Current time line ── */
-.time-line{position:absolute;left:0;right:0;pointer-events:none;z-index:10;display:flex;align-items:center}
-.time-line-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-left:-4px}
-.time-line-bar{flex:1;height:2px;background:linear-gradient(90deg,currentColor 0%,transparent 95%);opacity:.85}
-/* Mobile time line sits inside schedMobileWrap */
-.time-line-m{position:absolute;left:0;right:0;pointer-events:none;z-index:10;display:flex;align-items:center}
+/* ── Planner time blocks ── */
+.planner-timeblocks{position:absolute;pointer-events:none;z-index:6;overflow:hidden}
+.planner-timeblock{position:absolute;border-radius:10px;padding:6px 8px;overflow:hidden;
+  box-shadow:0 4px 14px rgba(0,0,0,0.10);border-left:4px solid currentColor;border-right:4px solid currentColor;box-sizing:border-box;max-width:100%;
+  background:rgba(255,255,255,0.92);color:var(--ink);display:flex;flex-direction:column;gap:3px;
+  text-align:left;align-items:flex-start;justify-content:flex-start;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
+.planner-timeblock:active{cursor:grabbing}
+.planner-timeblock.dragging{opacity:.35;cursor:grabbing}
+.planner-timeblock.drag-target{outline:2px dashed currentColor;outline-offset:-2px}
+.planner-timeblock.high{background:rgba(232,82,82,0.14);color:#B53A3A}
+.planner-timeblock.medium{background:rgba(196,148,42,0.18);color:#8B6914}
+.planner-timeblock.low{background:rgba(92,184,92,0.16);color:#3C8A3C}
+.planner-timeblock.done{opacity:.72;filter:saturate(.85)}
+.planner-timeblock .tb-title{font-size:11px;font-weight:700;line-height:1.2;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.planner-timeblock .tb-time{font-size:10px;font-weight:600;opacity:.86;line-height:1.1}
+.planner-timeblock.recurring .tb-title:before{content:'🔁 ';font-weight:400}
+@media(max-width:700px){
+  .planner-timeblock{padding:5px 7px;border-radius:9px}
+  .planner-timeblock .tb-title{font-size:10px}
+  .planner-timeblock .tb-time{font-size:9px}
+}
 
 /* ── Footer ── */
 footer{background:var(--gd);color:rgba(255,253,245,0.5);text-align:center;
@@ -770,6 +786,7 @@ function getTasksForSlot(colDate,slot){
     var td=parseDate(t.date);
     if(!td) return;
     if(fmtDate(td)!==colStr) return;
+    if(t.endTime) return; // timed blocks render as planner overlays
     if(!t.time){
       if(slot.h===9&&slot.m===0) result.push({task:t,isStart:true,isCont:false,isEnd:false});
       return;
@@ -790,6 +807,210 @@ function getTasksForSlot(colDate,slot){
     return (prioOrder[ta.priority]||1)-(prioOrder[tb.priority]||1);
   });
   return result;
+}
+
+
+
+function minsToTimeStr(total){
+  total=Math.max(0,Math.min(1439,Math.round(total)));
+  var h=Math.floor(total/60),m=total%60;
+  return pad(h)+':'+pad(m);
+}
+
+function clearBlockDragHighlights(){
+  document.querySelectorAll('.sc.drag-over, .sc.drag-over-mobile').forEach(function(el){
+    el.classList.remove('drag-over');
+    el.classList.remove('drag-over-mobile');
+  });
+  document.querySelectorAll('.planner-timeblock.drag-target').forEach(function(el){el.classList.remove('drag-target');});
+}
+
+function attachTimeBlockDrag(el, task){
+  if(!el||!task||!task.id) return;
+  var longPressTimer=null;
+  var originalVisibility='';
+
+  el.setAttribute('draggable','true');
+  el.addEventListener('dragstart',function(e){
+    dragState.taskId=task.id;
+    dragState.dragType='timeblock';
+    try{e.dataTransfer.setData('text/plain',task.id);e.dataTransfer.effectAllowed='move';}catch(_e){}
+    setTimeout(function(){el.classList.add('dragging');},0);
+  });
+  el.addEventListener('dragend',function(){
+    el.classList.remove('dragging');
+    dragState.taskId=null;
+    dragState.dragType=null;
+    clearBlockDragHighlights();
+  });
+
+  el.addEventListener('touchstart',function(e){
+    if(e.touches.length!==1) return;
+    longPressTimer=setTimeout(function(){
+      dragState.taskId=task.id;
+      dragState.dragType='timeblock';
+      var clone=el.cloneNode(true);
+      clone.style.position='fixed';
+      clone.style.zIndex='99999';
+      clone.style.width=Math.max(el.offsetWidth,120)+'px';
+      clone.style.height=el.offsetHeight+'px';
+      clone.style.opacity='0.9';
+      clone.style.pointerEvents='none';
+      document.body.appendChild(clone);
+      dragState.touchClone=clone;
+      originalVisibility=el.style.visibility;
+      el.style.visibility='hidden';
+      el.classList.add('dragging');
+    },350);
+  },{passive:true});
+
+  el.addEventListener('touchmove',function(e){
+    if(!dragState.taskId||dragState.dragType!=='timeblock'||!dragState.touchClone){clearTimeout(longPressTimer);return;}
+    e.preventDefault();
+    var t=e.touches[0];
+    dragState.touchClone.style.left=(t.clientX-(dragState.touchClone.offsetWidth/2))+'px';
+    dragState.touchClone.style.top=(t.clientY-20)+'px';
+    dragState.touchClone.style.display='none';
+    var under=document.elementFromPoint(t.clientX,t.clientY);
+    dragState.touchClone.style.display='';
+    var cell=under?under.closest('.sc'):null;
+    clearBlockDragHighlights();
+    if(cell){
+      cell.classList.add(isMobile()?'drag-over-mobile':'drag-over');
+      dragState.touchTargetCell=cell;
+    } else {
+      dragState.touchTargetCell=null;
+    }
+  },{passive:false});
+
+  function finishTouchDrag(applyDrop){
+    clearTimeout(longPressTimer);
+    if(dragState.touchClone){dragState.touchClone.remove();dragState.touchClone=null;}
+    el.style.visibility=originalVisibility;
+    el.classList.remove('dragging');
+    if(applyDrop && dragState.touchTargetCell){
+      dropTaskOnCell(task.id,dragState.touchTargetCell);
+    }
+    dragState.taskId=null;
+    dragState.dragType=null;
+    dragState.touchTargetCell=null;
+    clearBlockDragHighlights();
+  }
+
+  el.addEventListener('touchend',function(){finishTouchDrag(true);});
+  el.addEventListener('touchcancel',function(){finishTouchDrag(false);});
+}
+
+function clearPlannerTimeBlocks(){
+  document.querySelectorAll('.planner-timeblocks').forEach(function(el){el.remove();});
+}
+
+function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
+  var el=document.createElement('button');
+  el.type='button';
+  var pr=(task.priority||'medium');
+  var pc=PRIORITY_COLORS[pr]||PRIORITY_COLORS.medium;
+  el.className='planner-timeblock '+pr+(task.done?' done':'')+(task.recurrence?' recurring':'');
+  el.style.top=topPx+'px';
+  el.style.left=leftPx+'px';
+  el.style.width=Math.max(widthPx,48)+'px';
+  el.style.height=Math.max(heightPx,24)+'px';
+  el.style.borderLeftColor=pc;
+  el.style.pointerEvents='auto';
+  el.innerHTML='<div class="tb-title">'+(task.title||'(no title)')+'</div>'
+    +'<div class="tb-time">'+(task.time||'')+' - '+(task.endTime||'')+'</div>';
+  el.addEventListener('click', function(e){
+    e.stopPropagation();
+    if(el.classList.contains('dragging')) return;
+    openTaskPopover(task.id, el);
+  });
+  attachTimeBlockDrag(el, task);
+  return el;
+}
+
+function renderPlannerTimeBlocks(){
+  clearPlannerTimeBlocks();
+  if(!weekStart) return;
+  var tasks=Object.values(lsGet(TK)||{}).filter(function(t){
+    return !!(t && t.date && t.time && t.endTime && taskSlotSpan(t, parseDate(t.date))>0);
+  });
+  if(!tasks.length) return;
+
+  var desktop=document.getElementById('schedDesktop');
+  if(desktop && desktop.style.display!=='none'){
+    var wrap=desktop.parentElement;
+    if(wrap){
+      var layer=document.createElement('div');
+      layer.className='planner-timeblocks';
+      layer.style.left=desktop.offsetLeft+'px';
+      layer.style.top=desktop.offsetTop+'px';
+      layer.style.width=desktop.offsetWidth+'px';
+      layer.style.height=desktop.offsetHeight+'px';
+      wrap.appendChild(layer);
+      var tableRect=desktop.getBoundingClientRect();
+      var thead=document.getElementById('schedHead');
+      var body=document.getElementById('schedBody');
+      var headRow=thead?thead.querySelector('tr'):null;
+      var firstRow=body?body.querySelector('tr'):null;
+      if(headRow && firstRow){
+        var dayCells=headRow.querySelectorAll('th');
+        var rowH=firstRow.getBoundingClientRect().height;
+        var headerH=thead.getBoundingClientRect().height;
+        tasks.forEach(function(task){
+          var d=parseDate(task.date); if(!d) return;
+          var diff=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate()) - new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate()))/86400000);
+          if(diff<0||diff>6) return;
+          var dayCell=dayCells[diff+1]; if(!dayCell) return;
+          var cellRect=dayCell.getBoundingClientRect();
+          var startM=taskStartMins(task), endM=taskEndMins(task);
+          if(endM<=startM) return;
+          var top=headerH + ((startM-(PLANNER_START_H*60))/30)*rowH;
+          var height=((endM-startM)/30)*rowH;
+          var left=(cellRect.left-tableRect.left)+3;
+          var width=Math.max(0, cellRect.width-6);
+          layer.appendChild(makePlannerTimeBlock(task, top, left, width, height));
+        });
+      }
+    }
+  }
+
+  var mWrap=document.getElementById('schedMobileWrap');
+  if(mWrap && mWrap.style.display!=='none'){
+    var mTable=mWrap.querySelector('table');
+    if(mTable){
+      var layerM=document.createElement('div');
+      layerM.className='planner-timeblocks';
+      layerM.style.left=mTable.offsetLeft+'px';
+      layerM.style.top=mTable.offsetTop+'px';
+      layerM.style.width=mTable.offsetWidth+'px';
+      layerM.style.height=mTable.offsetHeight+'px';
+      mWrap.appendChild(layerM);
+      var tableRectM=mTable.getBoundingClientRect();
+      var theadM=document.getElementById('schedHeadM');
+      var bodyM=document.getElementById('schedBodyM');
+      var headRowM=theadM?theadM.querySelector('tr'):null;
+      var firstRowM=bodyM?bodyM.querySelector('tr'):null;
+      if(headRowM && firstRowM){
+        var headCellsM=headRowM.querySelectorAll('th');
+        var dayDate=addDays(weekStart,currentDayIdx);
+        var rowHM=firstRowM.getBoundingClientRect().height;
+        var headerHM=theadM.getBoundingClientRect().height;
+        tasks.forEach(function(task){
+          var d=parseDate(task.date); if(!d) return;
+          if(fmtDate(d)!==fmtDate(dayDate)) return;
+          var dayCellM=headCellsM[1]; if(!dayCellM) return;
+          var cellRectM=dayCellM.getBoundingClientRect();
+          var startM=taskStartMins(task), endM=taskEndMins(task);
+          if(endM<=startM) return;
+          var top=headerHM + ((startM-(PLANNER_START_H*60))/30)*rowHM;
+          var height=((endM-startM)/30)*rowHM;
+          var left=(cellRectM.left-tableRectM.left)+3;
+          var width=Math.max(0, cellRectM.width-6);
+          layerM.appendChild(makePlannerTimeBlock(task, top, left, width, height));
+        });
+      }
+    }
+  }
 }
 
 // ── Drag state ───────────────────────────────────────────────────────────────
@@ -937,10 +1158,20 @@ function dropTaskOnCell(taskId,cell){
   var oldDate=tasks[taskId].date;
   var oldTime=tasks[taskId].time;
   var newDateStr=fmtDate(newDate);
+  var movedTask=tasks[taskId];
+  var prevStartM=movedTask.endTime ? taskStartMins(movedTask) : -1;
+  var prevEndM=movedTask.endTime ? taskEndMins(movedTask) : -1;
   // Only update if something actually changed
   if(newDateStr===oldDate && newTime===oldTime) return;
   tasks[taskId].date=newDateStr;
   tasks[taskId].time=newTime;
+  if(tasks[taskId].endTime){
+    var duration=Math.max(30, prevEndM-prevStartM);
+    var newStartM=slot.h*60 + (slot.half?30:0);
+    var newEndM=Math.min(1439, newStartM + duration);
+    tasks[taskId].endTime=minsToTimeStr(newEndM);
+    tasks[taskId].endDate=newDateStr;
+  }
   lsSet(TK,tasks);
   FB.ignoreNextTaskSync=true;
   FB.saveTask(taskId,tasks[taskId]);
@@ -1070,6 +1301,7 @@ function buildGrid(){
     body.appendChild(tr);
   });
 
+  setTimeout(renderPlannerTimeBlocks,0);
 }
 
 function markOverdue(){
@@ -2577,7 +2809,7 @@ function buildMobileDay(){
     var key='r'+ri+'_c'+currentDayIdx;
     var ta=document.createElement('textarea');
     ta.className='ci';ta.setAttribute('data-key',key);ta.rows=2;
-    ta.value=wd[key]||'';ta.placeholder=slot.half?'':'Tap to add...';
+    ta.value=wd[key]||'';ta.placeholder='';
     ta.addEventListener('input',function(){
       var s=lsGet(SK);if(!s[wk])s[wk]={};
       s[wk][key]=ta.value;lsSet(SK,s);
@@ -3072,111 +3304,12 @@ function isSameYMD(dateObj, y, m, d){
 }
 
 function renderTimeLine(){
-  // Force the running time line to use IST / Asia-Kolkata.
-  var nowIST = getNowInSchedulerTZ();
-  var nowMins = nowIST.hours*60 + nowIST.minutes + ((nowIST.seconds || 0) / 60);
-  var plannerStart = PLANNER_START_H*60; // 05:00 = 300 mins
-  var plannerEnd   = 23*60+30;
-  if(nowMins < plannerStart || nowMins > plannerEnd) {
-    // Outside planner range — remove any existing line
-    var ed=document.getElementById('timeLineD'); if(ed) ed.remove();
-    var em=document.getElementById('timeLineM'); if(em) em.remove();
-    return;
-  }
-
-  // Helper: measure actual row height from first body row
-  function getRowH(tbodyId){
-    var tbody=document.getElementById(tbodyId);
-    if(!tbody) return null;
-    var firstRow=tbody.querySelector('tr');
-    if(!firstRow) return null;
-    return firstRow.getBoundingClientRect().height;
-  }
-
-  // Helper: build the line element
-  function makeLine(id, topPx, leftPx, widthPx){
-    var existing=document.getElementById(id);
-    if(existing) existing.remove();
-    var line=document.createElement('div');
-    line.id=id;
-    line.className='time-line';
-    line.style.top  =topPx+'px';
-    line.style.left =leftPx+'px';
-    line.style.width=widthPx+'px';
-    var dot=document.createElement('div');
-    dot.className='time-line-dot';
-    dot.style.background=TIME_LINE_COLOR;
-    var bar=document.createElement('div');
-    bar.className='time-line-bar';
-    bar.style.background='linear-gradient(90deg,'+TIME_LINE_COLOR+' 0%,rgba(232,82,82,0.08) 100%)';
-    line.appendChild(dot);
-    line.appendChild(bar);
-    return line;
-  }
-
-  // ── Desktop ───────────────────────────────────────────────────────────
-  (function(){
-    var table=document.getElementById('schedDesktop');
-    if(!table||table.style.display==='none'){
-      var e=document.getElementById('timeLineD');if(e)e.remove(); return;
-    }
-    // Find today column in IST
-    var ths=Array.from(document.querySelectorAll('#schedHead th'));
-    if(ths.length<2) return;
-    var todayIdx=-1;
-    if(weekStart){
-      for(var i=0;i<7;i++){
-        var d=new Date(addDays(weekStart,i));
-        if(isSameYMD(d, nowIST.year, nowIST.month, nowIST.day)){todayIdx=i;break;}
-      }
-    }
-    if(todayIdx<0){var e=document.getElementById('timeLineD');if(e)e.remove();return;}
-    // Column geometry from actual DOM
-    var tcW=ths[0].offsetWidth;
-    var colLeft=tcW;
-    for(var j=0;j<todayIdx;j++) colLeft+=(ths[j+1]?ths[j+1].offsetWidth:0);
-    var colW=ths[todayIdx+1]?ths[todayIdx+1].offsetWidth:100;
-    // Row height: measure from actual rendered first row
-    var rowH=getRowH('schedBody')||TB_ROW_H_DESKTOP;
-    var thead=document.getElementById('schedHead');
-    var theadH=thead?thead.offsetHeight:38;
-    var topPx=theadH+((nowMins-plannerStart)/30)*rowH;
-    var line=makeLine('timeLineD',topPx,colLeft,colW);
-    var gw=table.parentElement;
-    if(gw) gw.appendChild(line);
-  })();
-
-  // ── Mobile ────────────────────────────────────────────────────────────
-  (function(){
-    var mWrap=document.getElementById('schedMobileWrap');
-    if(!mWrap||mWrap.style.display==='none'){
-      var e=document.getElementById('timeLineM');if(e)e.remove(); return;
-    }
-    if(!weekStart) return;
-    // Only show on today's day in IST
-    var colDate=addDays(weekStart,currentDayIdx);
-    var dc=new Date(colDate);
-    if(!isSameYMD(dc, nowIST.year, nowIST.month, nowIST.day)){
-      var e=document.getElementById('timeLineM');if(e)e.remove(); return;
-    }
-    var theadM=document.getElementById('schedHeadM');
-    var theadHM=theadM?theadM.offsetHeight:44;
-    var thsM=Array.from(theadM?theadM.querySelectorAll('th'):[]);
-    var tcWM=thsM[0]?thsM[0].offsetWidth:72;
-    var colWM=thsM[1]?thsM[1].offsetWidth:200;
-    var rowHM=getRowH('schedBodyM')||TB_ROW_H_MOBILE;
-    var topPx=theadHM+((nowMins-plannerStart)/30)*rowHM;
-    var line=makeLine('timeLineM',topPx,tcWM,colWM);
-    mWrap.style.position='relative';
-    mWrap.appendChild(line);
-  })();
+  ['timeLineD','timeLineM'].forEach(function(id){var e=document.getElementById(id);if(e)e.remove();});
 }
 
-// Update time line every minute
-setInterval(renderTimeLine, 60000);
-// Initial render after layout settles
-setTimeout(renderTimeLine, 300);
+setTimeout(renderPlannerTimeBlocks, 300);
 
+window.addEventListener('resize',function(){setTimeout(renderPlannerTimeBlocks,80);});
 setInterval(markOverdue,60000);
 setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
 
