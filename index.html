@@ -1007,10 +1007,16 @@ function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
 }
 
 function buildOverlapLayout(tasks){
+  var prioOrder={high:0,medium:1,low:2};
   var sorted=(tasks||[]).slice().sort(function(a,b){
     var sa=taskStartMins(a.task), sb=taskStartMins(b.task);
     if(sa!==sb) return sa-sb;
-    return taskVisualEndMins(a.task)-taskVisualEndMins(b.task);
+    var pa=(prioOrder[a.task.priority]!==undefined)?prioOrder[a.task.priority]:1;
+    var pb=(prioOrder[b.task.priority]!==undefined)?prioOrder[b.task.priority]:1;
+    if(pa!==pb) return pa-pb;
+    var ea=taskVisualEndMins(a.task), eb=taskVisualEndMins(b.task);
+    if(ea!==eb) return eb-ea;
+    return (a.task.title||'').localeCompare(b.task.title||'');
   });
   var groups=[];
   var current=[];
@@ -1030,14 +1036,33 @@ function buildOverlapLayout(tasks){
 
   groups.forEach(function(group){
     var laneEnds=[];
-    group.forEach(function(item){
-      var s=taskStartMins(item.task), e=taskVisualEndMins(item.task);
+    var i=0;
+    while(i<group.length){
+      var startM=taskStartMins(group[i].task);
+      var cluster=[];
+      while(i<group.length && taskStartMins(group[i].task)===startM){
+        cluster.push(group[i]);
+        i++;
+      }
+      cluster.sort(function(a,b){
+        var pa=(prioOrder[a.task.priority]!==undefined)?prioOrder[a.task.priority]:1;
+        var pb=(prioOrder[b.task.priority]!==undefined)?prioOrder[b.task.priority]:1;
+        if(pa!==pb) return pa-pb;
+        var ea=taskVisualEndMins(a.task), eb=taskVisualEndMins(b.task);
+        if(ea!==eb) return eb-ea;
+        return (a.task.title||'').localeCompare(b.task.title||'');
+      });
+      var clusterEnd=Math.max.apply(null, cluster.map(function(item){ return taskVisualEndMins(item.task); }));
       var lane=0;
-      while(lane<laneEnds.length && laneEnds[lane]>s) lane++;
-      if(lane===laneEnds.length) laneEnds.push(e);
-      else laneEnds[lane]=e;
-      item._lane=lane;
-    });
+      while(lane<laneEnds.length && laneEnds[lane]>startM) lane++;
+      if(lane===laneEnds.length) laneEnds.push(clusterEnd);
+      else laneEnds[lane]=Math.max(laneEnds[lane], clusterEnd);
+      cluster.forEach(function(item, idx){
+        item._lane=lane;
+        item._stackIndex=idx;
+        item._stackCount=cluster.length;
+      });
+    }
     var cols=Math.max(1,laneEnds.length);
     group.forEach(function(item){ item._cols=cols; });
   });
@@ -1097,6 +1122,14 @@ function renderPlannerTimeBlocks(){
             var width=(cols===1)?totalWidth:Math.max(52,laneWidth);
             var left=leftBase + lane*(laneWidth+gutter);
             if(left+width>leftBase+totalWidth) width=Math.max(48,(leftBase+totalWidth)-left);
+            var stackCount=Math.max(1,item._stackCount||1);
+            var stackIndex=Math.max(0,item._stackIndex||0);
+            if(stackCount>1){
+              var slotHeight=Math.max(12, rowYFromMinutes(startM+30, rowMetrics)-rowYFromMinutes(startM, rowMetrics));
+              var stackOffset=Math.min(slotHeight-6, Math.max(10, Math.floor((slotHeight-4)/stackCount))*stackIndex);
+              top += stackOffset;
+              height = Math.max(10, height-stackOffset);
+            }
             layer.appendChild(makePlannerTimeBlock(task, top, left, width, height));
           });
         }
@@ -1147,6 +1180,14 @@ function renderPlannerTimeBlocks(){
             var width=(cols===1)?totalWidthM:Math.max(52,laneWidth);
             var left=leftBaseM + lane*(laneWidth+gutter);
             if(left+width>leftBaseM+totalWidthM) width=Math.max(48,(leftBaseM+totalWidthM)-left);
+            var stackCount=Math.max(1,item._stackCount||1);
+            var stackIndex=Math.max(0,item._stackIndex||0);
+            if(stackCount>1){
+              var slotHeightM=Math.max(12, rowYFromMinutes(startM+30, rowMetricsM)-rowYFromMinutes(startM, rowMetricsM));
+              var stackOffsetM=Math.min(slotHeightM-6, Math.max(10, Math.floor((slotHeightM-4)/stackCount))*stackIndex);
+              top += stackOffsetM;
+              height = Math.max(10, height-stackOffsetM);
+            }
             layerM.appendChild(makePlannerTimeBlock(task, top, left, width, height));
           });
         }
