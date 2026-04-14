@@ -98,7 +98,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 /* ── Planner grid ── */
 .grid-wrap{flex:1;overflow-x:auto;padding:12px 18px 36px;-webkit-overflow-scrolling:touch}
 .sched{min-width:700px;border-collapse:separate;border-spacing:0;width:100%;
-  border-radius:10px;overflow:hidden;box-shadow:0 6px 28px var(--sg)}
+  border-radius:10px;overflow:visible;box-shadow:0 6px 28px var(--sg)}
 .sched thead th{background:linear-gradient(180deg,var(--gm) 0%,var(--gd) 100%);color:var(--white);
   font-family:'Playfair Display',serif;font-size:12px;font-weight:700;padding:10px 5px;
   text-align:center;border-right:1px solid rgba(255,255,255,0.14);white-space:nowrap}
@@ -112,7 +112,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .tc.ovt{color:var(--ot);font-weight:700}
 .sc{padding:0;border-right:1px solid rgba(196,148,42,0.11);border-bottom:1px solid rgba(196,148,42,0.18);
   height:40px;min-height:40px;vertical-align:top;background:white;
-  position:relative;overflow:visible}
+  position:relative;overflow:visible;box-sizing:content-box}
 .sc:last-child{border-right:none}
 .sched tbody tr:nth-child(4n+3) .sc,
 .sched tbody tr:nth-child(4n+4) .sc{background:#FFFBEE}
@@ -1094,7 +1094,7 @@ function buildGrid(){
       });
       tbTasksD.forEach(function(t){
         var span=taskSlotSpan(t,colDate);
-        if(span>1) td.rowSpan=span; // use absolute rowspan, not cumulative
+        if(span>1){ td.rowSpan=span; td.style.height=(span*40)+'px'; }
         var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
         var ROW_H=40; // must match .sc height in CSS
         var startM=taskStartMins(t);
@@ -2659,7 +2659,7 @@ function buildMobileDay(){
     });
     mbTasks.forEach(function(t){
       var span=taskSlotSpan(t,colDate);
-      if(span>1) td.rowSpan=span;
+      if(span>1){ td.rowSpan=span; td.style.height=(span*48)+'px'; }
       var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
       var block=document.createElement('div');
       block.className='tb-block';
