@@ -981,7 +981,7 @@ function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
   var pr=(task.priority||'medium');
   var pc=PRIORITY_COLORS[pr]||PRIORITY_COLORS.medium;
   var safeW=Math.max(widthPx,48), safeH=Math.max(8,heightPx);
-  el.className='planner-timeblock '+pr+(task.done?' done':'')+(task.recurrence?' recurring':'');
+  el.className='planner-timeblock '+pr+(task.done?' done':'')+((task.recurrence&&!task.done)?' recurring':'');
   if(safeH<=24) el.classList.add('tiny');
   else if(safeH<=40) el.classList.add('compact');
   if(safeH<=18) el.classList.add('time-only');
@@ -994,7 +994,8 @@ function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
   el.style.borderRightColor=pc;
   el.style.pointerEvents='auto';
   var timeLabel=(task.time||'')+(task.endTime?(' - '+task.endTime):'');
-  el.innerHTML='<div class="tb-title">'+(task.title||'(no title)')+'</div>'
+  var titleText=(task.done?'✅ ':'')+(task.title||'(no title)');
+  el.innerHTML='<div class="tb-title">'+titleText+'</div>'
     +'<div class="tb-time">'+timeLabel+'</div>';
   el.title=(task.title||'(no title)')+' ('+timeLabel+')';
   el.addEventListener('click', function(e){
