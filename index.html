@@ -3034,96 +3034,104 @@ var TB_ROW_H_MOBILE  = 48;
 var PLANNER_START_H  = 5; // 05:00
 
 function renderTimeLine(){
+  // Uses device local time — correct for IST automatically
   var now = new Date();
   var nowMins = now.getHours()*60 + now.getMinutes();
-  // Only show if within planner range (05:00 – 23:30)
-  var plannerStart = PLANNER_START_H*60;
+  var plannerStart = PLANNER_START_H*60; // 05:00 = 300 mins
   var plannerEnd   = 23*60+30;
+  if(nowMins < plannerStart || nowMins > plannerEnd) {
+    // Outside planner range — remove any existing line
+    var ed=document.getElementById('timeLineD'); if(ed) ed.remove();
+    var em=document.getElementById('timeLineM'); if(em) em.remove();
+    return;
+  }
+
+  // Helper: measure actual row height from first body row
+  function getRowH(tbodyId){
+    var tbody=document.getElementById(tbodyId);
+    if(!tbody) return null;
+    var firstRow=tbody.querySelector('tr');
+    if(!firstRow) return null;
+    return firstRow.getBoundingClientRect().height;
+  }
+
+  // Helper: build the line element
+  function makeLine(id, topPx, leftPx, widthPx){
+    var existing=document.getElementById(id);
+    if(existing) existing.remove();
+    var line=document.createElement('div');
+    line.id=id;
+    line.className='time-line';
+    line.style.top  =topPx+'px';
+    line.style.left =leftPx+'px';
+    line.style.width=widthPx+'px';
+    var dot=document.createElement('div');
+    dot.className='time-line-dot';
+    dot.style.background=TIME_LINE_COLOR;
+    var bar=document.createElement('div');
+    bar.className='time-line-bar';
+    bar.style.background='linear-gradient(90deg,'+TIME_LINE_COLOR+' 0%,rgba(232,82,82,0.08) 100%)';
+    line.appendChild(dot);
+    line.appendChild(bar);
+    return line;
+  }
 
   // ── Desktop ───────────────────────────────────────────────────────────
   (function(){
-    var existing = document.getElementById('timeLineD');
-    if(existing) existing.remove();
-    var table = document.getElementById('schedDesktop');
-    if(!table || table.style.display==='none') return;
-    if(nowMins < plannerStart || nowMins > plannerEnd) return;
-    // Find today column index from header ths
-    var ths = Array.from(document.querySelectorAll('#schedHead th'));
-    if(ths.length < 2) return;
-    var todayIdx = -1;
-    var today = new Date(); today.setHours(0,0,0,0);
+    var table=document.getElementById('schedDesktop');
+    if(!table||table.style.display==='none'){
+      var e=document.getElementById('timeLineD');if(e)e.remove(); return;
+    }
+    // Find today column
+    var ths=Array.from(document.querySelectorAll('#schedHead th'));
+    if(ths.length<2) return;
+    var todayIdx=-1;
+    var today=new Date();today.setHours(0,0,0,0);
     if(weekStart){
       for(var i=0;i<7;i++){
-        var d=addDays(weekStart,i); d.setHours(0,0,0,0);
+        var d=new Date(addDays(weekStart,i));d.setHours(0,0,0,0);
         if(d.getTime()===today.getTime()){todayIdx=i;break;}
       }
     }
-    if(todayIdx<0) return; // today not in current week view
-    // Compute left/width from column th
-    var tcW = ths[0].offsetWidth;
-    var colLeft = tcW;
-    for(var j=0;j<todayIdx;j++) colLeft += (ths[j+1]?ths[j+1].offsetWidth:0);
-    var colW = ths[todayIdx+1]?ths[todayIdx+1].offsetWidth:100;
-    // Compute top: thead height + rows above
-    var thead = document.getElementById('schedHead');
-    var theadH = thead ? thead.offsetHeight : 38;
-    var topPx = theadH + ((nowMins - plannerStart)/30)*TB_ROW_H_DESKTOP;
-    // Build line
-    var line = document.createElement('div');
-    line.id = 'timeLineD';
-    line.className = 'time-line';
-    line.style.top  = topPx+'px';
-    line.style.left = colLeft+'px';
-    line.style.width= colW+'px';
-    line.style.color= TIME_LINE_COLOR;
-    var dot = document.createElement('div');
-    dot.className = 'time-line-dot';
-    dot.style.background = TIME_LINE_COLOR;
-    var bar = document.createElement('div');
-    bar.className = 'time-line-bar';
-    bar.style.background = 'linear-gradient(90deg,'+TIME_LINE_COLOR+' 0%,rgba(232,82,82,0.1) 100%)';
-    line.appendChild(dot); line.appendChild(bar);
-    // Place inside grid-wrap (scrolls with table)
-    var gw = table.parentElement;
+    if(todayIdx<0){var e=document.getElementById('timeLineD');if(e)e.remove();return;}
+    // Column geometry from actual DOM
+    var tcW=ths[0].offsetWidth;
+    var colLeft=tcW;
+    for(var j=0;j<todayIdx;j++) colLeft+=(ths[j+1]?ths[j+1].offsetWidth:0);
+    var colW=ths[todayIdx+1]?ths[todayIdx+1].offsetWidth:100;
+    // Row height: measure from actual rendered first row
+    var rowH=getRowH('schedBody')||TB_ROW_H_DESKTOP;
+    var thead=document.getElementById('schedHead');
+    var theadH=thead?thead.offsetHeight:38;
+    var topPx=theadH+((nowMins-plannerStart)/30)*rowH;
+    var line=makeLine('timeLineD',topPx,colLeft,colW);
+    var gw=table.parentElement;
     if(gw) gw.appendChild(line);
   })();
 
   // ── Mobile ────────────────────────────────────────────────────────────
   (function(){
-    var existing = document.getElementById('timeLineM');
-    if(existing) existing.remove();
-    var mWrap = document.getElementById('schedMobileWrap');
-    if(!mWrap || mWrap.style.display==='none') return;
-    if(nowMins < plannerStart || nowMins > plannerEnd) return;
-    // Only show if today is the current day being viewed
+    var mWrap=document.getElementById('schedMobileWrap');
+    if(!mWrap||mWrap.style.display==='none'){
+      var e=document.getElementById('timeLineM');if(e)e.remove(); return;
+    }
     if(!weekStart) return;
-    var colDate = addDays(weekStart, currentDayIdx);
-    var dc = new Date(colDate); dc.setHours(0,0,0,0);
-    var today = new Date(); today.setHours(0,0,0,0);
-    if(dc.getTime() !== today.getTime()) return;
-    var tableM = mWrap.querySelector('table');
-    if(!tableM) return;
-    var theadM = document.getElementById('schedHeadM');
-    var theadHM = theadM ? theadM.offsetHeight : 44;
-    var thsM = Array.from(theadM ? theadM.querySelectorAll('th') : []);
-    var tcWM = thsM[0] ? thsM[0].offsetWidth : 72;
-    var colWM = thsM[1] ? thsM[1].offsetWidth : 200;
-    var topPx = theadHM + ((nowMins - plannerStart)/30)*TB_ROW_H_MOBILE;
-    var line = document.createElement('div');
-    line.id = 'timeLineM';
-    line.className = 'time-line-m';
-    line.style.top   = topPx+'px';
-    line.style.left  = tcWM+'px';
-    line.style.width = colWM+'px';
-    line.style.color = TIME_LINE_COLOR;
-    var dot = document.createElement('div');
-    dot.className = 'time-line-dot';
-    dot.style.background = TIME_LINE_COLOR;
-    var bar = document.createElement('div');
-    bar.className = 'time-line-bar';
-    bar.style.background = 'linear-gradient(90deg,'+TIME_LINE_COLOR+' 0%,rgba(232,82,82,0.1) 100%)';
-    line.appendChild(dot); line.appendChild(bar);
-    mWrap.style.position = 'relative';
+    // Only show on today's day
+    var colDate=addDays(weekStart,currentDayIdx);
+    var dc=new Date(colDate);dc.setHours(0,0,0,0);
+    var today=new Date();today.setHours(0,0,0,0);
+    if(dc.getTime()!==today.getTime()){
+      var e=document.getElementById('timeLineM');if(e)e.remove(); return;
+    }
+    var theadM=document.getElementById('schedHeadM');
+    var theadHM=theadM?theadM.offsetHeight:44;
+    var thsM=Array.from(theadM?theadM.querySelectorAll('th'):[]);
+    var tcWM=thsM[0]?thsM[0].offsetWidth:72;
+    var colWM=thsM[1]?thsM[1].offsetWidth:200;
+    var rowHM=getRowH('schedBodyM')||TB_ROW_H_MOBILE;
+    var topPx=theadHM+((nowMins-plannerStart)/30)*rowHM;
+    var line=makeLine('timeLineM',topPx,tcWM,colWM);
+    mWrap.style.position='relative';
     mWrap.appendChild(line);
   })();
 }
