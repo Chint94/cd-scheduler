@@ -151,26 +151,28 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .sched-mobile .tc.half{font-size:11px}
 .sched-mobile .sc{min-height:48px}
 .sched-mobile .ci{font-size:13px;min-height:44px;padding:6px 8px;line-height:1.5}
-.sched-mobile .tpill{font-size:11px;padding:3px 7px;margin:2px 2px 0}
+.sched-mobile .tpill{font-size:11px;padding:6px 8px 5px;margin:2px 2px 0;border-radius:12px}
 
 /* ── Task pills in planner ── */
-.tpill{display:flex;flex-direction:column;align-items:flex-start;gap:0;
-  font-size:10px;font-weight:600;padding:3px 5px 2px;
-  margin:1px 2px 0;line-height:1.3;border-radius:4px;cursor:pointer;border:none;
-  text-align:left;width:calc(100% - 4px);transition:opacity .15s;overflow:hidden}
+.tpill{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  font-size:10px;font-weight:600;padding:6px 8px 5px;
+  margin:2px 2px 0;line-height:1.25;border:none;border-radius:12px;cursor:pointer;
+  text-align:left;width:calc(100% - 4px);transition:opacity .15s;overflow:hidden;
+  box-sizing:border-box;box-shadow:0 2px 0 rgba(0,0,0,.82), 0 8px 14px rgba(0,0,0,.06);
+  font-family:DM Sans,sans-serif}
 .tpill:hover{opacity:.8}
 .tpill.done-pill{opacity:.4;text-decoration:line-through}
 
 .tb-cell{padding:2px;position:relative;vertical-align:top;border-right:1px solid rgba(196,148,42,0.11)}
 
 
-.tpill.ov-pill{background:#FFE0E0!important;border-left:2px solid var(--ot)!important;color:var(--ot)!important}
-.tpill .ptitle-row{display:flex;align-items:center;gap:3px;width:100%;overflow:hidden}
-.tpill .picon{flex-shrink:0;font-size:10px}
-.tpill .ptxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:10px;font-weight:600}
-.tpill .ptime{font-size:9px;opacity:.75;display:block;
+.tpill.ov-pill{background:#FFE0E0!important;border-left:5px solid var(--ot)!important;border-right:5px solid var(--ot)!important;color:var(--ot)!important}
+.tpill .ptitle-row{display:flex;align-items:center;gap:4px;width:100%;overflow:hidden}
+.tpill .picon{flex-shrink:0;font-size:10px;opacity:.9}
+.tpill .ptxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:11px;font-weight:700}
+.tpill .ptime{font-size:10px;opacity:.82;display:block;
   width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  font-weight:500;margin-top:1px;letter-spacing:0.1px}
+  font-weight:600;margin-top:0;letter-spacing:0.1px}
 
 /* ── Task popover ── */
 .pop-overlay{position:fixed;inset:0;z-index:8999;background:rgba(0,0,0,0.2)}
@@ -318,7 +320,10 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .repeat-freq-wrap{display:none;margin-top:6px}
 .repeat-freq-wrap.visible{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 /* Recurring pill in planner */
-.tpill.rec-pill{border-left-color:#5B9BD5!important}
+.tpill.high{background:rgba(232,82,82,0.14);color:#B53A3A;border-left:5px solid #E85252;border-right:5px solid #E85252}
+.tpill.medium{background:rgba(196,148,42,0.18);color:#8B6914;border-left:5px solid #C4942A;border-right:5px solid #C4942A}
+.tpill.low{background:rgba(92,184,92,0.16);color:#3C8A3C;border-left:5px solid #5CB85C;border-right:5px solid #5CB85C}
+.tpill.rec-pill{border-left-color:#5B9BD5!important;border-right-color:#5B9BD5!important}
 .filter-bar{display:flex;gap:7px;margin-bottom:13px;flex-wrap:wrap}
 .fb{font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;background:white;
   border:1.5px solid var(--gp);border-radius:20px;padding:4px 13px;cursor:pointer;
@@ -815,7 +820,8 @@ function rowYFromMinutes(mins, rowMetrics){
 function blockGeometryForTask(startMins, endMins, rowMetrics){
   var top=rowYFromMinutes(startMins, rowMetrics);
   var bottom=rowYFromMinutes(endMins, rowMetrics);
-  return {top:top,height:Math.max(24,bottom-top)};
+  var exactHeight=Math.max(8,bottom-top);
+  return {top:top,height:exactHeight};
 }
 
 // Returns array of {task} for a given slot — simple pill rendering
@@ -953,12 +959,12 @@ function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
   el.type='button';
   var pr=(task.priority||'medium');
   var pc=PRIORITY_COLORS[pr]||PRIORITY_COLORS.medium;
-  var safeW=Math.max(widthPx,48), safeH=Math.max(heightPx,24);
+  var safeW=Math.max(widthPx,48), safeH=Math.max(8,heightPx);
   el.className='planner-timeblock '+pr+(task.done?' done':'')+(task.recurrence?' recurring':'');
-  if(safeH<=30) el.classList.add('tiny');
-  else if(safeH<=42) el.classList.add('compact');
-  if(safeH<=24) el.classList.add('time-only');
-  else if(safeH<=30 && safeW<120) el.classList.add('title-hidden');
+  if(safeH<=24) el.classList.add('tiny');
+  else if(safeH<=40) el.classList.add('compact');
+  if(safeH<=18) el.classList.add('time-only');
+  else if(safeH<=24 && safeW<120) el.classList.add('title-hidden');
   el.style.top=topPx+'px';
   el.style.left=leftPx+'px';
   el.style.width=safeW+'px';
@@ -1143,7 +1149,7 @@ function makePill(task,entry){
       isOv=dl<now;
     }
   }
-  btn.className='tpill'+(task.done?' done-pill':'')+(isOv?' ov-pill':'')+(task.recurrence?' rec-pill':'')+(entry.isCont?' cont-pill':'')+(entry.isEnd&&!entry.isStart?' end-pill':'');
+  btn.className='tpill '+(task.priority||'medium')+(task.done?' done-pill':'')+(isOv?' ov-pill':'')+(task.recurrence?' rec-pill':'')+(entry.isCont?' cont-pill':'')+(entry.isEnd&&!entry.isStart?' end-pill':'');
   if(!isOv)btn.style.cssText='background:'+pc+'22;border-left:2px solid '+pc+';color:'+pc+';';
   var icon=task.done?'✅':(task.recurrence?'🔁':'📌');
   // Title row: icon + task name
