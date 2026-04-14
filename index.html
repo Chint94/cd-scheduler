@@ -439,13 +439,25 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .planner-timeblock.low{background:rgba(92,184,92,0.16);color:#3C8A3C}
 .planner-timeblock.done{opacity:.72;filter:saturate(.85)}
 .planner-timeblock .tb-title{font-size:11px;font-weight:700;line-height:1.2;display:-webkit-box;
-  -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.planner-timeblock .tb-time{font-size:10px;font-weight:600;opacity:.86;line-height:1.1}
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:100%}
+.planner-timeblock .tb-time{font-size:10px;font-weight:600;opacity:.86;line-height:1.1;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.planner-timeblock.compact{padding-top:4px;padding-bottom:4px;gap:2px}
+.planner-timeblock.compact .tb-title{-webkit-line-clamp:1;font-size:10px}
+.planner-timeblock.compact .tb-time{font-size:9px}
+.planner-timeblock.tiny{justify-content:center;gap:1px;padding-top:3px;padding-bottom:3px}
+.planner-timeblock.tiny .tb-title{-webkit-line-clamp:1;font-size:9px;line-height:1.05}
+.planner-timeblock.tiny .tb-time{font-size:8px;line-height:1.0}
+.planner-timeblock.tiny.title-hidden .tb-title{display:none}
+.planner-timeblock.time-only{justify-content:center}
+.planner-timeblock.time-only .tb-title{display:none}
+.planner-timeblock.time-only .tb-time{font-size:11px;font-weight:700}
 .planner-timeblock.recurring .tb-title:before{content:'🔁 ';font-weight:400}
 @media(max-width:700px){
   .planner-timeblock{padding:5px 7px;border-radius:9px}
   .planner-timeblock .tb-title{font-size:10px}
   .planner-timeblock .tb-time{font-size:9px}
+  .planner-timeblock.compact .tb-title{font-size:9px}
+  .planner-timeblock.compact .tb-time{font-size:8px}
 }
 
 /* ── Footer ── */
@@ -910,15 +922,22 @@ function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
   el.type='button';
   var pr=(task.priority||'medium');
   var pc=PRIORITY_COLORS[pr]||PRIORITY_COLORS.medium;
+  var safeW=Math.max(widthPx,48), safeH=Math.max(heightPx,24);
   el.className='planner-timeblock '+pr+(task.done?' done':'')+(task.recurrence?' recurring':'');
+  if(safeH<=30) el.classList.add('tiny');
+  else if(safeH<=42) el.classList.add('compact');
+  if(safeH<=24) el.classList.add('time-only');
+  else if(safeH<=30 && safeW<120) el.classList.add('title-hidden');
   el.style.top=topPx+'px';
   el.style.left=leftPx+'px';
-  el.style.width=Math.max(widthPx,48)+'px';
-  el.style.height=Math.max(heightPx,24)+'px';
+  el.style.width=safeW+'px';
+  el.style.height=safeH+'px';
   el.style.borderLeftColor=pc;
+  el.style.borderRightColor=pc;
   el.style.pointerEvents='auto';
   el.innerHTML='<div class="tb-title">'+(task.title||'(no title)')+'</div>'
     +'<div class="tb-time">'+(task.time||'')+' - '+(task.endTime||'')+'</div>';
+  el.title=(task.title||'(no title)')+' ('+(task.time||'')+' - '+(task.endTime||'')+')';
   el.addEventListener('click', function(e){
     e.stopPropagation();
     if(el.classList.contains('dragging')) return;
@@ -926,6 +945,44 @@ function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
   });
   attachTimeBlockDrag(el, task);
   return el;
+}
+
+function buildOverlapLayout(tasks){
+  var sorted=(tasks||[]).slice().sort(function(a,b){
+    var sa=taskStartMins(a.task), sb=taskStartMins(b.task);
+    if(sa!==sb) return sa-sb;
+    return taskEndMins(a.task)-taskEndMins(b.task);
+  });
+  var groups=[];
+  var current=[];
+  var currentMax=-1;
+  sorted.forEach(function(item){
+    var s=taskStartMins(item.task), e=taskEndMins(item.task);
+    if(!current.length || s<currentMax){
+      current.push(item);
+      currentMax=Math.max(currentMax,e);
+    }else{
+      groups.push(current);
+      current=[item];
+      currentMax=e;
+    }
+  });
+  if(current.length) groups.push(current);
+
+  groups.forEach(function(group){
+    var laneEnds=[];
+    group.forEach(function(item){
+      var s=taskStartMins(item.task), e=taskEndMins(item.task);
+      var lane=0;
+      while(lane<laneEnds.length && laneEnds[lane]>s) lane++;
+      if(lane===laneEnds.length) laneEnds.push(e);
+      else laneEnds[lane]=e;
+      item._lane=lane;
+    });
+    var cols=Math.max(1,laneEnds.length);
+    group.forEach(function(item){ item._cols=cols; });
+  });
+  return sorted;
 }
 
 function renderPlannerTimeBlocks(){
@@ -956,20 +1013,32 @@ function renderPlannerTimeBlocks(){
         var dayCells=headRow.querySelectorAll('th');
         var rowH=firstRow.getBoundingClientRect().height;
         var headerH=thead.getBoundingClientRect().height;
-        tasks.forEach(function(task){
-          var d=parseDate(task.date); if(!d) return;
-          var diff=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate()) - new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate()))/86400000);
-          if(diff<0||diff>6) return;
-          var dayCell=dayCells[diff+1]; if(!dayCell) return;
+        for(var dayIdx=0; dayIdx<7; dayIdx++){
+          var dayCell=dayCells[dayIdx+1]; if(!dayCell) continue;
           var cellRect=dayCell.getBoundingClientRect();
-          var startM=taskStartMins(task), endM=taskEndMins(task);
-          if(endM<=startM) return;
-          var top=headerH + ((startM-(PLANNER_START_H*60))/30)*rowH;
-          var height=((endM-startM)/30)*rowH;
-          var left=(cellRect.left-tableRect.left)+3;
-          var width=Math.max(0, cellRect.width-6);
-          layer.appendChild(makePlannerTimeBlock(task, top, left, width, height));
-        });
+          var leftBase=(cellRect.left-tableRect.left)+3;
+          var totalWidth=Math.max(0, cellRect.width-6);
+          var dayTasks=tasks.filter(function(task){
+            var d=parseDate(task.date); if(!d) return false;
+            var diff=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate()) - new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate()))/86400000);
+            return diff===dayIdx;
+          }).map(function(task){ return {task:task}; });
+          buildOverlapLayout(dayTasks).forEach(function(item){
+            var task=item.task;
+            var startM=taskStartMins(task), endM=taskEndMins(task);
+            if(endM<=startM) return;
+            var top=headerH + ((startM-(PLANNER_START_H*60))/30)*rowH;
+            var height=((endM-startM)/30)*rowH;
+            var cols=Math.max(1,item._cols||1);
+            var lane=Math.max(0,item._lane||0);
+            var gutter=4;
+            var laneWidth=Math.max(52,(totalWidth-((cols-1)*gutter))/cols);
+            var width=(cols===1)?totalWidth:Math.max(52,laneWidth);
+            var left=leftBase + lane*(laneWidth+gutter);
+            if(left+width>leftBase+totalWidth) width=Math.max(48,(leftBase+totalWidth)-left);
+            layer.appendChild(makePlannerTimeBlock(task, top, left, width, height));
+          });
+        }
       }
     }
   }
@@ -995,19 +1064,31 @@ function renderPlannerTimeBlocks(){
         var dayDate=addDays(weekStart,currentDayIdx);
         var rowHM=firstRowM.getBoundingClientRect().height;
         var headerHM=theadM.getBoundingClientRect().height;
-        tasks.forEach(function(task){
-          var d=parseDate(task.date); if(!d) return;
-          if(fmtDate(d)!==fmtDate(dayDate)) return;
-          var dayCellM=headCellsM[1]; if(!dayCellM) return;
+        var dayCellM=headCellsM[1];
+        if(dayCellM){
           var cellRectM=dayCellM.getBoundingClientRect();
-          var startM=taskStartMins(task), endM=taskEndMins(task);
-          if(endM<=startM) return;
-          var top=headerHM + ((startM-(PLANNER_START_H*60))/30)*rowHM;
-          var height=((endM-startM)/30)*rowHM;
-          var left=(cellRectM.left-tableRectM.left)+3;
-          var width=Math.max(0, cellRectM.width-6);
-          layerM.appendChild(makePlannerTimeBlock(task, top, left, width, height));
-        });
+          var leftBaseM=(cellRectM.left-tableRectM.left)+3;
+          var totalWidthM=Math.max(0, cellRectM.width-6);
+          var dayTasksM=tasks.filter(function(task){
+            var d=parseDate(task.date); if(!d) return false;
+            return fmtDate(d)===fmtDate(dayDate);
+          }).map(function(task){ return {task:task}; });
+          buildOverlapLayout(dayTasksM).forEach(function(item){
+            var task=item.task;
+            var startM=taskStartMins(task), endM=taskEndMins(task);
+            if(endM<=startM) return;
+            var top=headerHM + ((startM-(PLANNER_START_H*60))/30)*rowHM;
+            var height=((endM-startM)/30)*rowHM;
+            var cols=Math.max(1,item._cols||1);
+            var lane=Math.max(0,item._lane||0);
+            var gutter=4;
+            var laneWidth=Math.max(52,(totalWidthM-((cols-1)*gutter))/cols);
+            var width=(cols===1)?totalWidthM:Math.max(52,laneWidth);
+            var left=leftBaseM + lane*(laneWidth+gutter);
+            if(left+width>leftBaseM+totalWidthM) width=Math.max(48,(leftBaseM+totalWidthM)-left);
+            layerM.appendChild(makePlannerTimeBlock(task, top, left, width, height));
+          });
+        }
       }
     }
   }
