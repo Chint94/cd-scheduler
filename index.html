@@ -1125,10 +1125,12 @@ function renderPlannerTimeBlocks(){
             var stackCount=Math.max(1,item._stackCount||1);
             var stackIndex=Math.max(0,item._stackIndex||0);
             if(stackCount>1){
-              var slotHeight=Math.max(12, rowYFromMinutes(startM+30, rowMetrics)-rowYFromMinutes(startM, rowMetrics));
-              var stackOffset=Math.min(slotHeight-6, Math.max(10, Math.floor((slotHeight-4)/stackCount))*stackIndex);
+              // Same-start tasks should stack vertically by priority with enough spacing
+              // to keep titles fully readable instead of visually colliding.
+              var minCardStep=38;
+              var stackOffset=minCardStep*stackIndex;
               top += stackOffset;
-              height = Math.max(10, height-stackOffset);
+              height = Math.max(18, height-stackOffset);
             }
             layer.appendChild(makePlannerTimeBlock(task, top, left, width, height));
           });
@@ -1183,10 +1185,12 @@ function renderPlannerTimeBlocks(){
             var stackCount=Math.max(1,item._stackCount||1);
             var stackIndex=Math.max(0,item._stackIndex||0);
             if(stackCount>1){
-              var slotHeightM=Math.max(12, rowYFromMinutes(startM+30, rowMetricsM)-rowYFromMinutes(startM, rowMetricsM));
-              var stackOffsetM=Math.min(slotHeightM-6, Math.max(10, Math.floor((slotHeightM-4)/stackCount))*stackIndex);
+              // Same-start tasks should stack vertically by priority with enough spacing
+              // to keep titles fully readable instead of visually colliding.
+              var minCardStepM=38;
+              var stackOffsetM=minCardStepM*stackIndex;
               top += stackOffsetM;
-              height = Math.max(10, height-stackOffsetM);
+              height = Math.max(18, height-stackOffsetM);
             }
             layerM.appendChild(makePlannerTimeBlock(task, top, left, width, height));
           });
