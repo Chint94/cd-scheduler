@@ -1011,8 +1011,9 @@ function renderPlannerTimeBlocks(){
       var firstRow=body?body.querySelector('tr'):null;
       if(headRow && firstRow){
         var dayCells=headRow.querySelectorAll('th');
-        var rowH=firstRow.getBoundingClientRect().height;
-        var headerH=thead.getBoundingClientRect().height;
+        var rowRect=firstRow.getBoundingClientRect();
+        var rowH=rowRect.height;
+        var bodyTop=Math.max(0, rowRect.top-tableRect.top);
         for(var dayIdx=0; dayIdx<7; dayIdx++){
           var dayCell=dayCells[dayIdx+1]; if(!dayCell) continue;
           var cellRect=dayCell.getBoundingClientRect();
@@ -1027,7 +1028,7 @@ function renderPlannerTimeBlocks(){
             var task=item.task;
             var startM=taskStartMins(task), endM=taskEndMins(task);
             if(endM<=startM) return;
-            var top=headerH + ((startM-(PLANNER_START_H*60))/30)*rowH;
+            var top=bodyTop + ((startM-(PLANNER_START_H*60))/30)*rowH;
             var height=((endM-startM)/30)*rowH;
             var cols=Math.max(1,item._cols||1);
             var lane=Math.max(0,item._lane||0);
@@ -1062,8 +1063,9 @@ function renderPlannerTimeBlocks(){
       if(headRowM && firstRowM){
         var headCellsM=headRowM.querySelectorAll('th');
         var dayDate=addDays(weekStart,currentDayIdx);
-        var rowHM=firstRowM.getBoundingClientRect().height;
-        var headerHM=theadM.getBoundingClientRect().height;
+        var rowRectM=firstRowM.getBoundingClientRect();
+        var rowHM=rowRectM.height;
+        var bodyTopM=Math.max(0, rowRectM.top-tableRectM.top);
         var dayCellM=headCellsM[1];
         if(dayCellM){
           var cellRectM=dayCellM.getBoundingClientRect();
@@ -1077,7 +1079,7 @@ function renderPlannerTimeBlocks(){
             var task=item.task;
             var startM=taskStartMins(task), endM=taskEndMins(task);
             if(endM<=startM) return;
-            var top=headerHM + ((startM-(PLANNER_START_H*60))/30)*rowHM;
+            var top=bodyTopM + ((startM-(PLANNER_START_H*60))/30)*rowHM;
             var height=((endM-startM)/30)*rowHM;
             var cols=Math.max(1,item._cols||1);
             var lane=Math.max(0,item._lane||0);
