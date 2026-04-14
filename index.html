@@ -167,9 +167,9 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 
 
 .tpill.ov-pill{background:#FFE0E0!important;border-left:5px solid var(--ot)!important;border-right:5px solid var(--ot)!important;color:var(--ot)!important}
-.tpill .ptitle-row{display:flex;align-items:center;gap:4px;width:100%;overflow:hidden}
-.tpill .picon{flex-shrink:0;font-size:10px;opacity:.9}
-.tpill .ptxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:11px;font-weight:700;line-height:1.15}
+.tpill .ptitle-row{display:flex;align-items:center;gap:0;width:100%;overflow:hidden}
+.tpill .picon{display:none}
+.tpill .ptxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:11px;font-weight:700;line-height:1.15;max-width:100%;width:100%}
 .tpill .ptime{font-size:10px;opacity:.82;display:block;
   width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   font-weight:600;margin-top:0;letter-spacing:0.1px;line-height:1.1}
@@ -429,6 +429,10 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .day-pill:hover:not(.active){border-color:var(--gm);color:var(--gd)}
 .day-pills-wrap{display:none;margin-top:6px}
 .day-pills-wrap.show{display:block}
+
+.tpill::before{content:none!important;display:none!important}
+.tpill .picon{display:none!important}
+.tpill .ptitle-row{gap:0!important}
 
 /* ── Planner time blocks ── */
 .planner-timeblocks{position:absolute;pointer-events:none;z-index:6;overflow:hidden}
