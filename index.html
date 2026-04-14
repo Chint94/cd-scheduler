@@ -3032,11 +3032,42 @@ var TIME_LINE_COLOR = '#E85252'; // red accent
 var TB_ROW_H_DESKTOP = 40;
 var TB_ROW_H_MOBILE  = 48;
 var PLANNER_START_H  = 5; // 05:00
+var SCHEDULER_TIMEZONE = 'Asia/Kolkata';
+
+function getNowInSchedulerTZ(){
+  var parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: SCHEDULER_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).formatToParts(new Date()).reduce(function(acc, part){
+    if(part.type !== 'literal') acc[part.type] = part.value;
+    return acc;
+  }, {});
+
+  return {
+    year: parseInt(parts.year, 10),
+    month: parseInt(parts.month, 10),
+    day: parseInt(parts.day, 10),
+    hours: parseInt(parts.hour, 10),
+    minutes: parseInt(parts.minute, 10)
+  };
+}
+
+function isSameYMD(dateObj, y, m, d){
+  return dateObj &&
+    dateObj.getFullYear() === y &&
+    (dateObj.getMonth() + 1) === m &&
+    dateObj.getDate() === d;
+}
 
 function renderTimeLine(){
-  // Uses device local time — correct for IST automatically
-  var now = new Date();
-  var nowMins = now.getHours()*60 + now.getMinutes();
+  // Force the running time line to use IST / Asia-Kolkata.
+  var nowIST = getNowInSchedulerTZ();
+  var nowMins = nowIST.hours*60 + nowIST.minutes;
   var plannerStart = PLANNER_START_H*60; // 05:00 = 300 mins
   var plannerEnd   = 23*60+30;
   if(nowMins < plannerStart || nowMins > plannerEnd) {
@@ -3082,15 +3113,14 @@ function renderTimeLine(){
     if(!table||table.style.display==='none'){
       var e=document.getElementById('timeLineD');if(e)e.remove(); return;
     }
-    // Find today column
+    // Find today column in IST
     var ths=Array.from(document.querySelectorAll('#schedHead th'));
     if(ths.length<2) return;
     var todayIdx=-1;
-    var today=new Date();today.setHours(0,0,0,0);
     if(weekStart){
       for(var i=0;i<7;i++){
-        var d=new Date(addDays(weekStart,i));d.setHours(0,0,0,0);
-        if(d.getTime()===today.getTime()){todayIdx=i;break;}
+        var d=new Date(addDays(weekStart,i));
+        if(isSameYMD(d, nowIST.year, nowIST.month, nowIST.day)){todayIdx=i;break;}
       }
     }
     if(todayIdx<0){var e=document.getElementById('timeLineD');if(e)e.remove();return;}
@@ -3116,11 +3146,10 @@ function renderTimeLine(){
       var e=document.getElementById('timeLineM');if(e)e.remove(); return;
     }
     if(!weekStart) return;
-    // Only show on today's day
+    // Only show on today's day in IST
     var colDate=addDays(weekStart,currentDayIdx);
-    var dc=new Date(colDate);dc.setHours(0,0,0,0);
-    var today=new Date();today.setHours(0,0,0,0);
-    if(dc.getTime()!==today.getTime()){
+    var dc=new Date(colDate);
+    if(!isSameYMD(dc, nowIST.year, nowIST.month, nowIST.day)){
       var e=document.getElementById('timeLineM');if(e)e.remove(); return;
     }
     var theadM=document.getElementById('schedHeadM');
