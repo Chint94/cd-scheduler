@@ -719,14 +719,22 @@ function taskSlotSpan(t, colDate){
   var colStr=fmtDate(colDate);
   if(fmtDate(parseDate(t.date))!==colStr) return 0;
   var startM=taskStartMins(t);
-  // End on same day unless endDate is different
   var endOnSameDay=(!t.endDate||t.endDate===t.date||taskEndDateStr(t)===t.date);
-  if(!endOnSameDay) return 0; // cross-day blocks: just use pills for now
+  if(!endOnSameDay) return 0;
   var endM=taskEndMins(t);
   if(endM<=startM) return 0;
-  // Number of 30-min slots covered — minimum 1 so even 15-min blocks render
-  var slots = Math.ceil((endM-startM)/30);
-  return Math.max(slots, 1);
+  // Count how many 30-min SLOTS the block touches (not minutes/30)
+  // startSlot = floor(startM/30), endSlot = ceil(endM/30) - 1
+  // span = endSlot - startSlot + 1 ... but capped to SLOTS array
+  var startSlot=Math.floor(startM/30); // e.g. 08:45 → floor(525/30)=17
+  var endSlot=Math.ceil(endM/30)-1;    // e.g. 09:15 → ceil(555/30)-1=18-1=17... 
+  // Actually: endSlot = the last 30-min row that endM overlaps
+  // A row [r*30, (r+1)*30) is touched if startM < (r+1)*30 AND endM > r*30
+  // Last touched row: largest r where r*30 < endM → r = ceil(endM/30)-1
+  // But if endM is exactly on a boundary (e.g. 09:30 = 570), it does NOT touch that row
+  endSlot=endM%30===0 ? Math.floor(endM/30)-1 : Math.floor(endM/30);
+  var span=Math.max(endSlot-startSlot+1,1);
+  return span;
 }
 
 // Index of SLOTS array for a given hour:minute
