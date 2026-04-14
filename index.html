@@ -110,9 +110,9 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   border-bottom:1px solid rgba(196,148,42,0.14);white-space:nowrap;min-width:68px;vertical-align:middle;height:40px}
 .tc.half{color:var(--gm);font-size:10px;font-weight:500}
 .tc.ovt{color:var(--ot);font-weight:700}
-.sc{padding:0;border-right:1px solid rgba(196,148,42,0.11);border-bottom:1px solid rgba(196,148,42,0.18);
+.sc{padding:2px 2px 2px 3px;border-right:1px solid rgba(196,148,42,0.11);border-bottom:1px solid rgba(196,148,42,0.18);
   height:40px;min-height:40px;vertical-align:top;background:white;
-  overflow:hidden;box-sizing:content-box}
+  box-sizing:content-box}
 .sc:last-child{border-right:none}
 .sched tbody tr:nth-child(4n+3) .sc,
 .sched tbody tr:nth-child(4n+4) .sc{background:#FFFBEE}
@@ -150,7 +150,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   border-radius:10px;overflow:hidden;box-shadow:0 4px 20px var(--sg)}
 .sched-mobile .tc{min-width:72px;font-size:13px;height:48px;padding:0 10px}
 .sched-mobile .tc.half{font-size:11px}
-.sched-mobile .sc{height:48px;min-height:48px;overflow:hidden}
+.sched-mobile .sc{height:48px;min-height:48px}
 .sched-mobile .ci{font-size:13px;min-height:44px;padding:6px 8px;line-height:1.5}
 .sched-mobile .tpill{font-size:11px;padding:3px 7px;margin:2px 2px 0}
 
@@ -167,9 +167,8 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   border-radius:4px;padding:3px 6px;cursor:pointer;overflow:hidden;
   box-sizing:border-box;transition:opacity .15s;
   border-left:3px solid transparent;user-select:none;-webkit-tap-highlight-color:transparent;
-  /* margin-top and height set by JS for sub-slot precision */
-  width:calc(100% - 3px);position:relative;z-index:2}
-.tb-block:hover{opacity:.85}
+  position:absolute;pointer-events:all;z-index:3}
+.tb-block:hover{opacity:.85;z-index:4}
 .tb-block:active{opacity:.7}
 .tb-title{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;line-height:1.3}
@@ -537,10 +536,16 @@ footer strong{color:rgba(255,253,245,0.85)}
   <div class="day-dots" id="dayDots" style="display:none"></div>
   <div class="grid-wrap">
     <!-- Desktop: full 7-column table -->
-    <table class="sched" id="schedDesktop"><thead id="schedHead"></thead><tbody id="schedBody"></tbody></table>
+    <div class="sched-wrap" id="schedWrap" style="position:relative">
+      <table class="sched" id="schedDesktop"><thead id="schedHead"></thead><tbody id="schedBody"></tbody></table>
+      <div id="tbBlockLayer" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible"></div>
+    </div>
     <!-- Mobile: single-day table -->
     <div id="schedMobileWrap" style="display:none">
-      <table class="sched sched-mobile"><thead id="schedHeadM"></thead><tbody id="schedBodyM"></tbody></table>
+      <div style="position:relative">
+        <table class="sched sched-mobile"><thead id="schedHeadM"></thead><tbody id="schedBodyM"></tbody></table>
+        <div id="tbBlockLayerM" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1041,29 +1046,6 @@ function buildGrid(){
   var wd=lsGet(SK)[wk]||{};
   var allTasks=lsGet(TK);
 
-  // ── Pre-compute rowspan skips ─────────────────────────────────────────
-  // skipped[ri][ci] = true means this cell is consumed by a rowspan from above
-  var skipped=[];
-  for(var si=0;si<SLOTS.length;si++) skipped[si]={};
-  cols.forEach(function(colDate,ci){
-    Object.values(allTasks).forEach(function(t){
-      var span=taskSlotSpan(t,colDate);
-      if(span<1) return;
-      // Find the row index where this task starts
-      if(!t.time) return;
-      var tp=t.time.split(':');
-      var th=parseInt(tp[0]),tm=parseInt(tp[1]);
-      var startRi=SLOTS.findIndex(function(s){
-        return s.h===th&&(tm<30?s.m===0:s.m===30);
-      });
-      if(startRi<0) return;
-      // Mark rows startRi+1 … startRi+span-1 as skipped for this column
-      for(var sk=1;sk<span&&(startRi+sk)<SLOTS.length;sk++){
-        skipped[startRi+sk][ci]=true;
-      }
-    });
-  });
-
   SLOTS.forEach(function(slot,ri){
     var tr=document.createElement('tr');
     if(slot.half)tr.classList.add('hr');
@@ -1074,57 +1056,12 @@ function buildGrid(){
     var anyOv=false;
 
     cols.forEach(function(colDate,ci){
-      // ── Skip cells consumed by a rowspan from above ───────────────────
-      if(skipped[ri][ci]) return;
-
       var ov=isSlotOverdue(colDate,slot);
       if(ov)anyOv=true;
       var td=document.createElement('td');
       td.className='sc'+(ci===todayIdx?' tdy':'')+(ov?' ov':'');
 
-      // ── Timeblock tasks: render as colour block with rowspan ──────────
-      var tbTasksD=Object.values(allTasks).filter(function(t){
-        if(taskSlotSpan(t,colDate)<1) return false;
-        if(!t.time) return false;
-        var p=t.time.split(':');var h=parseInt(p[0]),m=parseInt(p[1]);
-        return h===slot.h&&(m<30?slot.m===0:slot.m===30);
-      });
-      tbTasksD.forEach(function(t){
-        var span=taskSlotSpan(t,colDate);
-        td.style.overflow='visible';
-        td.style.verticalAlign='top';
-        if(span>1){ td.rowSpan=span; td.style.height=(span*40)+'px'; }
-        var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
-        var ROW_H=40; // must match .sc height in CSS
-        var startM=taskStartMins(t);
-        var endM=taskEndMins(t);
-        var startRow=Math.floor(startM/30); // which 30-min row block starts in
-        var endRow=(endM%30===0)?Math.floor(endM/30)-1:Math.floor(endM/30);
-        // topOffset: how far into the start row the block begins (px)
-        var topOff=Math.round(((startM - startRow*30)/30)*ROW_H);
-        // bottomCrop: space after block ends in last row (px)
-        var lastRowEnd=(endRow+1)*30;
-        var botCrop=endM%30===0?0:Math.round(((lastRowEnd-endM)/30)*ROW_H);
-        var blockH=Math.max(span*ROW_H - topOff - botCrop - 1, 4);
-        var block=document.createElement('div');
-        block.className='tb-block';
-        block.style.cssText='background:'+pc+'28;border-left-color:'+pc+
-          ';color:'+pc+';height:'+blockH+'px;margin-top:'+topOff+'px;';
-        var icon=t.done?'✅':(t.recurrence?'🔁':'📌');
-        var titleDiv=document.createElement('div');titleDiv.className='tb-title';
-        titleDiv.textContent=icon+' '+(t.title||'(no title)');
-        var timeDiv=document.createElement('div');timeDiv.className='tb-time';
-        timeDiv.textContent=t.time+(t.endTime?'–'+t.endTime:'');
-        block.appendChild(titleDiv);block.appendChild(timeDiv);
-        block.addEventListener('click',function(e){e.stopPropagation();openTaskEditModal(t.id);});
-        block.setAttribute('draggable','true');
-        block.addEventListener('dragstart',function(e){
-          dragState.taskId=t.id;e.dataTransfer.effectAllowed='move';
-          e.dataTransfer.setData('text/plain',t.id);
-        });
-        td.appendChild(block);
-      });
-      // Regular pills for tasks with no end time
+      // Regular pills only (timeblocks rendered on overlay after table built)
       getTasksForSlot(colDate,slot).forEach(function(entry){
         if(entry.isCont) return;
         if(taskSlotSpan(entry.task,colDate)>=1) return;
@@ -1180,6 +1117,66 @@ function buildGrid(){
     if(anyOv)tc.classList.add('ovt');
     body.appendChild(tr);
   });
+
+  // ── Render timeblocks on overlay layer ────────────────────────────────
+  // We do this AFTER the table is built so we can measure column positions
+  var layer=document.getElementById('tbBlockLayer');
+  if(layer){
+    layer.innerHTML='';
+    // Use requestAnimationFrame so table has been laid out
+    requestAnimationFrame(function(){
+      var ROW_H=40;
+      var theadH=document.getElementById('schedHead').offsetHeight||38;
+      // Column widths: get from actual header th elements
+      var ths=document.querySelectorAll('#schedHead th');
+      var tcW=ths[0]?ths[0].offsetWidth:68; // time column width
+      cols.forEach(function(colDate,ci){
+        Object.values(allTasks).forEach(function(t){
+          if(taskSlotSpan(t,colDate)<1) return;
+          if(!t.time) return;
+          var startM=taskStartMins(t);
+          var endM=taskEndMins(t);
+          // Top position: theadH + (startM - PLANNER_START_M)/30 * ROW_H + offset within slot
+          var plannerStartM=5*60; // 05:00
+          var startSlotIdx=(startM-plannerStartM)/30; // float slot index
+          var topPx=theadH+startSlotIdx*ROW_H;
+          // Height: (endM - startM)/30 * ROW_H
+          var heightPx=Math.max(((endM-startM)/30)*ROW_H-1,4);
+          // Left: tcW + ci*(colW) + 1px gap
+          var colW=ths[ci+1]?ths[ci+1].offsetWidth:100;
+          var leftPx=tcW;
+          for(var j=0;j<ci;j++) leftPx+=(ths[j+1]?ths[j+1].offsetWidth:100);
+          leftPx+=2; // small gap from border
+          var rightPx=leftPx+colW-4;
+          var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
+          var block=document.createElement('div');
+          block.className='tb-block';
+          block.style.top=topPx+'px';
+          block.style.left=leftPx+'px';
+          block.style.width=(colW-4)+'px';
+          block.style.height=heightPx+'px';
+          block.style.background=pc+'28';
+          block.style.borderLeftColor=pc;
+          block.style.color=pc;
+          var icon=t.done?'✅':(t.recurrence?'🔁':'📌');
+          var titleDiv=document.createElement('div');titleDiv.className='tb-title';
+          titleDiv.textContent=icon+' '+(t.title||'(no title)');
+          var timeDiv=document.createElement('div');timeDiv.className='tb-time';
+          timeDiv.textContent=t.time+(t.endTime?'–'+t.endTime:'');
+          block.appendChild(titleDiv);block.appendChild(timeDiv);
+          (function(taskId){
+            block.addEventListener('click',function(e){e.stopPropagation();openTaskEditModal(taskId);});
+            block.setAttribute('draggable','true');
+            block.addEventListener('dragstart',function(e){
+              dragState.taskId=taskId;e.dataTransfer.effectAllowed='move';
+              e.dataTransfer.setData('text/plain',taskId);
+            });
+          })(t.id);
+          layer.appendChild(block);
+        });
+      });
+    });
+  }
 }
 
 function markOverdue(){
@@ -2649,41 +2646,7 @@ function buildMobileDay(){
     var td=document.createElement('td');
     td.className='sc'+(isToday?' tdy':'')+(ov?' ov':'');
     // Timeblock rendering for mobile
-    var mbTasks=mbAllTasks.filter(function(t){
-      return taskSlotSpan(t,colDate)>=1&&(function(){
-        if(!t.time) return false;
-        var p=t.time.split(':');var h=parseInt(p[0]),m=parseInt(p[1]);
-        return h===slot.h&&(m<30?slot.m===0:slot.m===30);
-      })();
-    });
-    mbTasks.forEach(function(t){
-      var span=taskSlotSpan(t,colDate);
-      td.style.overflow='visible';
-      td.style.verticalAlign='top';
-      if(span>1){ td.rowSpan=span; td.style.height=(span*48)+'px'; }
-      var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
-      var block=document.createElement('div');
-      block.className='tb-block';
-      var MB_ROW_H=48; // must match mobile .sc height in CSS
-      var mbStartM=taskStartMins(t);
-      var mbEndM=taskEndMins(t);
-      var mbStartRow=Math.floor(mbStartM/30);
-      var mbEndRow=(mbEndM%30===0)?Math.floor(mbEndM/30)-1:Math.floor(mbEndM/30);
-      var mbTopOff=Math.round(((mbStartM - mbStartRow*30)/30)*MB_ROW_H);
-      var mbLastRowEnd=(mbEndRow+1)*30;
-      var mbBotCrop=mbEndM%30===0?0:Math.round(((mbLastRowEnd-mbEndM)/30)*MB_ROW_H);
-      var mbH=Math.max(span*MB_ROW_H - mbTopOff - mbBotCrop - 1, 4);
-      block.style.cssText='background:'+pc+'28;border-left-color:'+pc+
-        ';color:'+pc+';height:'+mbH+'px;margin-top:'+mbTopOff+'px;';
-      var titleDiv=document.createElement('div');titleDiv.className='tb-title';
-      titleDiv.textContent=(t.done?'✅':(t.recurrence?'🔁':'📌'))+' '+(t.title||'(no title)');
-      var timeDiv=document.createElement('div');timeDiv.className='tb-time';
-      timeDiv.textContent=t.time+(t.endTime?'–'+t.endTime:'');
-      block.appendChild(titleDiv);block.appendChild(timeDiv);
-      block.addEventListener('click',function(e){e.stopPropagation();openTaskEditModal(t.id);});
-      td.appendChild(block);
-    });
-    // Regular pills for non-timeblock tasks
+    // Regular pills only (timeblocks on overlay layer)
     getTasksForSlot(colDate,slot).forEach(function(entry){
       if(entry.isCont) return;
       if(taskSlotSpan(entry.task,colDate)>=1) return;
@@ -2720,6 +2683,55 @@ function buildMobileDay(){
       cells[0].style.borderRadius='0 0 0 10px';
       cells[cells.length-1].style.borderRadius='0 0 10px 0';
     }
+  }
+
+  // ── Render timeblocks on mobile overlay layer ─────────────────────────
+  var layerM=document.getElementById('tbBlockLayerM');
+  if(layerM){
+    layerM.innerHTML='';
+    requestAnimationFrame(function(){
+      var ROW_H=48;
+      var theadH=document.getElementById('schedHeadM').offsetHeight||44;
+      // Mobile has one task column only
+      var ths=document.querySelectorAll('#schedHeadM th');
+      var tcW=ths[0]?ths[0].offsetWidth:72;
+      var colW=ths[1]?ths[1].offsetWidth:200;
+      mbAllTasks.forEach(function(t){
+        if(taskSlotSpan(t,colDate)<1) return;
+        if(!t.time) return;
+        var startM=taskStartMins(t);
+        var endM=taskEndMins(t);
+        var plannerStartM=5*60;
+        var startSlotIdx=(startM-plannerStartM)/30;
+        var topPx=theadH+startSlotIdx*ROW_H;
+        var heightPx=Math.max(((endM-startM)/30)*ROW_H-1,4);
+        var pc=PRIORITY_COLORS[t.priority]||PRIORITY_COLORS.medium;
+        var block=document.createElement('div');
+        block.className='tb-block';
+        block.style.top=topPx+'px';
+        block.style.left=(tcW+2)+'px';
+        block.style.width=(colW-4)+'px';
+        block.style.height=heightPx+'px';
+        block.style.background=pc+'28';
+        block.style.borderLeftColor=pc;
+        block.style.color=pc;
+        var icon=t.done?'✅':(t.recurrence?'🔁':'📌');
+        var titleDiv=document.createElement('div');titleDiv.className='tb-title';
+        titleDiv.textContent=icon+' '+(t.title||'(no title)');
+        var timeDiv=document.createElement('div');timeDiv.className='tb-time';
+        timeDiv.textContent=t.time+(t.endTime?'–'+t.endTime:'');
+        block.appendChild(titleDiv);block.appendChild(timeDiv);
+        (function(taskId){
+          block.addEventListener('click',function(e){e.stopPropagation();openTaskEditModal(taskId);});
+          block.setAttribute('draggable','true');
+          block.addEventListener('dragstart',function(e){
+            dragState.taskId=taskId;e.dataTransfer.effectAllowed='move';
+            e.dataTransfer.setData('text/plain',taskId);
+          });
+        })(t.id);
+        layerM.appendChild(block);
+      });
+    });
   }
 }
 
