@@ -975,7 +975,7 @@ function showDropToast(title,date,time){
 
 function buildGrid(){
   if(!weekStart)return;
-  var today=new Date();today.setHours(0,0,0,0);
+  var today=getTodayInSchedulerTZDate();today.setHours(0,0,0,0);
   var cols=DAYS.map(function(_,i){return addDays(weekStart,i)});
   var todayIdx=cols.findIndex(function(d){var dc=new Date(d);dc.setHours(0,0,0,0);return dc.getTime()===today.getTime()});
 
@@ -2496,7 +2496,7 @@ function applyPlannerLayout(){
 function buildDayDots(){
   var dots=document.getElementById('dayDots');if(!dots)return;
   dots.innerHTML='';
-  var today=new Date();today.setHours(0,0,0,0);
+  var today=getTodayInSchedulerTZDate();today.setHours(0,0,0,0);
   DAYS.forEach(function(_,i){
     var d=addDays(weekStart,i);
     var dot=document.createElement('div');
@@ -2510,7 +2510,7 @@ function buildDayDots(){
 function buildMobileDay(){
   if(!weekStart)return;
   var colDate=addDays(weekStart,currentDayIdx);
-  var today=new Date();today.setHours(0,0,0,0);
+  var today=getTodayInSchedulerTZDate();today.setHours(0,0,0,0);
   var dc=new Date(colDate);dc.setHours(0,0,0,0);
   var isToday=dc.getTime()===today.getTime();
   // Update nav header
@@ -2648,7 +2648,7 @@ window.addEventListener('resize',function(){
 var _origSetWeek=setWeek;
 setWeek=function(d){
   _origSetWeek(d);
-  var today=new Date();today.setHours(0,0,0,0);
+  var today=getTodayInSchedulerTZDate();today.setHours(0,0,0,0);
   var found=false;
   DAYS.forEach(function(_,i){
     var col=addDays(weekStart,i);var dc=new Date(col);dc.setHours(0,0,0,0);
@@ -3042,6 +3042,7 @@ function getNowInSchedulerTZ(){
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit',
     hour12: false
   }).formatToParts(new Date()).reduce(function(acc, part){
     if(part.type !== 'literal') acc[part.type] = part.value;
@@ -3053,8 +3054,14 @@ function getNowInSchedulerTZ(){
     month: parseInt(parts.month, 10),
     day: parseInt(parts.day, 10),
     hours: parseInt(parts.hour, 10),
-    minutes: parseInt(parts.minute, 10)
+    minutes: parseInt(parts.minute, 10),
+    seconds: parseInt(parts.second || '0', 10)
   };
+}
+
+function getTodayInSchedulerTZDate(){
+  var now = getNowInSchedulerTZ();
+  return new Date(now.year, now.month - 1, now.day);
 }
 
 function isSameYMD(dateObj, y, m, d){
@@ -3067,7 +3074,7 @@ function isSameYMD(dateObj, y, m, d){
 function renderTimeLine(){
   // Force the running time line to use IST / Asia-Kolkata.
   var nowIST = getNowInSchedulerTZ();
-  var nowMins = nowIST.hours*60 + nowIST.minutes;
+  var nowMins = nowIST.hours*60 + nowIST.minutes + ((nowIST.seconds || 0) / 60);
   var plannerStart = PLANNER_START_H*60; // 05:00 = 300 mins
   var plannerEnd   = 23*60+30;
   if(nowMins < plannerStart || nowMins > plannerEnd) {
@@ -3217,6 +3224,40 @@ setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
            typeof window.Android !== 'undefined';
   }
 
+  function isMobileLikeBrowser() {
+    var ua = navigator.userAgent || '';
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
+           (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
+           Math.min(window.innerWidth || 0, window.innerHeight || 0) < 820;
+  }
+
+  function beginGoogleSignIn(lbl) {
+    var useRedirect = isWebView() || isMobileLikeBrowser();
+    if (lbl) lbl.textContent = 'Signing in...';
+
+    return auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(function() {
+      if (useRedirect) {
+        return auth.signInWithRedirect(provider);
+      }
+      return auth.signInWithPopup(provider).catch(function(e) {
+        if (e.code === 'auth/popup-blocked' ||
+            e.code === 'auth/popup-closed-by-user' ||
+            e.code === 'auth/cancelled-popup-request' ||
+            e.code === 'auth/operation-not-supported-in-this-environment') {
+          return auth.signInWithRedirect(provider);
+        }
+        throw e;
+      });
+    }).catch(function(e) {
+      if (lbl) lbl.textContent = 'Sign in with Google';
+      if (e.code === 'auth/configuration-not-found' || e.code === 'auth/invalid-api-key' || e.code === 'auth/unauthorized-domain') {
+        document.getElementById('configWarning').style.display = 'flex';
+      } else if (e.code !== 'auth/no-auth-event') {
+        alert('Sign-in error: ' + e.message);
+      }
+    });
+  }
+
   var plannerPath = null, plannerCb = null;
   var tasksCb = null, notesCb = null;
 
@@ -3261,35 +3302,20 @@ setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
 
   // ── Sign In ────────────────────────────────────────────────────────────
   document.getElementById('signInBtn').addEventListener('click', function() {
-    var lbl = document.getElementById('signInLabel');
-    if (isWebView()) {
-      // Android WebView: must use redirect (popup is blocked by Google)
-      if (lbl) lbl.textContent = 'Signing in...';
-      auth.signInWithRedirect(provider).catch(function(e) {
-        if (lbl) lbl.textContent = 'Sign in with Google';
-        alert('Sign-in error: ' + e.message);
-      });
-    } else {
-      // Browser: use popup
-      auth.signInWithPopup(provider).catch(function(e) {
-        if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
-          // Auto-fallback to redirect if popup blocked
-          if (lbl) lbl.textContent = 'Signing in...';
-          auth.signInWithRedirect(provider);
-        } else if (e.code === 'auth/configuration-not-found' || e.code === 'auth/invalid-api-key') {
-          document.getElementById('configWarning').style.display = 'flex';
-        } else {
-          alert('Sign-in error: ' + e.message);
-        }
-      });
-    }
+    beginGoogleSignIn(document.getElementById('signInLabel'));
   });
 
   // ── Handle redirect result on page load ───────────────────────────────
   auth.getRedirectResult().then(function(result) {
+    var lbl = document.getElementById('signInLabel');
+    if (lbl) lbl.textContent = 'Sign in with Google';
     // onAuthStateChanged below handles updating the UI
   }).catch(function(e) {
-    if (e.code !== 'auth/no-auth-event') {
+    var lbl = document.getElementById('signInLabel');
+    if (lbl) lbl.textContent = 'Sign in with Google';
+    if (e.code === 'auth/configuration-not-found' || e.code === 'auth/invalid-api-key' || e.code === 'auth/unauthorized-domain') {
+      document.getElementById('configWarning').style.display = 'flex';
+    } else if (e.code !== 'auth/no-auth-event') {
       console.warn('Redirect result:', e.message);
     }
   });
