@@ -836,6 +836,20 @@ function blockGeometryForTask(startMins, endMins, rowMetrics){
 }
 
 // Returns array of {task} for a given slot — simple pill rendering
+
+function mobileTimedTaskStartsAt(colDate,slot){
+  var tasks=lsGet(TK)||{};
+  var colStr=fmtDate(colDate);
+  return Object.values(tasks).some(function(t){
+    if(!(t && t.date && t.time)) return false;
+    var td=parseDate(t.date);
+    if(!td || fmtDate(td)!==colStr) return false;
+    var p=t.time.split(':');
+    var th=parseInt(p[0],10), tm=parseInt(p[1],10);
+    return th===slot.h && tm===slot.m;
+  });
+}
+
 function getTasksForSlot(colDate,slot){
   var tasks=lsGet(TK);
   var colStr=fmtDate(colDate);
@@ -2925,8 +2939,16 @@ function buildMobileDay(){
 
     var td=document.createElement('td');
     td.className='sc'+(isToday?' tdy':'')+(ov?' ov':'');
-    // Timeblock rendering for mobile
-    getTasksForSlot(colDate,slot).forEach(function(t){td.appendChild(makePill(t.task,t));});
+    // Mobile-only safeguard:
+    // if any task with a start time begins in this slot, keep this cell free of pills
+    // so overlay time-cards do not visually collide with in-cell task pills.
+    var hasTimedOverlayStart=mobileTimedTaskStartsAt(colDate,slot);
+    if(!hasTimedOverlayStart){
+      getTasksForSlot(colDate,slot).forEach(function(t){
+        if(t && t.task && t.task.time) return;
+        td.appendChild(makePill(t.task,t));
+      });
+    }
     // Drag-over for mobile table cells
     td.addEventListener('dragover',function(e){e.preventDefault();td.classList.add('drag-over');});
     td.addEventListener('dragleave',function(){td.classList.remove('drag-over');});
