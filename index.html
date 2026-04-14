@@ -74,7 +74,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 /* Mobile: allow the whole tab to scroll vertically */
 @media(max-width:700px){
   .tab-panel.active{overflow-y:auto;-webkit-overflow-scrolling:touch}
-  .grid-wrap{overflow-y:visible;overflow-x:visible;padding:10px 12px 30px}
+  .grid-wrap{overflow-y:visible;overflow-x:visible;padding:10px 12px 30px;position:relative}
   .gcal-wrap{display:none!important}
 }
 
@@ -96,7 +96,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .btn-clr:hover{background:var(--gm);color:white}
 
 /* ── Planner grid ── */
-.grid-wrap{flex:1;overflow-x:auto;padding:12px 18px 36px;-webkit-overflow-scrolling:touch}
+.grid-wrap{flex:1;overflow-x:auto;padding:12px 18px 36px;-webkit-overflow-scrolling:touch;position:relative}
 .sched{min-width:700px;border-collapse:separate;border-spacing:0;width:100%;
   border-radius:10px;overflow:hidden;box-shadow:0 6px 28px var(--sg)}
 .sched thead th{background:linear-gradient(180deg,var(--gm) 0%,var(--gd) 100%);color:var(--white);
@@ -424,6 +424,13 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .day-pill:hover:not(.active){border-color:var(--gm);color:var(--gd)}
 .day-pills-wrap{display:none;margin-top:6px}
 .day-pills-wrap.show{display:block}
+
+/* ── Current time line ── */
+.time-line{position:absolute;left:0;right:0;pointer-events:none;z-index:10;display:flex;align-items:center}
+.time-line-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-left:-4px}
+.time-line-bar{flex:1;height:2px;background:linear-gradient(90deg,currentColor 0%,transparent 95%);opacity:.85}
+/* Mobile time line sits inside schedMobileWrap */
+.time-line-m{position:absolute;left:0;right:0;pointer-events:none;z-index:10;display:flex;align-items:center}
 
 /* ── Footer ── */
 footer{background:var(--gd);color:rgba(255,253,245,0.5);text-align:center;
@@ -2595,12 +2602,12 @@ function buildMobileDay(){
 }
 
 document.getElementById('prevDay').addEventListener('click',function(){
-  if(currentDayIdx>0){currentDayIdx--;buildMobileDay();}
-  else{shiftWeek(-1);currentDayIdx=6;setTimeout(buildMobileDay,80);}
+  if(currentDayIdx>0){currentDayIdx--;buildMobileDay();setTimeout(renderTimeLine,50);}
+  else{shiftWeek(-1);currentDayIdx=6;setTimeout(function(){buildMobileDay();renderTimeLine();},80);}
 });
 document.getElementById('nextDay').addEventListener('click',function(){
-  if(currentDayIdx<6){currentDayIdx++;buildMobileDay();}
-  else{shiftWeek(1);currentDayIdx=0;setTimeout(buildMobileDay,80);}
+  if(currentDayIdx<6){currentDayIdx++;buildMobileDay();setTimeout(renderTimeLine,50);}
+  else{shiftWeek(1);currentDayIdx=0;setTimeout(function(){buildMobileDay();renderTimeLine();},80);}
 });
 
 // Swipe left/right to change day
@@ -2649,6 +2656,7 @@ setWeek=function(d){
   });
   if(!found)currentDayIdx=0;
   setTimeout(applyPlannerLayout,20);
+  setTimeout(renderTimeLine,50);
 };
 
 // ── Init ─────────────────────────────────────────────────────────────────────
@@ -3018,6 +3026,112 @@ document.getElementById('gcalExportBtn').addEventListener('click',function(){
     gcalSyncAllTasks();
   });
 })();
+
+// ── Current time line ────────────────────────────────────────────────────────
+var TIME_LINE_COLOR = '#E85252'; // red accent
+var TB_ROW_H_DESKTOP = 40;
+var TB_ROW_H_MOBILE  = 48;
+var PLANNER_START_H  = 5; // 05:00
+
+function renderTimeLine(){
+  var now = new Date();
+  var nowMins = now.getHours()*60 + now.getMinutes();
+  // Only show if within planner range (05:00 – 23:30)
+  var plannerStart = PLANNER_START_H*60;
+  var plannerEnd   = 23*60+30;
+
+  // ── Desktop ───────────────────────────────────────────────────────────
+  (function(){
+    var existing = document.getElementById('timeLineD');
+    if(existing) existing.remove();
+    var table = document.getElementById('schedDesktop');
+    if(!table || table.style.display==='none') return;
+    if(nowMins < plannerStart || nowMins > plannerEnd) return;
+    // Find today column index from header ths
+    var ths = Array.from(document.querySelectorAll('#schedHead th'));
+    if(ths.length < 2) return;
+    var todayIdx = -1;
+    var today = new Date(); today.setHours(0,0,0,0);
+    if(weekStart){
+      for(var i=0;i<7;i++){
+        var d=addDays(weekStart,i); d.setHours(0,0,0,0);
+        if(d.getTime()===today.getTime()){todayIdx=i;break;}
+      }
+    }
+    if(todayIdx<0) return; // today not in current week view
+    // Compute left/width from column th
+    var tcW = ths[0].offsetWidth;
+    var colLeft = tcW;
+    for(var j=0;j<todayIdx;j++) colLeft += (ths[j+1]?ths[j+1].offsetWidth:0);
+    var colW = ths[todayIdx+1]?ths[todayIdx+1].offsetWidth:100;
+    // Compute top: thead height + rows above
+    var thead = document.getElementById('schedHead');
+    var theadH = thead ? thead.offsetHeight : 38;
+    var topPx = theadH + ((nowMins - plannerStart)/30)*TB_ROW_H_DESKTOP;
+    // Build line
+    var line = document.createElement('div');
+    line.id = 'timeLineD';
+    line.className = 'time-line';
+    line.style.top  = topPx+'px';
+    line.style.left = colLeft+'px';
+    line.style.width= colW+'px';
+    line.style.color= TIME_LINE_COLOR;
+    var dot = document.createElement('div');
+    dot.className = 'time-line-dot';
+    dot.style.background = TIME_LINE_COLOR;
+    var bar = document.createElement('div');
+    bar.className = 'time-line-bar';
+    bar.style.background = 'linear-gradient(90deg,'+TIME_LINE_COLOR+' 0%,rgba(232,82,82,0.1) 100%)';
+    line.appendChild(dot); line.appendChild(bar);
+    // Place inside grid-wrap (scrolls with table)
+    var gw = table.parentElement;
+    if(gw) gw.appendChild(line);
+  })();
+
+  // ── Mobile ────────────────────────────────────────────────────────────
+  (function(){
+    var existing = document.getElementById('timeLineM');
+    if(existing) existing.remove();
+    var mWrap = document.getElementById('schedMobileWrap');
+    if(!mWrap || mWrap.style.display==='none') return;
+    if(nowMins < plannerStart || nowMins > plannerEnd) return;
+    // Only show if today is the current day being viewed
+    if(!weekStart) return;
+    var colDate = addDays(weekStart, currentDayIdx);
+    var dc = new Date(colDate); dc.setHours(0,0,0,0);
+    var today = new Date(); today.setHours(0,0,0,0);
+    if(dc.getTime() !== today.getTime()) return;
+    var tableM = mWrap.querySelector('table');
+    if(!tableM) return;
+    var theadM = document.getElementById('schedHeadM');
+    var theadHM = theadM ? theadM.offsetHeight : 44;
+    var thsM = Array.from(theadM ? theadM.querySelectorAll('th') : []);
+    var tcWM = thsM[0] ? thsM[0].offsetWidth : 72;
+    var colWM = thsM[1] ? thsM[1].offsetWidth : 200;
+    var topPx = theadHM + ((nowMins - plannerStart)/30)*TB_ROW_H_MOBILE;
+    var line = document.createElement('div');
+    line.id = 'timeLineM';
+    line.className = 'time-line-m';
+    line.style.top   = topPx+'px';
+    line.style.left  = tcWM+'px';
+    line.style.width = colWM+'px';
+    line.style.color = TIME_LINE_COLOR;
+    var dot = document.createElement('div');
+    dot.className = 'time-line-dot';
+    dot.style.background = TIME_LINE_COLOR;
+    var bar = document.createElement('div');
+    bar.className = 'time-line-bar';
+    bar.style.background = 'linear-gradient(90deg,'+TIME_LINE_COLOR+' 0%,rgba(232,82,82,0.1) 100%)';
+    line.appendChild(dot); line.appendChild(bar);
+    mWrap.style.position = 'relative';
+    mWrap.appendChild(line);
+  })();
+}
+
+// Update time line every minute
+setInterval(renderTimeLine, 60000);
+// Initial render after layout settles
+setTimeout(renderTimeLine, 300);
 
 setInterval(markOverdue,60000);
 setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
