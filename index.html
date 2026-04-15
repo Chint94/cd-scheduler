@@ -448,6 +448,9 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .planner-timeblock.medium{background:rgba(196,148,42,0.18);color:#8B6914;border-left:5px solid #C4942A;border-right:5px solid #C4942A}
 .planner-timeblock.low{background:rgba(92,184,92,0.16);color:#3C8A3C;border-left:5px solid #5CB85C;border-right:5px solid #5CB85C}
 .planner-timeblock.done{opacity:.72;filter:saturate(.85)}
+.planner-timeblock.overdue{background:#FFE0E0!important;border-left:5px solid var(--ot)!important;border-right:5px solid var(--ot)!important;color:var(--ot)!important}
+.planner-timeblock.overdue .tb-title:before{content:'⚠️ ';font-weight:400}
+.planner-timeblock.overdue.recurring .tb-title:before{content:'⚠️ ';font-weight:400}
 .planner-timeblock .tb-title{font-size:11px;font-weight:700;line-height:1.15;display:-webkit-box;
   -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:100%;width:100%}
 .planner-timeblock .tb-time{font-size:10px;font-weight:600;opacity:.82;line-height:1.1;max-width:100%;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -975,13 +978,24 @@ function clearPlannerTimeBlocks(){
   document.querySelectorAll('.planner-timeblocks').forEach(function(el){el.remove();});
 }
 
+function taskIsOverdue(task){
+  if(!task||task.done||!task.date) return false;
+  var td=parseDate(task.date);if(!td) return false;
+  var now=new Date();
+  var dl;
+  if(task.time){var tp=task.time.split(':');dl=new Date(td.getFullYear(),td.getMonth(),td.getDate(),parseInt(tp[0]),parseInt(tp[1]));}
+  else dl=new Date(td.getFullYear(),td.getMonth(),td.getDate(),23,59);
+  return dl<now;
+}
+
 function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
   var el=document.createElement('button');
   el.type='button';
   var pr=(task.priority||'medium');
   var pc=PRIORITY_COLORS[pr]||PRIORITY_COLORS.medium;
   var safeW=Math.max(widthPx,48), safeH=Math.max(8,heightPx);
-  el.className='planner-timeblock '+pr+(task.done?' done':'')+((task.recurrence&&!task.done)?' recurring':'');
+  var isOvBlock=taskIsOverdue(task);
+  el.className='planner-timeblock '+pr+(task.done?' done':'')+((task.recurrence&&!task.done)?' recurring':'')+(isOvBlock?' overdue':'');
   if(safeH<=24) el.classList.add('tiny');
   else if(safeH<=40) el.classList.add('compact');
   if(safeH<=18) el.classList.add('time-only');
@@ -990,11 +1004,12 @@ function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
   el.style.left=leftPx+'px';
   el.style.width=safeW+'px';
   el.style.height=safeH+'px';
-  el.style.borderLeftColor=pc;
-  el.style.borderRightColor=pc;
+  // Only apply priority colour if not overdue (overdue CSS overrides via !important)
+  if(!isOvBlock){el.style.borderLeftColor=pc;el.style.borderRightColor=pc;}
   el.style.pointerEvents='auto';
+  el.setAttribute('data-task-id',task.id||'');
   var timeLabel=(task.time||'')+(task.endTime?(' - '+task.endTime):'');
-  var titleText=(task.done?'✅ ':'')+(task.title||'(no title)');
+  var titleText=(task.done?'✅ ':(isOvBlock?'':''))+(task.title||'(no title)');
   el.innerHTML='<div class="tb-title">'+titleText+'</div>'
     +'<div class="tb-time">'+timeLabel+'</div>';
   el.title=(task.title||'(no title)')+' ('+timeLabel+')';
@@ -1452,6 +1467,7 @@ function buildGrid(){
 function markOverdue(){
   if(!weekStart)return;
   var cols=DAYS.map(function(_,i){return addDays(weekStart,i)});
+  // Desktop grid: update cell backgrounds and time labels
   var rows=document.querySelectorAll('#schedBody tr');
   rows.forEach(function(tr,ri){
     var slot=SLOTS[ri];if(!slot)return;
@@ -1461,6 +1477,37 @@ function markOverdue(){
       if(ov){td.classList.add('ov');anyOv=true;}else td.classList.remove('ov');
     });
     if(ttd){if(anyOv)ttd.classList.add('ovt');else ttd.classList.remove('ovt');}
+  });
+  // Update overdue state on all timeblock overlays (desktop + mobile)
+  document.querySelectorAll('.planner-timeblock').forEach(function(el){
+    var taskId=el.getAttribute('data-task-id');
+    if(!taskId) return;
+    var tasks=lsGet(TK);
+    var task=tasks[taskId];
+    if(!task) return;
+    var ov=taskIsOverdue(task);
+    if(ov && !el.classList.contains('overdue')){
+      el.classList.add('overdue');
+      el.style.borderLeftColor='';
+      el.style.borderRightColor='';
+    } else if(!ov && el.classList.contains('overdue')){
+      el.classList.remove('overdue');
+      var pc=PRIORITY_COLORS[task.priority||'medium']||PRIORITY_COLORS.medium;
+      el.style.borderLeftColor=pc;
+      el.style.borderRightColor=pc;
+    }
+  });
+  // Mobile: update tc (time label) overdue styling
+  var mRows=document.querySelectorAll('#schedBodyM tr');
+  var colDate=weekStart?addDays(weekStart,currentDayIdx):null;
+  mRows.forEach(function(tr,ri){
+    var slot=SLOTS[ri];if(!slot||!colDate)return;
+    var tc=tr.querySelector('.tc');
+    if(!tc)return;
+    var ov=isSlotOverdue(colDate,slot);
+    if(ov)tc.classList.add('ovt');else tc.classList.remove('ovt');
+    var sd=tr.querySelector('.sc');
+    if(sd){if(ov)sd.classList.add('ov');else sd.classList.remove('ov');}
   });
 }
 
