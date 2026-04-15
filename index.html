@@ -510,12 +510,14 @@ footer strong{color:rgba(255,253,245,0.85)}
 <div id="app">
 
 <!-- Config Warning -->
-<div id="configWarning">
+<div id="configWarning" style="display:none;">
   <div class="wbox">
-    <h3>🔧 Firebase Setup Required</h3>
-    <p>Replace the 7 <code>REPLACE_WITH_YOUR_...</code> values in the HTML with your Firebase config to enable cross-device sync.</p>
-    <p style="margin-top:8px;font-size:12px;color:#888">Everything works offline — data saves to your browser automatically.</p>
-    <p style="margin-top:8px;font-size:12px;color:#888"><b>Using the WebIntoApp Android app?</b> Make sure <code>chint94.github.io</code> is added to Firebase → Authentication → Authorised domains.</p>
+    <h3 id="configWarningTitle">⚠️ Google Sign-In needs setup</h3>
+    <div id="configWarningBody">
+      <p>This app can save offline in your browser, but Google sign-in and cross-device sync only work when the page is opened from an authorised web domain.</p>
+      <p style="margin-top:8px;font-size:12px;color:#888">If sign-in does not open, check whether the page is being opened as a local file or from a domain that is not added in Firebase Authentication → Settings → Authorised domains.</p>
+      <p style="margin-top:8px;font-size:12px;color:#888"><b>Using GitHub Pages or WebIntoApp?</b> Add the exact host you use, such as <code>chint94.github.io</code>, and also add the same origin in Google Cloud OAuth if Calendar sync is used.</p>
+    </div>
     <button class="btn-dis" id="dismissWarning">Got it, use offline</button>
   </div>
 </div>
@@ -3515,6 +3517,36 @@ setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
            Math.min(window.innerWidth || 0, window.innerHeight || 0) < 820;
   }
 
+  function showConfigWarning(title, html) {
+    var box = document.getElementById('configWarning');
+    var titleEl = document.getElementById('configWarningTitle');
+    var bodyEl = document.getElementById('configWarningBody');
+    if (titleEl && title) titleEl.textContent = title;
+    if (bodyEl && html) bodyEl.innerHTML = html;
+    if (box) box.style.display = 'flex';
+  }
+
+  function currentOriginText() {
+    if (location.protocol === 'file:') return 'local file (file://)';
+    return location.origin || (location.protocol + '//' + location.host);
+  }
+
+  function localFileWarningHtml() {
+    return '<p><b>Google sign-in cannot run from a local HTML file.</b></p>'
+      + '<p style="margin-top:8px">Please open this scheduler from a hosted HTTPS URL such as GitHub Pages, Firebase Hosting, Netlify, or another live website.</p>'
+      + '<p style="margin-top:8px;font-size:12px;color:#888">Current location: <code>' + currentOriginText() + '</code></p>'
+      + '<p style="margin-top:8px;font-size:12px;color:#888">Offline editing will still work in this browser, but cross-device sync requires hosted sign-in.</p>';
+  }
+
+  function domainWarningHtml(extra) {
+    var msg = '<p><b>Google sign-in is blocked for the current domain.</b></p>'
+      + '<p style="margin-top:8px">Add <code>' + (location.hostname || 'this-host') + '</code> in Firebase Authentication → Settings → Authorised domains.</p>'
+      + '<p style="margin-top:8px">For Calendar sync, also add <code>' + currentOriginText() + '</code> as an authorised JavaScript origin in Google Cloud Console.</p>'
+      + '<p style="margin-top:8px;font-size:12px;color:#888">Current location: <code>' + currentOriginText() + '</code></p>';
+    if (extra) msg += '<p style="margin-top:8px;font-size:12px;color:#B04A00">' + extra + '</p>';
+    return msg;
+  }
+
   function beginGoogleSignIn(lbl) {
     var useRedirect = isWebView() || isMobileLikeBrowser();
     if (lbl) lbl.textContent = 'Signing in...';
@@ -3535,7 +3567,7 @@ setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
     }).catch(function(e) {
       if (lbl) lbl.textContent = 'Sign in with Google';
       if (e.code === 'auth/configuration-not-found' || e.code === 'auth/invalid-api-key' || e.code === 'auth/unauthorized-domain') {
-        document.getElementById('configWarning').style.display = 'flex';
+        showConfigWarning('⚠️ Authorise this domain for Google sign-in', domainWarningHtml(e.message));
       } else if (e.code !== 'auth/no-auth-event') {
         alert('Sign-in error: ' + e.message);
       }
@@ -3586,6 +3618,18 @@ setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
 
   // ── Sign In ────────────────────────────────────────────────────────────
   document.getElementById('signInBtn').addEventListener('click', function() {
+    if (!navigator.onLine) {
+      alert('You appear to be offline. Connect to the internet and try Google sign-in again.');
+      return;
+    }
+    if (location.protocol === 'file:') {
+      showConfigWarning('⚠️ Open this app from a hosted website', localFileWarningHtml());
+      return;
+    }
+    if (!window.firebase || !firebase.auth) {
+      showConfigWarning('⚠️ Firebase auth did not load', '<p>The Firebase authentication library did not load correctly. Refresh the page and try again.</p>');
+      return;
+    }
     beginGoogleSignIn(document.getElementById('signInLabel'));
   });
 
@@ -3598,7 +3642,7 @@ setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
     var lbl = document.getElementById('signInLabel');
     if (lbl) lbl.textContent = 'Sign in with Google';
     if (e.code === 'auth/configuration-not-found' || e.code === 'auth/invalid-api-key' || e.code === 'auth/unauthorized-domain') {
-      document.getElementById('configWarning').style.display = 'flex';
+      showConfigWarning('⚠️ Authorise this domain for Google sign-in', domainWarningHtml(e.message));
     } else if (e.code !== 'auth/no-auth-event') {
       console.warn('Redirect result:', e.message);
     }
