@@ -1462,6 +1462,8 @@ function buildGrid(){
 
 function markOverdue(){
   if(!weekStart)return;
+
+  // Desktop weekly grid
   var cols=DAYS.map(function(_,i){return addDays(weekStart,i)});
   var rows=document.querySelectorAll('#schedBody tr');
   rows.forEach(function(tr,ri){
@@ -1473,6 +1475,23 @@ function markOverdue(){
     });
     if(ttd){if(anyOv)ttd.classList.add('ovt');else ttd.classList.remove('ovt');}
   });
+
+  // Mobile single-day grid
+  var mobileBody=document.getElementById('schedBodyM');
+  if(mobileBody){
+    var mobileDate=addDays(weekStart,currentDayIdx||0);
+    Array.from(mobileBody.querySelectorAll('tr')).forEach(function(tr,ri){
+      var slot=SLOTS[ri];if(!slot)return;
+      var ttd=tr.querySelector('.tc');
+      var td=tr.querySelector('.sc');
+      var ov=isSlotOverdue(mobileDate,slot);
+      if(ttd){if(ov)ttd.classList.add('ovt');else ttd.classList.remove('ovt');}
+      if(td){if(ov)td.classList.add('ov');else td.classList.remove('ov');}
+    });
+  }
+
+  // Re-evaluate overlay timeblocks because their overdue state also changes with time
+  setTimeout(renderPlannerTimeBlocks,0);
 }
 
 function setWeek(d){
@@ -3569,7 +3588,7 @@ function renderTimeLine(){
   ['timeLineD','timeLineM'].forEach(function(id){var e=document.getElementById(id);if(e)e.remove();});
 }
 
-setTimeout(renderPlannerTimeBlocks, 300);
+setTimeout(function(){renderPlannerTimeBlocks();markOverdue();}, 300);
 
 window.addEventListener('resize',function(){setTimeout(renderPlannerTimeBlocks,80);});
 setInterval(markOverdue,60000);
