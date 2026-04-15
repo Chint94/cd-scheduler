@@ -1774,13 +1774,12 @@ function openTaskEditModal(taskId, editScope){
   var actRow=document.createElement('div');actRow.className='edit-acts';
 
   var delBtn=document.createElement('button');delBtn.className='pop-btn dan';
-  delBtn.textContent=isRecurring?'🗑 Delete occurrence':'🗑 Delete';
+  delBtn.textContent=isRecurring?'🗑 Delete…':'🗑 Delete';
   delBtn.addEventListener('click',function(){
-    var msg=isRecurring?'Delete this occurrence only?':'Delete this task?';
-    if(!confirm(msg))return;
-    if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(taskId);
-    var tasks2=lsGet(TK);delete tasks2[taskId];lsSet(TK,tasks2);
-    FB.deleteTask(taskId);
+    var latest=(lsGet(TK)||{})[taskId]||t;
+    var scope=chooseDeleteScope(latest);
+    if(!scope) return;
+    deleteTaskWithScope(taskId, scope);
     closePopover();buildGrid();
     if(currentTab==='tasks')renderTasks();
   });
@@ -1912,6 +1911,42 @@ function nextRecurrenceDate(fromDateStr, type){
 
 // Human-readable label for a frequency value
 function recurrenceLabel(type){
+function deleteTaskWithScope(taskId, scope){
+  var tasks2=lsGet(TK)||{};
+  var t=tasks2[taskId];
+  if(!t) return false;
+  var ids=[];
+  if(scope==='all' && t.recurrenceGroupId){
+    ids=Object.keys(tasks2).filter(function(id){ return tasks2[id] && tasks2[id].recurrenceGroupId===t.recurrenceGroupId; });
+  }else{
+    ids=[taskId];
+  }
+  ids.forEach(function(id){
+    if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(id);
+    delete tasks2[id];
+    FB.deleteTask(id);
+  });
+  lsSet(TK,tasks2);
+  return ids.length>0;
+}
+
+function chooseDeleteScope(task){
+  if(!task) return null;
+  if(!task.recurrenceGroupId) return confirm('Delete this task?') ? 'this' : null;
+  var total=(lsGet(TK) ? Object.keys(lsGet(TK)).filter(function(id){ var x=lsGet(TK)[id]; return x && x.recurrenceGroupId===task.recurrenceGroupId; }).length : 0);
+  var ans=prompt('Delete options for this recurring task:
+1 = Delete only this occurrence
+2 = Delete all '+total+' instances in the series
+
+Enter 1 or 2');
+  if(ans===null) return null;
+  ans=String(ans).trim();
+  if(ans==='2' || /^all$/i.test(ans)) return 'all';
+  if(ans==='1' || /^this$/i.test(ans) || /^one$/i.test(ans)) return 'this';
+  alert('Please enter 1 for this occurrence or 2 for all instances.');
+  return null;
+}
+
   var labels={
     'daily':'Daily','every2days':'Every 2 days','every3days':'Every 3 days',
     'weekdays':'Weekdays (Mon–Fri)','weekends':'Weekends (Sat–Sun)',
@@ -2686,13 +2721,13 @@ function renderTasks(){
     });
 
     del.addEventListener('click',function(){
-      var msg=t.recurrence?'Delete this occurrence only? (Other occurrences remain)':'Delete this task?';
-      if(!confirm(msg))return;
-      if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(t.id);
-      var tasks2=lsGet(TK);delete tasks2[t.id];lsSet(TK,tasks2);
-      FB.deleteTask(t.id);
+      var latest=(lsGet(TK)||{})[t.id]||t;
+      var scope=chooseDeleteScope(latest);
+      if(!scope)return;
+      deleteTaskWithScope(t.id, scope);
       card.remove();
       buildGrid();
+      renderTasks();
     });
 
     // ── Edit button ───────────────────────────────────────────────────────
