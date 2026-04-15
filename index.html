@@ -1462,8 +1462,6 @@ function buildGrid(){
 
 function markOverdue(){
   if(!weekStart)return;
-
-  // Desktop weekly grid
   var cols=DAYS.map(function(_,i){return addDays(weekStart,i)});
   var rows=document.querySelectorAll('#schedBody tr');
   rows.forEach(function(tr,ri){
@@ -1475,23 +1473,6 @@ function markOverdue(){
     });
     if(ttd){if(anyOv)ttd.classList.add('ovt');else ttd.classList.remove('ovt');}
   });
-
-  // Mobile single-day grid
-  var mobileBody=document.getElementById('schedBodyM');
-  if(mobileBody){
-    var mobileDate=addDays(weekStart,currentDayIdx||0);
-    Array.from(mobileBody.querySelectorAll('tr')).forEach(function(tr,ri){
-      var slot=SLOTS[ri];if(!slot)return;
-      var ttd=tr.querySelector('.tc');
-      var td=tr.querySelector('.sc');
-      var ov=isSlotOverdue(mobileDate,slot);
-      if(ttd){if(ov)ttd.classList.add('ovt');else ttd.classList.remove('ovt');}
-      if(td){if(ov)td.classList.add('ov');else td.classList.remove('ov');}
-    });
-  }
-
-  // Re-evaluate overlay timeblocks because their overdue state also changes with time
-  setTimeout(renderPlannerTimeBlocks,0);
 }
 
 function setWeek(d){
@@ -1774,12 +1755,13 @@ function openTaskEditModal(taskId, editScope){
   var actRow=document.createElement('div');actRow.className='edit-acts';
 
   var delBtn=document.createElement('button');delBtn.className='pop-btn dan';
-  delBtn.textContent=isRecurring?'🗑 Delete…':'🗑 Delete';
+  delBtn.textContent=isRecurring?'🗑 Delete occurrence':'🗑 Delete';
   delBtn.addEventListener('click',function(){
-    var latest=(lsGet(TK)||{})[taskId]||t;
-    var scope=chooseDeleteScope(latest);
-    if(!scope) return;
-    deleteTaskWithScope(taskId, scope);
+    var msg=isRecurring?'Delete this occurrence only?':'Delete this task?';
+    if(!confirm(msg))return;
+    if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(taskId);
+    var tasks2=lsGet(TK);delete tasks2[taskId];lsSet(TK,tasks2);
+    FB.deleteTask(taskId);
     closePopover();buildGrid();
     if(currentTab==='tasks')renderTasks();
   });
@@ -1911,42 +1893,6 @@ function nextRecurrenceDate(fromDateStr, type){
 
 // Human-readable label for a frequency value
 function recurrenceLabel(type){
-function deleteTaskWithScope(taskId, scope){
-  var tasks2=lsGet(TK)||{};
-  var t=tasks2[taskId];
-  if(!t) return false;
-  var ids=[];
-  if(scope==='all' && t.recurrenceGroupId){
-    ids=Object.keys(tasks2).filter(function(id){ return tasks2[id] && tasks2[id].recurrenceGroupId===t.recurrenceGroupId; });
-  }else{
-    ids=[taskId];
-  }
-  ids.forEach(function(id){
-    if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(id);
-    delete tasks2[id];
-    FB.deleteTask(id);
-  });
-  lsSet(TK,tasks2);
-  return ids.length>0;
-}
-
-function chooseDeleteScope(task){
-  if(!task) return null;
-  if(!task.recurrenceGroupId) return confirm('Delete this task?') ? 'this' : null;
-  var total=(lsGet(TK) ? Object.keys(lsGet(TK)).filter(function(id){ var x=lsGet(TK)[id]; return x && x.recurrenceGroupId===task.recurrenceGroupId; }).length : 0);
-  var ans=prompt('Delete options for this recurring task:
-1 = Delete only this occurrence
-2 = Delete all '+total+' instances in the series
-
-Enter 1 or 2');
-  if(ans===null) return null;
-  ans=String(ans).trim();
-  if(ans==='2' || /^all$/i.test(ans)) return 'all';
-  if(ans==='1' || /^this$/i.test(ans) || /^one$/i.test(ans)) return 'this';
-  alert('Please enter 1 for this occurrence or 2 for all instances.');
-  return null;
-}
-
   var labels={
     'daily':'Daily','every2days':'Every 2 days','every3days':'Every 3 days',
     'weekdays':'Weekdays (Mon–Fri)','weekends':'Weekends (Sat–Sun)',
@@ -2721,13 +2667,13 @@ function renderTasks(){
     });
 
     del.addEventListener('click',function(){
-      var latest=(lsGet(TK)||{})[t.id]||t;
-      var scope=chooseDeleteScope(latest);
-      if(!scope)return;
-      deleteTaskWithScope(t.id, scope);
+      var msg=t.recurrence?'Delete this occurrence only? (Other occurrences remain)':'Delete this task?';
+      if(!confirm(msg))return;
+      if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(t.id);
+      var tasks2=lsGet(TK);delete tasks2[t.id];lsSet(TK,tasks2);
+      FB.deleteTask(t.id);
       card.remove();
       buildGrid();
-      renderTasks();
     });
 
     // ── Edit button ───────────────────────────────────────────────────────
@@ -3623,7 +3569,7 @@ function renderTimeLine(){
   ['timeLineD','timeLineM'].forEach(function(id){var e=document.getElementById(id);if(e)e.remove();});
 }
 
-setTimeout(function(){renderPlannerTimeBlocks();markOverdue();}, 300);
+setTimeout(renderPlannerTimeBlocks, 300);
 
 window.addEventListener('resize',function(){setTimeout(renderPlannerTimeBlocks,80);});
 setInterval(markOverdue,60000);
