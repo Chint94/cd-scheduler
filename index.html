@@ -3512,9 +3512,11 @@ setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
 
   function isMobileLikeBrowser() {
     var ua = navigator.userAgent || '';
+    // Only use UA and pointer type — screen size is NOT a reliable indicator
+    // (small laptops/monitors would incorrectly trigger redirect, breaking popup auth
+    // when third-party cookies are blocked)
     return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
-           (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
-           Math.min(window.innerWidth || 0, window.innerHeight || 0) < 820;
+           (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   }
 
   function showConfigWarning(title, html) {
@@ -3643,8 +3645,20 @@ setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
     if (lbl) lbl.textContent = 'Sign in with Google';
     if (e.code === 'auth/configuration-not-found' || e.code === 'auth/invalid-api-key' || e.code === 'auth/unauthorized-domain') {
       showConfigWarning('⚠️ Authorise this domain for Google sign-in', domainWarningHtml(e.message));
+    } else if (e.code === 'auth/web-storage-unsupported' || e.code === 'auth/null-user') {
+      showConfigWarning('⚠️ Sign-in failed: cookies or storage blocked',
+        '<p><b>Google sign-in was interrupted — this is usually caused by browser privacy settings on this device.</b></p>'
+        + '<p style="margin-top:8px">Please try the following in your browser settings:</p>'
+        + '<ul style="margin-top:6px;padding-left:18px;font-size:13px">'
+        + '<li>Allow <b>third-party cookies</b> for this site (or disable "Block third-party cookies" in browser settings)</li>'
+        + '<li>Disable privacy/tracker-blocking extensions (e.g. uBlock, Privacy Badger) temporarily</li>'
+        + '<li>If using Chrome: go to <code>chrome://settings/cookies</code> and add this site to the "Allow" list</li>'
+        + '<li>If using Firefox: go to <b>Preferences → Privacy</b> and set Enhanced Tracking Protection to Standard</li>'
+        + '</ul>'
+        + '<p style="margin-top:8px;font-size:12px;color:#888">This error only appears on devices where cookies/storage are restricted. Other devices work fine.</p>'
+      );
     } else if (e.code !== 'auth/no-auth-event') {
-      console.warn('Redirect result:', e.message);
+      console.warn('Redirect result error [' + e.code + ']:', e.message);
     }
   });
 
