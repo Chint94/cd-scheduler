@@ -440,10 +440,12 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   justify-content:flex-start;gap:2px;border:none;box-sizing:border-box;text-align:left;cursor:grab;
   border-radius:14px;padding:8px 10px 7px;max-width:100%;font-family:DM Sans,sans-serif;
   box-shadow:0 3px 0 rgba(0,0,0,.82), 0 10px 18px rgba(0,0,0,.08);
-  touch-action:none;-webkit-user-select:none;user-select:none}
+  touch-action:none;-webkit-user-select:none;user-select:none;pointer-events:auto}
 .planner-timeblock:active{cursor:grabbing}
 .planner-timeblock.dragging{opacity:.35;cursor:grabbing}
 .planner-timeblock.drag-target{outline:2px dashed currentColor;outline-offset:-2px}
+.planner-day-drop-target{position:relative}
+.planner-day-drop-target.drag-over-day{box-shadow:inset 0 -3px 0 rgba(139,105,20,.95);background:rgba(196,148,42,.14)!important}
 .planner-timeblock.high{background:rgba(232,82,82,0.14);color:#B53A3A;border-left:5px solid #E85252;border-right:5px solid #E85252}
 .planner-timeblock.medium{background:rgba(196,148,42,0.18);color:#8B6914;border-left:5px solid #C4942A;border-right:5px solid #C4942A}
 .planner-timeblock.low{background:rgba(92,184,92,0.16);color:#3C8A3C;border-left:5px solid #5CB85C;border-right:5px solid #5CB85C}
@@ -893,6 +895,7 @@ function clearBlockDragHighlights(){
     el.classList.remove('drag-over');
     el.classList.remove('drag-over-mobile');
   });
+  document.querySelectorAll('.planner-day-drop-target.drag-over-day').forEach(function(el){el.classList.remove('drag-over-day');});
   document.querySelectorAll('.planner-timeblock.drag-target').forEach(function(el){el.classList.remove('drag-target');});
 }
 
@@ -1195,7 +1198,9 @@ function makePill(task,entry){
 
   // Click to open popover (only if not a drag)
   var didDrag=false;
-  btn.addEventListener('mousedown',function(){didDrag=false;});
+  btn.addEventListener('mousedown',function(){didDrag=false;setSelectedTask(task.id);});
+  btn.addEventListener('mouseenter',function(){ setHoveredTask(task.id); setSelectedTask(task.id); });
+  btn.addEventListener('focus',function(){ setHoveredTask(task.id); setSelectedTask(task.id); });
   btn.addEventListener('click',function(e){
     if(didDrag){didDrag=false;return;}
     e.stopPropagation();
@@ -1247,9 +1252,18 @@ function makePill(task,entry){
       var el=document.elementFromPoint(t.clientX,t.clientY);
       dragState.touchClone.style.display='';
       var cell=el?el.closest('.sc'):null;
-      if(dragState.touchTargetCell&&dragState.touchTargetCell!==cell)
+      var dayHeader=el?el.closest('.planner-day-drop-target'):null;
+      if(dragState.touchTargetCell&&dragState.touchTargetCell!==cell&&dragState.touchTargetCell!==dayHeader){
         dragState.touchTargetCell.classList.remove('drag-over-mobile');
-      if(cell){cell.classList.add('drag-over-mobile');dragState.touchTargetCell=cell;}
+        dragState.touchTargetCell.classList.remove('drag-over-day');
+      }
+      if(cell){
+        cell.classList.add('drag-over-mobile');
+        dragState.touchTargetCell=cell;
+      } else if(dayHeader){
+        dayHeader.classList.add('drag-over-day');
+        dragState.touchTargetCell=dayHeader;
+      }
     },{passive:false});
 
     btn.addEventListener('touchend',function onEnd(e){
@@ -1272,64 +1286,78 @@ function makePill(task,entry){
       dragState.taskId=null;dragState.touchTargetCell=null;
     });
   },{passive:true});
+  btn.addEventListener('mouseleave',function(){ if(hoveredTaskId===task.id) hoveredTaskId=null; });
+  btn.addEventListener('blur',function(){ if(hoveredTaskId===task.id) hoveredTaskId=null; });
 
   return btn;
 }
 
 // ── Apply the drop: update task date+time from the target cell ────────────────
-function dropTaskOnCell(taskId,cell){
-  if(!taskId||!cell) return;
-  // Extract date from cell's parent row's column index
-  // and time from the row's slot index
-  var row=cell.parentElement;
-  var tbody=row.parentElement;
-  var ri=Array.from(tbody.children).indexOf(row); // slot index
-  var ci=Array.from(row.children).indexOf(cell)-1; // col index (subtract time column)
-  if(ri<0||ci<0||ci>=7) return;
-  var slot=SLOTS[ri];
-  if(!slot) return;
-  // Build new date from column
-  var isMobileView=!document.getElementById('schedDesktop').style.display||
-                    document.getElementById('schedDesktop').style.display==='none';
-  var newDate;
-  if(isMobileView){
-    // Mobile: ci is always 0, use currentDayIdx
-    newDate=addDays(weekStart,currentDayIdx);
-    ci=currentDayIdx;
-  } else {
-    newDate=addDays(weekStart,ci);
-  }
-  // Build new time from slot (use the hour:00 of the slot)
-  var newTime=pad(slot.h)+':'+(slot.half?'30':'00');
-  // Load task and update
+function moveTaskToDateTime(taskId,newDate,newTime,options){
+  options=options||{};
+  if(!taskId||!newDate||!newTime) return false;
   var tasks=lsGet(TK);
-  if(!tasks[taskId]) return;
-  var oldDate=tasks[taskId].date;
-  var oldTime=tasks[taskId].time;
-  var newDateStr=fmtDate(newDate);
+  if(!tasks[taskId]) return false;
   var movedTask=tasks[taskId];
+  var oldDate=movedTask.date||'';
+  var oldTime=movedTask.time||'';
+  var newDateStr=fmtDate(newDate);
+  if(newDateStr===oldDate && newTime===oldTime) return false;
+
   var prevStartM=movedTask.endTime ? taskStartMins(movedTask) : -1;
   var prevEndM=movedTask.endTime ? taskEndMins(movedTask) : -1;
-  // Only update if something actually changed
-  if(newDateStr===oldDate && newTime===oldTime) return;
-  tasks[taskId].date=newDateStr;
-  tasks[taskId].time=newTime;
-  if(tasks[taskId].endTime){
+  movedTask.date=newDateStr;
+  movedTask.time=newTime;
+
+  if(movedTask.endTime){
     var duration=Math.max(30, prevEndM-prevStartM);
-    var newStartM=slot.h*60 + (slot.half?30:0);
+    var newStartParts=newTime.split(':');
+    var newStartM=(parseInt(newStartParts[0],10)||0)*60 + (parseInt(newStartParts[1],10)||0);
     var newEndM=Math.min(1439, newStartM + duration);
-    tasks[taskId].endTime=minsToTimeStr(newEndM);
-    tasks[taskId].endDate=newDateStr;
+    movedTask.endTime=minsToTimeStr(newEndM);
+    movedTask.endDate=newDateStr;
   }
+
   lsSet(TK,tasks);
   FB.ignoreNextTaskSync=true;
-  FB.saveTask(taskId,tasks[taskId]);
-  // Rebuild both planner and tasks list
+  FB.saveTask(taskId,movedTask);
   buildGrid();
-  if(typeof buildMobileDay==='function'&&isMobileView) buildMobileDay();
+  if(typeof buildMobileDay==='function'&&isMobile()) buildMobileDay();
   if(currentTab==='tasks') renderTasks();
-  // Show a brief confirmation toast
-  showDropToast(tasks[taskId].title,newDateStr,newTime);
+  if(!options.silentToast) showDropToast(movedTask.title,newDateStr,newTime);
+  return true;
+}
+
+function dropTaskOnDayHeader(taskId,dayIdx){
+  if(!taskId||!weekStart||dayIdx<0||dayIdx>6) return false;
+  var tasks=lsGet(TK);
+  var task=tasks[taskId];
+  if(!task) return false;
+  var newDate=addDays(weekStart,dayIdx);
+  var keepTime=task.time||'09:00';
+  return moveTaskToDateTime(taskId,newDate,keepTime);
+}
+
+function dropTaskOnCell(taskId,cell){
+  if(!taskId||!cell) return false;
+  var row=cell.parentElement;
+  var tbody=row.parentElement;
+  var ri=Array.from(tbody.children).indexOf(row);
+  var ci=Array.from(row.children).indexOf(cell)-1;
+  if(ri<0) return false;
+  var slot=SLOTS[ri];
+  if(!slot) return false;
+
+  var isMobileView=!document.getElementById('schedDesktop').style.display||
+                    document.getElementById('schedDesktop').style.display==='none';
+  if(isMobileView){
+    ci=currentDayIdx;
+  }
+  if(ci<0||ci>=7) return false;
+
+  var newDate=addDays(weekStart,ci);
+  var newTime=pad(slot.h)+':'+(slot.half?'30':'00');
+  return moveTaskToDateTime(taskId,newDate,newTime,{silentToast:false});
 }
 
 // ── Brief toast message after a successful drop ───────────────────────────────
@@ -1366,8 +1394,24 @@ function buildGrid(){
   var th0=document.createElement('th');th0.textContent='Time';htr.appendChild(th0);
   cols.forEach(function(d,ci){
     var th=document.createElement('th');
+    th.classList.add('planner-day-drop-target');
+    th.setAttribute('data-day-idx',ci);
     if(ci===todayIdx)th.classList.add('tdy');
     th.innerHTML=DAY_SHORT[ci]+'<span class="dd">'+shortD(d)+'</span>';
+    th.addEventListener('dragover',function(e){
+      e.preventDefault();
+      try{e.dataTransfer.dropEffect='move';}catch(_e){}
+      th.classList.add('drag-over-day');
+    });
+    th.addEventListener('dragleave',function(){th.classList.remove('drag-over-day');});
+    th.addEventListener('drop',function(e){
+      e.preventDefault();
+      th.classList.remove('drag-over-day');
+      var id='';
+      try{id=e.dataTransfer.getData('text/plain');}catch(_e){}
+      id=id||dragState.taskId;
+      dropTaskOnDayHeader(id,ci);
+    });
     htr.appendChild(th);
   });
   head.appendChild(htr);
@@ -1400,8 +1444,9 @@ function buildGrid(){
         td.appendChild(makePill(entry.task, entry));
       });
 
+      td.addEventListener('mouseenter',function(){ setPlannerPasteCell(td); });
       td.addEventListener('click',function(e){
-        lastPlannerPasteCell=td;
+        setPlannerPasteCell(td);
         if(copiedTaskData && !e.target.closest('.tpill') && !e.target.closest('.planner-timeblock') && !e.target.classList.contains('ci')){
           pasteCopiedTaskIntoCell(td);
         }
@@ -1442,6 +1487,8 @@ function buildGrid(){
           requestAnimationFrame(function(){ta.style.height=newH+'px';});
         }
       });
+      ta.addEventListener('focus',function(){ setPlannerPasteCell(td); });
+      ta.addEventListener('focus',function(){ setPlannerPasteCell(td); });
       ta.addEventListener('keydown',function(e){
         if(e.key==='Tab'){
           e.preventDefault();
@@ -1548,8 +1595,18 @@ var activePopover=null;
 var selectedTaskId=null;
 var copiedTaskData=null;
 var lastPlannerPasteCell=null;
+var hoveredTaskId=null;
+var hoveredPlannerCell=null;
 
 function setSelectedTask(taskId){ selectedTaskId=taskId||null; }
+function setHoveredTask(taskId){ hoveredTaskId=taskId||null; }
+function getActiveTaskForClipboard(){ return hoveredTaskId || selectedTaskId || null; }
+function setPlannerPasteCell(cell){
+  if(!cell) return;
+  hoveredPlannerCell=cell;
+  lastPlannerPasteCell=cell;
+}
+function getActivePlannerPasteCell(){ return hoveredPlannerCell || lastPlannerPasteCell || null; }
 
 function copyTaskToClipboard(taskId){
   var tasks=lsGet(TK);
@@ -1600,6 +1657,7 @@ function pasteCopiedTaskIntoCell(cell){
   var targetDate=isMobileView?addDays(weekStart,currentDayIdx):addDays(weekStart,ci);
   var targetTime=pad(slot.h)+':' +(slot.half?'30':'00');
   var targetDateStr=fmtDate(targetDate);
+  setPlannerPasteCell(cell);
   var newTask=buildCopiedTaskForTarget(copiedTaskData,targetDateStr,targetTime);
   var tasks=lsGet(TK);
   tasks[newTask.id]=newTask;
@@ -2551,7 +2609,9 @@ function renderTasks(){
       '</div>';
 
     list.appendChild(card);
-    card.addEventListener('click',function(e){ if(!e.target.closest('button,input,select,textarea,label')) setSelectedTask(t.id); });
+    card.addEventListener('mouseenter',function(){ setHoveredTask(t.id); setSelectedTask(t.id); });
+    card.addEventListener('mouseleave',function(){ if(hoveredTaskId===t.id) hoveredTaskId=null; });
+    card.addEventListener('click',function(e){ if(!e.target.closest('button,input,select,textarea,label')) { setHoveredTask(t.id); setSelectedTask(t.id); } });
 
     // Bind all events after DOM insertion
     var ti=card.querySelector('.task-ti');
@@ -2964,17 +3024,19 @@ document.addEventListener('keydown',function(e){
   if((e.ctrlKey||e.metaKey) && k==='c'){
     var tag=(document.activeElement&&document.activeElement.tagName||'').toLowerCase();
     if(tag==='input' || tag==='textarea') return;
-    if(selectedTaskId){
+    var activeTaskId=getActiveTaskForClipboard();
+    if(activeTaskId){
       e.preventDefault();
-      copyTaskToClipboard(selectedTaskId);
+      copyTaskToClipboard(activeTaskId);
     }
   }
   if((e.ctrlKey||e.metaKey) && k==='v'){
     var tag=(document.activeElement&&document.activeElement.tagName||'').toLowerCase();
     if(tag==='input' || tag==='textarea') return;
-    if(lastPlannerPasteCell && copiedTaskData){
+    var targetCell=getActivePlannerPasteCell();
+    if(targetCell && copiedTaskData){
       e.preventDefault();
-      pasteCopiedTaskIntoCell(lastPlannerPasteCell);
+      pasteCopiedTaskIntoCell(targetCell);
     }
   }
 });
