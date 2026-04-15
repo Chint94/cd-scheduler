@@ -462,6 +462,14 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .planner-timeblock.time-only{justify-content:center}
 .planner-timeblock.time-only .tb-title{display:none}
 .planner-timeblock.time-only .tb-time{font-size:11px;font-weight:700}
+/* Narrow block (overlap): reduced padding so text fits */
+.planner-timeblock.narrow{padding:5px 5px 4px;border-radius:8px;gap:1px}
+.planner-timeblock.narrow .tb-title{font-size:10px;font-weight:700;-webkit-line-clamp:2;line-height:1.1}
+.planner-timeblock.narrow .tb-time{font-size:9px;letter-spacing:-0.2px}
+/* Squeeze block (very narrow overlap): minimal chrome */
+.planner-timeblock.squeeze{padding:3px 4px 3px;border-radius:6px;gap:0;border-left-width:3px!important;border-right-width:3px!important}
+.planner-timeblock.squeeze .tb-title{font-size:9px;font-weight:700;-webkit-line-clamp:2;line-height:1.08;word-break:break-word}
+.planner-timeblock.squeeze .tb-time{font-size:8px;letter-spacing:-0.3px;opacity:.9}
 .planner-timeblock.recurring .tb-title:before{content:'🔁 ';font-weight:400}
 @media(max-width:700px){
   .planner-timeblock{padding:6px 8px 5px;border-radius:12px}
@@ -1000,6 +1008,9 @@ function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
   else if(safeH<=40) el.classList.add('compact');
   if(safeH<=18) el.classList.add('time-only');
   else if(safeH<=24 && safeW<120) el.classList.add('title-hidden');
+  // Width-based classes for overlapping blocks on desktop
+  if(safeW<80) el.classList.add('squeeze');
+  else if(safeW<130) el.classList.add('narrow');
   el.style.top=topPx+'px';
   el.style.left=leftPx+'px';
   el.style.width=safeW+'px';
@@ -1016,12 +1027,16 @@ function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
   }
   el.style.pointerEvents='auto';
   el.setAttribute('data-task-id',task.id||'');
-  var timeLabel=(task.time||'')+(task.endTime?(' - '+task.endTime):'');
+  var fullTimeLabel=(task.time||'')+(task.endTime?(' – '+task.endTime):'');
+  // For narrow blocks, show only start time to avoid truncation
+  var timeLabel=fullTimeLabel;
+  if(safeW<130 && task.endTime) timeLabel=task.time||'';
   // Embed ⚠️ directly in title for overdue (CSS ::before is hidden on tiny/time-only blocks)
   var titleText=(task.done?'✅ ':(isOvBlock?'⚠️ ':''))+(task.title||'(no title)');
   el.innerHTML='<div class="tb-title">'+titleText+'</div>'
     +'<div class="tb-time">'+timeLabel+'</div>';
-  el.title=(task.title||'(no title)')+' ('+timeLabel+')';
+  // Full info always in tooltip on hover
+  el.title=(task.title||'(no title)')+' ('+fullTimeLabel+')';
   el.addEventListener('click', function(e){
     e.stopPropagation();
     if(el.classList.contains('dragging')) return;
@@ -1118,10 +1133,13 @@ function renderPlannerTimeBlocks(){
             var cols=Math.max(1,item._cols||1);
             var lane=Math.max(0,item._lane||0);
             var gutter=4;
-            var laneWidth=Math.max(52,(totalWidth-((cols-1)*gutter))/cols);
-            var width=(cols===1)?totalWidth:Math.max(52,laneWidth);
+            // Each lane gets equal share; enforce minimum so text stays legible
+            var rawLaneW=(totalWidth-((cols-1)*gutter))/cols;
+            var laneWidth=(cols===1)?totalWidth:Math.max(40,rawLaneW);
+            var width=laneWidth;
             var left=leftBase + lane*(laneWidth+gutter);
-            if(left+width>leftBase+totalWidth) width=Math.max(48,(leftBase+totalWidth)-left);
+            // Hard clamp to stay within the column
+            if(left+width>leftBase+totalWidth) width=Math.max(38,(leftBase+totalWidth)-left);
             layer.appendChild(makePlannerTimeBlock(task, top, left, width, height));
           });
         }
