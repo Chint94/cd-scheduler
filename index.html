@@ -448,7 +448,6 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .planner-timeblock.medium{background:rgba(196,148,42,0.18);color:#8B6914;border-left:5px solid #C4942A;border-right:5px solid #C4942A}
 .planner-timeblock.low{background:rgba(92,184,92,0.16);color:#3C8A3C;border-left:5px solid #5CB85C;border-right:5px solid #5CB85C}
 .planner-timeblock.done{opacity:.72;filter:saturate(.85)}
-.planner-timeblock.ov{background:#FFE0E0!important;color:var(--ot)!important;border-left:5px solid var(--ot)!important;border-right:5px solid var(--ot)!important}
 .planner-timeblock .tb-title{font-size:11px;font-weight:700;line-height:1.15;display:-webkit-box;
   -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:100%;width:100%}
 .planner-timeblock .tb-time{font-size:10px;font-weight:600;opacity:.82;line-height:1.1;max-width:100%;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -464,7 +463,8 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .planner-timeblock.time-only .tb-time{font-size:11px;font-weight:700}
 .planner-timeblock.recurring .tb-title:before{content:'🔁 ';font-weight:400}
 @media(max-width:700px){
-  .planner-timeblock{padding:6px 8px 5px;border-radius:12px}
+  .planner-timeblocks{left:0;right:0;overflow:hidden}
+  .planner-timeblock{padding:6px 8px 5px;border-radius:12px;max-width:calc(100% - 8px);box-shadow:0 3px 0 rgba(0,0,0,.72), 0 8px 14px rgba(0,0,0,.08)}
   .planner-timeblock .tb-title{font-size:10px}
   .planner-timeblock .tb-time{font-size:9px}
   .planner-timeblock.compact .tb-title{font-size:9px}
@@ -799,28 +799,6 @@ function taskVisualEndMins(t){
   return Math.max(start+8, Math.min(nextBoundary-2, start+26));
 }
 
-function getTaskDeadline(t){
-  if(!t || !t.date) return null;
-  var startDate=parseDate(t.date);
-  if(!startDate) return null;
-  if(t.endTime){
-    var endDate=parseDate(taskEndDateStr(t)) || startDate;
-    var ep=t.endTime.split(':');
-    return new Date(endDate.getFullYear(),endDate.getMonth(),endDate.getDate(),parseInt(ep[0],10),parseInt(ep[1],10));
-  }
-  if(t.time){
-    var sp=t.time.split(':');
-    return new Date(startDate.getFullYear(),startDate.getMonth(),startDate.getDate(),parseInt(sp[0],10),parseInt(sp[1],10));
-  }
-  return new Date(startDate.getFullYear(),startDate.getMonth(),startDate.getDate(),23,59,59,999);
-}
-
-function isTaskOverdue(t){
-  if(!t || t.done) return false;
-  var dl=getTaskDeadline(t);
-  return !!(dl && dl < new Date());
-}
-
 function isSlotOverdue(colDate,slot){
   var now=new Date();
   var se=new Date(colDate.getFullYear(),colDate.getMonth(),colDate.getDate(),slot.h,slot.m+30);
@@ -1004,8 +982,7 @@ function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
   var pr=(task.priority||'medium');
   var pc=PRIORITY_COLORS[pr]||PRIORITY_COLORS.medium;
   var safeW=Math.max(widthPx,48), safeH=Math.max(8,heightPx);
-  var isOv=isTaskOverdue(task);
-  el.className='planner-timeblock '+pr+(task.done?' done':'')+(isOv?' ov':'')+((task.recurrence&&!task.done)?' recurring':'');
+  el.className='planner-timeblock '+pr+(task.done?' done':'')+((task.recurrence&&!task.done)?' recurring':'');
   if(safeH<=24) el.classList.add('tiny');
   else if(safeH<=40) el.classList.add('compact');
   if(safeH<=18) el.classList.add('time-only');
@@ -1153,8 +1130,9 @@ function renderPlannerTimeBlocks(){
         var dayCellM=headCellsM[1];
         if(dayCellM){
           var cellRectM=dayCellM.getBoundingClientRect();
+          var mobileInnerPad=8;
           var leftBaseM=(cellRectM.left-tableRectM.left)+3;
-          var totalWidthM=Math.max(0, cellRectM.width-6);
+          var totalWidthM=Math.max(0, Math.min(cellRectM.width-6, layerM.clientWidth-leftBaseM-mobileInnerPad));
           var dayTasksM=tasks.filter(function(task){
             var d=parseDate(task.date); if(!d) return false;
             return fmtDate(d)===fmtDate(dayDate);
@@ -1172,7 +1150,9 @@ function renderPlannerTimeBlocks(){
             var laneWidth=Math.max(52,(totalWidthM-((cols-1)*gutter))/cols);
             var width=(cols===1)?totalWidthM:Math.max(52,laneWidth);
             var left=leftBaseM + lane*(laneWidth+gutter);
-            if(left+width>leftBaseM+totalWidthM) width=Math.max(48,(leftBaseM+totalWidthM)-left);
+            var maxRightM=Math.max(leftBaseM+48, Math.min(leftBaseM+totalWidthM, layerM.clientWidth-4));
+            if(left>maxRightM-48) left=Math.max(leftBaseM, maxRightM-48);
+            if(left+width>maxRightM) width=Math.max(48,maxRightM-left);
             layerM.appendChild(makePlannerTimeBlock(task, top, left, width, height));
           });
         }
@@ -1188,7 +1168,17 @@ function makePill(task,entry){
   entry=entry||{isStart:true,isCont:false,isEnd:false};
   var btn=document.createElement('button');
   var pc=PRIORITY_COLORS[task.priority]||PRIORITY_COLORS.medium;
-  var isOv=isTaskOverdue(task);
+  var now=new Date();
+  var isOv=false;
+  if(!task.done&&task.date){
+    var td=parseDate(task.date);
+    if(td){
+      var dl;
+      if(task.time){var tp=task.time.split(':');dl=new Date(td.getFullYear(),td.getMonth(),td.getDate(),parseInt(tp[0]),parseInt(tp[1]));}
+      else dl=new Date(td.getFullYear(),td.getMonth(),td.getDate(),23,59);
+      isOv=dl<now;
+    }
+  }
   btn.className='tpill '+(task.priority||'medium')+(task.done?' done-pill':'')+(isOv?' ov-pill':'')+(task.recurrence?' rec-pill':'')+(entry.isCont?' cont-pill':'')+(entry.isEnd&&!entry.isStart?' end-pill':'');
   if(!isOv)btn.style.cssText='background:'+pc+'22;border-left:5px solid '+pc+';border-right:5px solid '+pc+';color:'+pc+';';
   var icon=task.done?'✅':(task.recurrence?'🔁':'📌');
@@ -2017,8 +2007,11 @@ function taskStatus(t){
   if(!t.date)return'pending';
   var td=parseDate(t.date);if(!td)return'pending';
   var now=new Date();
-  if(fmtDate(td)===fmtDate(now) && !isTaskOverdue(t))return'today';
-  return isTaskOverdue(t)?'overdue':'pending';
+  if(fmtDate(td)===fmtDate(now))return'today';
+  var dl;
+  if(t.time){var tp=t.time.split(':');dl=new Date(td.getFullYear(),td.getMonth(),td.getDate(),parseInt(tp[0]),parseInt(tp[1]));}
+  else dl=new Date(td.getFullYear(),td.getMonth(),td.getDate(),23,59);
+  return dl<now?'overdue':'pending';
 }
 
 document.getElementById('addTaskBtn').addEventListener('click',function(){
@@ -3579,11 +3572,8 @@ function renderTimeLine(){
 setTimeout(renderPlannerTimeBlocks, 300);
 
 window.addEventListener('resize',function(){setTimeout(renderPlannerTimeBlocks,80);});
-setInterval(function(){
-  markOverdue();
-  renderPlannerTimeBlocks();
-  if(currentTab==='tasks')renderTasks();
-},60000);
+setInterval(markOverdue,60000);
+setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
 
 </script>
 
