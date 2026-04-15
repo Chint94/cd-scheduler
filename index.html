@@ -448,7 +448,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .planner-timeblock.medium{background:rgba(196,148,42,0.18);color:#8B6914;border-left:5px solid #C4942A;border-right:5px solid #C4942A}
 .planner-timeblock.low{background:rgba(92,184,92,0.16);color:#3C8A3C;border-left:5px solid #5CB85C;border-right:5px solid #5CB85C}
 .planner-timeblock.done{opacity:.72;filter:saturate(.85)}
-.planner-timeblock.overdue{background:#FFE0E0!important;border-left:5px solid var(--ot)!important;border-right:5px solid var(--ot)!important;color:var(--ot)!important}
+.planner-timeblock.overdue{background:#FFE0E0;border-left:5px solid var(--ot);border-right:5px solid var(--ot);color:var(--ot)}
 .planner-timeblock.overdue .tb-title:before{content:'⚠️ ';font-weight:400}
 .planner-timeblock.overdue.recurring .tb-title:before{content:'⚠️ ';font-weight:400}
 .planner-timeblock .tb-title{font-size:11px;font-weight:700;line-height:1.15;display:-webkit-box;
@@ -995,6 +995,8 @@ function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
   var pc=PRIORITY_COLORS[pr]||PRIORITY_COLORS.medium;
   var safeW=Math.max(widthPx,48), safeH=Math.max(8,heightPx);
   var isOvBlock=taskIsOverdue(task);
+  var OV_COLOR='#B32020'; // matches --ot CSS variable
+  var OV_BG='#FFE0E0';
   el.className='planner-timeblock '+pr+(task.done?' done':'')+((task.recurrence&&!task.done)?' recurring':'')+(isOvBlock?' overdue':'');
   if(safeH<=24) el.classList.add('tiny');
   else if(safeH<=40) el.classList.add('compact');
@@ -1004,12 +1006,21 @@ function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
   el.style.left=leftPx+'px';
   el.style.width=safeW+'px';
   el.style.height=safeH+'px';
-  // Only apply priority colour if not overdue (overdue CSS overrides via !important)
-  if(!isOvBlock){el.style.borderLeftColor=pc;el.style.borderRightColor=pc;}
+  // Always set inline border + bg so inline style wins over class styles (avoids !important fight)
+  if(isOvBlock){
+    el.style.borderLeftColor=OV_COLOR;
+    el.style.borderRightColor=OV_COLOR;
+    el.style.background=OV_BG;
+    el.style.color=OV_COLOR;
+  } else {
+    el.style.borderLeftColor=pc;
+    el.style.borderRightColor=pc;
+  }
   el.style.pointerEvents='auto';
   el.setAttribute('data-task-id',task.id||'');
   var timeLabel=(task.time||'')+(task.endTime?(' - '+task.endTime):'');
-  var titleText=(task.done?'✅ ':(isOvBlock?'':''))+(task.title||'(no title)');
+  // Embed ⚠️ directly in title for overdue (CSS ::before is hidden on tiny/time-only blocks)
+  var titleText=(task.done?'✅ ':(isOvBlock?'⚠️ ':''))+(task.title||'(no title)');
   el.innerHTML='<div class="tb-title">'+titleText+'</div>'
     +'<div class="tb-time">'+timeLabel+'</div>';
   el.title=(task.title||'(no title)')+' ('+timeLabel+')';
@@ -1486,15 +1497,29 @@ function markOverdue(){
     var task=tasks[taskId];
     if(!task) return;
     var ov=taskIsOverdue(task);
+    var OV_COLOR='#B32020';
+    var OV_BG='#FFE0E0';
     if(ov && !el.classList.contains('overdue')){
       el.classList.add('overdue');
-      el.style.borderLeftColor='';
-      el.style.borderRightColor='';
+      el.style.borderLeftColor=OV_COLOR;
+      el.style.borderRightColor=OV_COLOR;
+      el.style.background=OV_BG;
+      el.style.color=OV_COLOR;
+      // Update title prefix to ⚠️ if not already
+      var tb=el.querySelector('.tb-title');
+      if(tb&&tb.textContent.indexOf('⚠️')<0){
+        tb.textContent='⚠️ '+tb.textContent.replace(/^✅ /,'');
+      }
     } else if(!ov && el.classList.contains('overdue')){
       el.classList.remove('overdue');
       var pc=PRIORITY_COLORS[task.priority||'medium']||PRIORITY_COLORS.medium;
       el.style.borderLeftColor=pc;
       el.style.borderRightColor=pc;
+      el.style.background='';
+      el.style.color='';
+      // Restore title prefix
+      var tb=el.querySelector('.tb-title');
+      if(tb) tb.textContent=tb.textContent.replace(/^⚠️ /,'');
     }
   });
   // Mobile: update tc (time label) overdue styling
