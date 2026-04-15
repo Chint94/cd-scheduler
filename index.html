@@ -324,6 +324,18 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .tpill.medium{background:rgba(196,148,42,0.18);color:#8B6914;border-left:5px solid #C4942A;border-right:5px solid #C4942A}
 .tpill.low{background:rgba(92,184,92,0.16);color:#3C8A3C;border-left:5px solid #5CB85C;border-right:5px solid #5CB85C}
 .tpill.rec-pill{border-left-color:#5B9BD5!important;border-right-color:#5B9BD5!important}
+.search-bar-wrap{position:relative;margin-bottom:13px}
+.search-bar-wrap .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);
+  font-size:13px;pointer-events:none;color:var(--inkl)}
+.search-bar-inp{width:100%;font-family:DM Sans,sans-serif;font-size:13px;color:var(--ink);
+  background:white;border:1.5px solid var(--gp);border-radius:20px;
+  padding:7px 36px 7px 32px;outline:none;box-sizing:border-box;transition:border-color .15s}
+.search-bar-inp:focus{border-color:var(--gm)}
+.search-bar-inp::placeholder{color:rgba(139,105,20,0.38)}
+.search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;font-size:15px;color:var(--inkl);
+  padding:2px 4px;line-height:1;display:none}
+.search-clear.visible{display:block}
 .filter-bar{display:flex;gap:7px;margin-bottom:13px;flex-wrap:wrap}
 .fb{font-family:DM Sans,sans-serif;font-size:12px;font-weight:500;background:white;
   border:1.5px solid var(--gp);border-radius:20px;padding:4px 13px;cursor:pointer;
@@ -621,6 +633,11 @@ footer strong{color:rgba(255,253,245,0.85)}
         <div class="gcal-msg" id="gcalMsg"></div>
       </div>
     </div>
+    <div class="search-bar-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-bar-inp" id="taskSearch" type="search" placeholder="Search tasks by title or notes..." autocomplete="off">
+      <button class="search-clear" id="taskSearchClear" title="Clear search">✕</button>
+    </div>
     <div class="filter-bar" id="filterBar">
       <button class="fb active" data-filter="all">All</button>
       <button class="fb" data-filter="pending">Pending</button>
@@ -639,6 +656,11 @@ footer strong{color:rgba(255,253,245,0.85)}
     <div class="sh">
       <div class="st">Notes &amp; Journal</div>
       <button class="btn-add" id="addNoteBtn">＋ New Note</button>
+    </div>
+    <div class="search-bar-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-bar-inp" id="noteSearch" type="search" placeholder="Search notes by title or content..." autocomplete="off">
+      <button class="search-clear" id="noteSearchClear" title="Clear search">✕</button>
     </div>
     <div class="notes-grid" id="notesGrid"></div>
   </div>
@@ -1895,6 +1917,8 @@ function openTaskEditModal(taskId, editScope){
 // TASKS + RECURRING TASKS
 // ════════════════════════════════════════════════════════
 var curFilter='all';
+var taskSearchQ='';
+var noteSearchQ='';
 
 // ── Recurring helpers ────────────────────────────────────
 // A recurring task has: recurrence:'daily'|'weekly'|'monthly', recurrenceGroupId, recurrenceIndex
@@ -2085,6 +2109,38 @@ document.getElementById('filterBar').addEventListener('click',function(e){
   btn.classList.add('active');
   renderTasks();
 });
+
+// ── Task search ──────────────────────────────────────────────────────────────
+(function(){
+  var inp=document.getElementById('taskSearch');
+  var clr=document.getElementById('taskSearchClear');
+  inp.addEventListener('input',function(){
+    taskSearchQ=inp.value.trim();
+    clr.classList.toggle('visible',taskSearchQ.length>0);
+    renderTasks();
+  });
+  clr.addEventListener('click',function(){
+    inp.value='';taskSearchQ='';
+    clr.classList.remove('visible');
+    inp.focus();renderTasks();
+  });
+})();
+
+// ── Note search ──────────────────────────────────────────────────────────────
+(function(){
+  var inp=document.getElementById('noteSearch');
+  var clr=document.getElementById('noteSearchClear');
+  inp.addEventListener('input',function(){
+    noteSearchQ=inp.value.trim();
+    clr.classList.toggle('visible',noteSearchQ.length>0);
+    renderNotes();
+  });
+  clr.addEventListener('click',function(){
+    inp.value='';noteSearchQ='';
+    clr.classList.remove('visible');
+    inp.focus();renderNotes();
+  });
+})();
 
 // ── Recurring setup modal ────────────────────────────────
 function openRecurringSetupModal(existingGroupId){
@@ -2495,6 +2551,13 @@ function renderTasks(){
       if(curFilter==='today')return s==='today';
       if(curFilter==='overdue')return s==='overdue';
       return true;
+    });
+  }
+  if(taskSearchQ){
+    var q=taskSearchQ.toLowerCase();
+    items=items.filter(function(t){
+      return (t.title||'').toLowerCase().indexOf(q)>=0
+          || (t.notes||'').toLowerCase().indexOf(q)>=0;
     });
   }
   if(items.length===0){
@@ -2946,7 +3009,22 @@ function renderNotes(){
   addCard.addEventListener('click',addNote);
   grid.appendChild(addCard);
 
-  Object.values(notes).sort(function(a,b){return(b.updated||0)-(a.updated||0)}).forEach(function(note){
+  var noteItems=Object.values(notes).sort(function(a,b){return(b.updated||0)-(a.updated||0)});
+  if(noteSearchQ){
+    var nq=noteSearchQ.toLowerCase();
+    noteItems=noteItems.filter(function(note){
+      return (note.title||'').toLowerCase().indexOf(nq)>=0
+          || (note.body||'').toLowerCase().indexOf(nq);
+    });
+  }
+  if(noteItems.length===0 && noteSearchQ){
+    var noRes=document.createElement('div');
+    noRes.style.cssText='grid-column:1/-1;text-align:center;padding:30px 20px;color:var(--inkl);font-size:13px;';
+    noRes.textContent='No notes match "'+noteSearchQ+'"';
+    grid.appendChild(noRes);
+    return;
+  }
+  noteItems.forEach(function(note){
     var card=document.createElement('div');
     card.className='note-card';
 
