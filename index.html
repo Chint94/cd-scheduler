@@ -490,7 +490,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   .sw{padding:12px}
   .grid-wrap{padding:10px 12px 30px}
   /* Wrapper clips corners cleanly without blocking scroll */
-  #schedMobileWrap{border-radius:10px;box-shadow:0 4px 20px var(--sg);overflow:hidden}
+  #schedMobileWrap{border-radius:10px;box-shadow:0 4px 20px var(--sg);overflow:hidden;position:relative}
   .sched-mobile{width:100%;border-radius:0}
   /* Top-left and top-right corner cells */
   .sched-mobile thead th:first-child{border-radius:10px 0 0 0}
@@ -1135,12 +1135,14 @@ function renderPlannerTimeBlocks(){
     if(mTable){
       var layerM=document.createElement('div');
       layerM.className='planner-timeblocks';
-      layerM.style.left=mTable.offsetLeft+'px';
-      layerM.style.top=mTable.offsetTop+'px';
-      layerM.style.width=mTable.offsetWidth+'px';
+      // Anchor layer to mWrap (which is now position:relative) — covers it exactly
+      layerM.style.left='0px';
+      layerM.style.top='0px';
+      layerM.style.width='100%';
       layerM.style.height=mTable.offsetHeight+'px';
       mWrap.appendChild(layerM);
-      var tableRectM=mTable.getBoundingClientRect();
+      // Use mWrap as the reference rect so all coordinates are relative to it
+      var wrapRectM=mWrap.getBoundingClientRect();
       var theadM=document.getElementById('schedHeadM');
       var bodyM=document.getElementById('schedBodyM');
       var headRowM=theadM?theadM.querySelector('tr'):null;
@@ -1148,12 +1150,16 @@ function renderPlannerTimeBlocks(){
       if(headRowM && firstRowM){
         var headCellsM=headRowM.querySelectorAll('th');
         var dayDate=addDays(weekStart,currentDayIdx);
-        var rowMetricsM=getPlannerRowMetrics(bodyM, tableRectM);
+        // Row metrics relative to mWrap (not table) so top positions align with layer
+        var rowMetricsM=getPlannerRowMetrics(bodyM, wrapRectM);
         var dayCellM=headCellsM[1];
         if(dayCellM){
           var cellRectM=dayCellM.getBoundingClientRect();
-          var leftBaseM=(cellRectM.left-tableRectM.left)+3;
-          var totalWidthM=Math.max(0, cellRectM.width-6);
+          // leftBase: horizontal offset of day column from mWrap left edge, +3px inset
+          var leftBaseM=(cellRectM.left-wrapRectM.left)+3;
+          // totalWidth: full width of day column minus 6px (3px inset each side)
+          // Clamp right edge so blocks never exceed mWrap right boundary
+          var totalWidthM=Math.max(0, Math.min(cellRectM.width, wrapRectM.right-cellRectM.left)-6);
           var dayTasksM=tasks.filter(function(task){
             var d=parseDate(task.date); if(!d) return false;
             return fmtDate(d)===fmtDate(dayDate);
@@ -1171,7 +1177,9 @@ function renderPlannerTimeBlocks(){
             var laneWidth=Math.max(52,(totalWidthM-((cols-1)*gutter))/cols);
             var width=(cols===1)?totalWidthM:Math.max(52,laneWidth);
             var left=leftBaseM + lane*(laneWidth+gutter);
-            if(left+width>leftBaseM+totalWidthM) width=Math.max(48,(leftBaseM+totalWidthM)-left);
+            // Hard clamp: block must not exceed right boundary of mWrap
+            var maxRight=wrapRectM.width-4;
+            if(left+width>maxRight) width=Math.max(40, maxRight-left);
             layerM.appendChild(makePlannerTimeBlock(task, top, left, width, height));
           });
         }
