@@ -1001,6 +1001,7 @@ function makePlannerTimeBlock(task, topPx, leftPx, widthPx, heightPx){
   el.addEventListener('click', function(e){
     e.stopPropagation();
     if(el.classList.contains('dragging')) return;
+    setSelectedTask(task.id);
     openTaskPopover(task.id, el);
   });
   attachTimeBlockDrag(el, task);
@@ -1194,6 +1195,7 @@ function makePill(task,entry){
   btn.addEventListener('click',function(e){
     if(didDrag){didDrag=false;return;}
     e.stopPropagation();
+    setSelectedTask(task.id);
     openTaskPopover(task.id,btn);
   });
 
@@ -1394,6 +1396,13 @@ function buildGrid(){
         td.appendChild(makePill(entry.task, entry));
       });
 
+      td.addEventListener('click',function(e){
+        lastPlannerPasteCell=td;
+        if(copiedTaskData && !e.target.closest('.tpill') && !e.target.closest('.planner-timeblock') && !e.target.classList.contains('ci')){
+          pasteCopiedTaskIntoCell(td);
+        }
+      });
+
       // Drag-over highlighting (desktop)
       td.addEventListener('dragover',function(e){
         e.preventDefault();
@@ -1513,6 +1522,74 @@ document.getElementById('weekStartInput').addEventListener('keydown',function(e)
 
 // ── Task popover ──────────────────────────────────────────────────────────────
 var activePopover=null;
+var selectedTaskId=null;
+var copiedTaskData=null;
+var lastPlannerPasteCell=null;
+
+function setSelectedTask(taskId){ selectedTaskId=taskId||null; }
+
+function copyTaskToClipboard(taskId){
+  var tasks=lsGet(TK);
+  var src=tasks[taskId];
+  if(!src) return false;
+  copiedTaskData=JSON.parse(JSON.stringify(src));
+  selectedTaskId=taskId;
+  showDropToast((src.title||'Task'),'Copied','');
+  return true;
+}
+
+function buildCopiedTaskForTarget(src,newDateStr,newTime){
+  var cloned=JSON.parse(JSON.stringify(src||{}));
+  cloned.id=genId();
+  cloned.date=newDateStr;
+  cloned.time=newTime||cloned.time||'09:00';
+  cloned.done=false;
+  delete cloned.completedAt;
+  delete cloned.recurrence; delete cloned.recurrenceGroupId; delete cloned.recurrenceIndex;
+  delete cloned.recurrenceEndType; delete cloned.recurrenceEndCount; delete cloned.recurrenceEndDate;
+  delete cloned.recurrenceWeekDays; delete cloned.seriesEdited;
+  if(cloned.endTime){
+    var sp=(src.time||cloned.time||'09:00').split(':');
+    var ep=(src.endTime||'').split(':');
+    var sM=(parseInt(sp[0])||0)*60+(parseInt(sp[1])||0);
+    var eM=(parseInt(ep[0])||0)*60+(parseInt(ep[1])||0);
+    var dur=Math.max(1,eM-sM);
+    var np=(cloned.time||'09:00').split(':');
+    var nM=(parseInt(np[0])||0)*60+(parseInt(np[1])||0);
+    cloned.endTime=minsToTimeStr(Math.min(1439,nM+dur));
+    cloned.endDate=newDateStr;
+  } else {
+    cloned.endDate='';
+  }
+  return cloned;
+}
+
+function pasteCopiedTaskIntoCell(cell){
+  if(!copiedTaskData||!cell||!weekStart) return false;
+  var row=cell.parentElement;
+  var tbody=row.parentElement;
+  var ri=Array.from(tbody.children).indexOf(row);
+  var ci=Array.from(row.children).indexOf(cell)-1;
+  if(ri<0) return false;
+  var slot=SLOTS[ri];
+  if(!slot) return false;
+  var isMobileView=!document.getElementById('schedDesktop').style.display||document.getElementById('schedDesktop').style.display==='none';
+  var targetDate=isMobileView?addDays(weekStart,currentDayIdx):addDays(weekStart,ci);
+  var targetTime=pad(slot.h)+':' +(slot.half?'30':'00');
+  var targetDateStr=fmtDate(targetDate);
+  var newTask=buildCopiedTaskForTarget(copiedTaskData,targetDateStr,targetTime);
+  var tasks=lsGet(TK);
+  tasks[newTask.id]=newTask;
+  lsSet(TK,tasks);
+  FB.ignoreNextTaskSync=true;
+  FB.saveTask(newTask.id,newTask);
+  buildGrid();
+  if(typeof buildMobileDay==='function'&&isMobile()) buildMobileDay();
+  if(currentTab==='tasks') renderTasks();
+  showDropToast(newTask.title||'Task',targetDateStr,targetTime);
+  return true;
+}
+
 
 function closePopover(){
   if(activePopover){activePopover.remove();activePopover=null;}
@@ -1522,6 +1599,7 @@ function closePopover(){
 
 // Planner pill click → quick popover (lightweight)
 function openTaskPopover(taskId,anchor){
+  setSelectedTask(taskId);
   openTaskEditModal(taskId);
 }
 
@@ -2443,12 +2521,14 @@ function renderTasks(){
           '</div>'+
         '</div>'+
         '<div class="task-acts">'+
+        '<button class="bni task-copy" title="Copy task">📋</button>'+
         '<button class="bni edit-btn task-edit" title="Edit task">✏️</button>'+
         '<button class="bni task-del" title="'+(t.recurrence?'Delete this occurrence':'Delete task')+'">🗑️</button>'+
         '</div>'+
       '</div>';
 
     list.appendChild(card);
+    card.addEventListener('click',function(e){ if(!e.target.closest('button,input,select,textarea,label')) setSelectedTask(t.id); });
 
     // Bind all events after DOM insertion
     var ti=card.querySelector('.task-ti');
@@ -2457,6 +2537,7 @@ function renderTasks(){
     var tmi=card.querySelector('.task-tmi');
     var sel=card.querySelector('.task-sel');
     var chk=card.querySelector('.task-chk');
+    var copyBtn=card.querySelector('.task-copy');
     var del=card.querySelector('.task-del');
 
     // Save to localStorage immediately; push to Firebase after 800ms idle
@@ -2855,6 +2936,26 @@ var currentDayIdx=0;
 
 function isMobile(){return window.innerWidth<=700;}
 
+document.addEventListener('keydown',function(e){
+  var k=(e.key||'').toLowerCase();
+  if((e.ctrlKey||e.metaKey) && k==='c'){
+    var tag=(document.activeElement&&document.activeElement.tagName||'').toLowerCase();
+    if(tag==='input' || tag==='textarea') return;
+    if(selectedTaskId){
+      e.preventDefault();
+      copyTaskToClipboard(selectedTaskId);
+    }
+  }
+  if((e.ctrlKey||e.metaKey) && k==='v'){
+    var tag=(document.activeElement&&document.activeElement.tagName||'').toLowerCase();
+    if(tag==='input' || tag==='textarea') return;
+    if(lastPlannerPasteCell && copiedTaskData){
+      e.preventDefault();
+      pasteCopiedTaskIntoCell(lastPlannerPasteCell);
+    }
+  }
+});
+
 function applyPlannerLayout(){
   var mobile=isMobile();
   var desktop=document.getElementById('schedDesktop');
@@ -2950,6 +3051,12 @@ function buildMobileDay(){
         td.appendChild(makePill(t.task,t));
       });
     }
+    td.addEventListener('click',function(e){
+      lastPlannerPasteCell=td;
+      if(copiedTaskData && !e.target.closest('.tpill') && !e.target.closest('.planner-timeblock') && !e.target.classList.contains('ci')){
+        pasteCopiedTaskIntoCell(td);
+      }
+    });
     // Drag-over for mobile table cells
     td.addEventListener('dragover',function(e){e.preventDefault();td.classList.add('drag-over');});
     td.addEventListener('dragleave',function(){td.classList.remove('drag-over');});
