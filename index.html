@@ -1171,12 +1171,14 @@ function makePill(task,entry){
       var dl;
       if(task.time){var tp=task.time.split(':');dl=new Date(td.getFullYear(),td.getMonth(),td.getDate(),parseInt(tp[0]),parseInt(tp[1]));}
       else dl=new Date(td.getFullYear(),td.getMonth(),td.getDate(),23,59);
+      // Must check overdue before today (today+past time = overdue)
       isOv=dl<now;
     }
   }
   btn.className='tpill '+(task.priority||'medium')+(task.done?' done-pill':'')+(isOv?' ov-pill':'')+(task.recurrence?' rec-pill':'')+(entry.isCont?' cont-pill':'')+(entry.isEnd&&!entry.isStart?' end-pill':'');
   if(!isOv)btn.style.cssText='background:'+pc+'22;border-left:5px solid '+pc+';border-right:5px solid '+pc+';color:'+pc+';';
-  var icon=task.done?'✅':(task.recurrence?'🔁':'📌');
+  // Overdue takes priority for icon; recurring overdue shows ⚠️ not 🔁
+  var icon=task.done?'✅':(isOv?'⚠️':(task.recurrence?'🔁':'📌'));
   // Title row: icon + task name
   var titleRow='<span class="ptitle-row"><span class="picon">'+icon+'</span>'
     +'<span class="ptxt">'+(task.title||'(no title)')+'</span></span>';
@@ -1958,11 +1960,13 @@ function taskStatus(t){
   if(!t.date)return'pending';
   var td=parseDate(t.date);if(!td)return'pending';
   var now=new Date();
-  if(fmtDate(td)===fmtDate(now))return'today';
   var dl;
   if(t.time){var tp=t.time.split(':');dl=new Date(td.getFullYear(),td.getMonth(),td.getDate(),parseInt(tp[0]),parseInt(tp[1]));}
   else dl=new Date(td.getFullYear(),td.getMonth(),td.getDate(),23,59);
-  return dl<now?'overdue':'pending';
+  // Overdue check before today: a task due today at 09:00, checked at 14:00, is overdue not today
+  if(dl<now)return'overdue';
+  if(fmtDate(td)===fmtDate(now))return'today';
+  return'pending';
 }
 
 document.getElementById('addTaskBtn').addEventListener('click',function(){
@@ -2529,12 +2533,34 @@ function renderTasks(){
     });
     setTimeout(function(){autoResize(ni);},0);
 
+    function refreshCardOverdueStyle(){
+      var tasks2=lsGet(TK);if(!tasks2[t.id])return;
+      var s=taskStatus(tasks2[t.id]);
+      card.classList.toggle('ov-card',s==='overdue');
+      var badgeEl=card.querySelector('.tbadge.bov');
+      var todayBadgeEl=card.querySelector('.tbadge.btd');
+      // Remove stale status badges before re-inserting
+      if(badgeEl)badgeEl.remove();
+      if(todayBadgeEl)todayBadgeEl.remove();
+      var meta=card.querySelector('.task-meta');
+      if(meta){
+        if(s==='overdue'){
+          var nb=document.createElement('span');nb.className='tbadge bov';nb.textContent='Overdue';
+          meta.insertBefore(nb,meta.firstChild);
+        } else if(s==='today'){
+          var nb=document.createElement('span');nb.className='tbadge btd';nb.textContent='Today';
+          meta.insertBefore(nb,meta.firstChild);
+        }
+      }
+    }
     di.addEventListener('change',function(){
       saveField('date',fromInputDate(di.value));
+      refreshCardOverdueStyle();
       buildGrid();
     });
     tmi.addEventListener('change',function(){
       saveField('time',tmi.value);
+      refreshCardOverdueStyle();
       buildGrid();
     });
     sel.addEventListener('change',function(){saveField('priority',sel.value);});
