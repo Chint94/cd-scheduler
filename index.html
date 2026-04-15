@@ -1674,12 +1674,45 @@ function openTaskEditModal(taskId, editScope){
 
   var delBtn=document.createElement('button');delBtn.className='pop-btn dan';
   delBtn.textContent=isRecurring?'🗑 Delete occurrence':'🗑 Delete';
+
+  // Update delete button label when scope changes
+  if(isRecurring){
+    var origBtnThis=modal.querySelector&&null; // placeholder; we patch via scope buttons below
+    // Patch scope buttons to also update delete label
+    var scopeBtnThis=modal.querySelector?modal.querySelector('.edit-scope-btn'):null;
+    // We do this after appendChild below; use a live closure instead
+    Object.defineProperty(window,'_delBtnScopeRef',{value:delBtn,configurable:true,writable:true});
+    setTimeout(function(){
+      var btns=modal.querySelectorAll('.edit-scope-btn');
+      if(btns.length>=2){
+        btns[0].addEventListener('click',function(){delBtn.textContent='🗑 Delete occurrence';});
+        btns[1].addEventListener('click',function(){delBtn.textContent='🗑 Delete all in series';});
+      }
+    },0);
+  }
+
   delBtn.addEventListener('click',function(){
-    var msg=isRecurring?'Delete this occurrence only?':'Delete this task?';
-    if(!confirm(msg))return;
-    if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(taskId);
-    var tasks2=lsGet(TK);delete tasks2[taskId];lsSet(TK,tasks2);
-    FB.deleteTask(taskId);
+    var tasks2=lsGet(TK);
+    if(isRecurring&&scope==='all'){
+      var groupId=t.recurrenceGroupId;
+      var groupIds=Object.keys(tasks2).filter(function(k){return tasks2[k].recurrenceGroupId===groupId;});
+      var msg='Delete all '+groupIds.length+' occurrences in this series? This cannot be undone.';
+      if(!confirm(msg))return;
+      groupIds.forEach(function(k){
+        if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(k);
+        FB.deleteTask(k);
+        delete tasks2[k];
+      });
+    } else {
+      var msg=isRecurring?'Delete this occurrence only? (Other occurrences remain)':'Delete this task?';
+      if(!confirm(msg))return;
+      if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(taskId);
+      FB.deleteTask(taskId);
+      delete tasks2[taskId];
+    }
+    lsSet(TK,tasks2);
+    // Sync in-memory tasks object
+    Object.keys(tasks).forEach(function(k){if(!tasks2[k])delete tasks[k];});
     closePopover();buildGrid();
     if(currentTab==='tasks')renderTasks();
   });
@@ -2582,11 +2615,38 @@ function renderTasks(){
     });
 
     del.addEventListener('click',function(){
-      var msg=t.recurrence?'Delete this occurrence only? (Other occurrences remain)':'Delete this task?';
-      if(!confirm(msg))return;
-      if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(t.id);
-      var tasks2=lsGet(TK);delete tasks2[t.id];lsSet(TK,tasks2);
-      FB.deleteTask(t.id);
+      var tasks2=lsGet(TK);
+      if(t.recurrenceGroupId){
+        // Ask user: this occurrence or entire series?
+        var groupIds=Object.keys(tasks2).filter(function(k){return tasks2[k].recurrenceGroupId===t.recurrenceGroupId;});
+        var choice=confirm(
+          'Delete recurring task:\n\n'+
+          'OK  → Delete ALL '+groupIds.length+' occurrences in this series\n'+
+          'Cancel → Delete this occurrence only'
+        );
+        if(choice){
+          // Delete all in series
+          groupIds.forEach(function(k){
+            if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(k);
+            FB.deleteTask(k);
+            delete tasks2[k];
+          });
+        } else {
+          // Delete this occurrence only
+          if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(t.id);
+          FB.deleteTask(t.id);
+          delete tasks2[t.id];
+        }
+      } else {
+        if(!confirm('Delete this task?'))return;
+        if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(t.id);
+        FB.deleteTask(t.id);
+        delete tasks2[t.id];
+      }
+      lsSet(TK,tasks2);
+      // Sync in-memory tasks object
+      var allTasks=lsGet(TK);
+      Object.keys(tasks).forEach(function(k){if(!allTasks[k])delete tasks[k];});
       card.remove();
       buildGrid();
     });
