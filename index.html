@@ -759,8 +759,125 @@ footer strong{color:rgba(255,253,245,0.85)}
 }
 
 /* ══════════════════════════════════════════════
-   GAMIFICATION — Tasks Section
+   REWARDS TAB
    ══════════════════════════════════════════════ */
+
+/* Status card */
+.rwd-status-card{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 100%);
+  border-radius:14px;padding:18px 20px;margin-bottom:18px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;box-shadow:0 4px 18px rgba(139,105,20,.3)}
+.rwd-status-left{display:flex;align-items:center;gap:14px;flex:1;min-width:200px}
+.rwd-status-icon{font-size:40px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25))}
+.rwd-status-level{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;
+  color:white;margin-bottom:3px}
+.rwd-status-xp{font-size:12px;color:rgba(255,253,245,.8);margin-bottom:7px}
+.rwd-status-bar-wrap{width:180px;height:8px;background:rgba(255,255,255,.25);
+  border-radius:999px;overflow:hidden}
+.rwd-status-bar{height:8px;background:white;border-radius:999px;
+  transition:width .6s cubic-bezier(.34,1.56,.64,1)}
+.rwd-status-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rwd-stat-pill{display:flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.18);border-radius:8px;padding:7px 11px}
+.rwd-stat-pill-icon{font-size:14px}
+.rwd-stat-pill-val{font-family:'Playfair Display',serif;font-size:16px;
+  font-weight:700;color:white}
+.rwd-stat-pill-lbl{font-size:10px;font-weight:600;color:rgba(255,253,245,.7);
+  text-transform:uppercase;letter-spacing:.07em}
+.rwd-reset-btn{font-family:DM Sans,sans-serif;font-size:11px;font-weight:700;
+  background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);
+  border-radius:7px;padding:7px 13px;color:white;cursor:pointer;transition:all .15s}
+.rwd-reset-btn:hover{background:rgba(255,82,82,.35);border-color:rgba(255,82,82,.6)}
+
+/* Section wrapper */
+.rwd-section{background:white;border:1.5px solid var(--gp);border-radius:12px;
+  padding:16px 18px;margin-bottom:16px;box-shadow:0 2px 8px var(--sg)}
+.rwd-section-head{display:flex;align-items:flex-start;justify-content:space-between;
+  gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.rwd-section-title{font-family:'Playfair Display',serif;font-size:16px;
+  font-weight:700;color:var(--gd)}
+.rwd-section-sub{font-size:12px;color:var(--inkl);margin-top:3px;line-height:1.5}
+
+/* Save / add buttons */
+.rwd-save-btn{font-family:DM Sans,sans-serif;font-size:12px;font-weight:700;
+  background:var(--gm);border:none;border-radius:8px;padding:8px 16px;
+  color:white;cursor:pointer;transition:background .15s;white-space:nowrap}
+.rwd-save-btn:hover{background:var(--gd)}
+.rwd-add-btn{font-family:DM Sans,sans-serif;font-size:12px;font-weight:700;
+  background:rgba(91,155,213,.12);border:1.5px solid rgba(91,155,213,.4);
+  border-radius:8px;padding:8px 14px;color:#185FA5;cursor:pointer;transition:all .15s}
+.rwd-add-btn:hover{background:rgba(91,155,213,.22)}
+
+/* XP grid */
+.rwd-xp-grid{display:flex;flex-direction:column;gap:8px}
+.rwd-xp-row{display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:9px 12px;background:var(--gc);border-radius:8px;
+  border:1px solid var(--gp)}
+.rwd-bonus-row{background:#F5F0FF;border-color:rgba(155,89,182,.2)}
+.rwd-xp-label{display:flex;align-items:center;gap:8px;font-size:13px;
+  font-weight:600;color:var(--inkm);flex:1;min-width:0}
+.rwd-xp-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.rwd-xp-input-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.rwd-inp{font-family:DM Sans,sans-serif;font-size:14px;font-weight:700;
+  color:var(--gd);background:white;border:1.5px solid var(--gm);
+  border-radius:7px;padding:5px 9px;width:72px;outline:none;text-align:center}
+.rwd-inp:focus{border-color:var(--gd);box-shadow:0 0 0 3px rgba(196,148,42,.15)}
+.rwd-xp-unit{font-size:12px;font-weight:700;color:var(--inkl)}
+.rwd-save-msg{font-size:12px;font-weight:600;margin-top:9px;min-height:18px;
+  transition:opacity .3s}
+
+/* Levels table */
+.rwd-levels-table{width:100%;border-collapse:collapse}
+.rwd-levels-table th{font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--inkl);padding:6px 8px;text-align:left;
+  border-bottom:2px solid var(--gp)}
+.rwd-levels-table td{padding:6px 6px;vertical-align:middle;
+  border-bottom:1px solid var(--gc)}
+.rwd-levels-table tr:last-child td{border-bottom:none}
+.rwd-level-num{font-size:11px;font-weight:700;color:var(--inkl);
+  text-align:center;min-width:28px}
+.rwd-inp-sm{font-family:DM Sans,sans-serif;font-size:13px;font-weight:600;
+  color:var(--ink);background:var(--gc);border:1.5px solid var(--gp);
+  border-radius:6px;padding:5px 8px;outline:none;width:100%}
+.rwd-inp-sm:focus{border-color:var(--gm);background:white}
+.rwd-inp-icon{width:52px;text-align:center;font-size:18px;cursor:pointer}
+.rwd-inp-xp{width:78px;text-align:center;font-weight:700;color:var(--gd)}
+.rwd-inp-xp:disabled{background:#f0f0f0;color:var(--inkl);cursor:default}
+.rwd-del-btn{background:transparent;border:none;cursor:pointer;font-size:15px;
+  padding:4px 6px;border-radius:5px;color:var(--inkl);transition:all .15s}
+.rwd-del-btn:hover{background:#FFE0E0;color:#E85252}
+.rwd-max-note{font-size:10px;color:var(--inkl);font-style:italic}
+
+/* Levels preview */
+.rwd-preview-list{display:flex;flex-direction:column;gap:8px}
+.rwd-preview-row{display:flex;align-items:center;gap:10px;padding:10px 14px;
+  border-radius:9px;border:1.5px solid var(--gp);background:var(--gc);
+  transition:border-color .15s}
+.rwd-preview-row.current-level{border-color:var(--gm);
+  background:linear-gradient(90deg,rgba(196,148,42,.08),rgba(232,184,75,.04))}
+.rwd-preview-icon{font-size:20px;width:28px;text-align:center}
+.rwd-preview-body{flex:1;min-width:0}
+.rwd-preview-name{font-family:'Playfair Display',serif;font-size:14px;
+  font-weight:700;color:var(--gd)}
+.rwd-preview-range{font-size:11px;color:var(--inkl);margin-top:1px}
+.rwd-preview-bar-wrap{width:120px;height:6px;background:rgba(196,148,42,.15);
+  border-radius:999px;overflow:hidden}
+.rwd-preview-bar{height:6px;border-radius:999px;background:var(--gm)}
+.rwd-preview-badge{font-size:10px;font-weight:700;padding:2px 8px;
+  border-radius:999px;background:var(--gm);color:white;white-space:nowrap}
+
+/* Mobile */
+@media(max-width:640px){
+  .rwd-status-card{padding:14px 14px}
+  .rwd-status-icon{font-size:30px}
+  .rwd-status-level{font-size:15px}
+  .rwd-status-bar-wrap{width:130px}
+  .rwd-xp-label span:last-child{font-size:12px}
+  .rwd-inp{width:60px}
+  .rwd-preview-bar-wrap{display:none}
+  .rwd-section{padding:13px 13px}
+}
+</style>
 
 /* ── HUD bar (sits between header and gcal/search) ── */
 .gami-hud{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
@@ -903,6 +1020,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   <button class="tab-btn" data-tab="planner">📅 Planner</button>
   <button class="tab-btn" data-tab="tasks">✅ Tasks</button>
   <button class="tab-btn" data-tab="notes">📓 Notes</button>
+  <button class="tab-btn" data-tab="rewards">🎮 Rewards</button>
 </nav>
 
 <!-- DASHBOARD TAB -->
@@ -1060,7 +1178,136 @@ footer strong{color:rgba(255,253,245,0.85)}
   </div>
 </div>
 
-<footer><strong>CD Scheduler</strong> · Dashboard · Planner · Tasks · Notes · Sync across all devices</footer>
+<!-- REWARDS TAB -->
+<div id="tab-rewards" class="tab-panel">
+  <div class="sw">
+
+    <!-- ── Current Status Card ── -->
+    <div class="sh">
+      <div class="st">🎮 Rewards & Customisation</div>
+    </div>
+
+    <div class="rwd-status-card" id="rwdStatusCard">
+      <div class="rwd-status-left">
+        <div class="rwd-status-icon" id="rwdStatusIcon">🌱</div>
+        <div>
+          <div class="rwd-status-level" id="rwdStatusLevel">Level 1 — Beginner</div>
+          <div class="rwd-status-xp" id="rwdStatusXp">0 XP · 0 / 50 to next level</div>
+          <div class="rwd-status-bar-wrap">
+            <div class="rwd-status-bar" id="rwdStatusBar" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="rwd-status-right">
+        <div class="rwd-stat-pill">
+          <span class="rwd-stat-pill-icon">🔥</span>
+          <span class="rwd-stat-pill-val" id="rwdStreakVal">0</span>
+          <span class="rwd-stat-pill-lbl">day streak</span>
+        </div>
+        <div class="rwd-stat-pill">
+          <span class="rwd-stat-pill-icon">✅</span>
+          <span class="rwd-stat-pill-val" id="rwdDoneVal">0</span>
+          <span class="rwd-stat-pill-lbl">completed</span>
+        </div>
+        <button class="rwd-reset-btn" id="rwdResetBtn" title="Reset all XP">↺ Reset XP</button>
+      </div>
+    </div>
+
+    <!-- ── XP Point Values ── -->
+    <div class="rwd-section">
+      <div class="rwd-section-head">
+        <div>
+          <div class="rwd-section-title">⚡ XP Point Values</div>
+          <div class="rwd-section-sub">How many XP each completed task earns. Changes apply immediately.</div>
+        </div>
+        <button class="rwd-save-btn" id="rwdSaveXp">Save XP Settings</button>
+      </div>
+
+      <div class="rwd-xp-grid">
+        <div class="rwd-xp-row">
+          <div class="rwd-xp-label">
+            <span class="rwd-xp-dot" style="background:#E85252"></span>
+            <span>🔴 High Priority</span>
+          </div>
+          <div class="rwd-xp-input-wrap">
+            <input type="number" class="rwd-inp" id="xpHigh" min="0" max="999" value="30">
+            <span class="rwd-xp-unit">XP</span>
+          </div>
+        </div>
+        <div class="rwd-xp-row">
+          <div class="rwd-xp-label">
+            <span class="rwd-xp-dot" style="background:#C4942A"></span>
+            <span>🟡 Medium Priority</span>
+          </div>
+          <div class="rwd-xp-input-wrap">
+            <input type="number" class="rwd-inp" id="xpMedium" min="0" max="999" value="20">
+            <span class="rwd-xp-unit">XP</span>
+          </div>
+        </div>
+        <div class="rwd-xp-row">
+          <div class="rwd-xp-label">
+            <span class="rwd-xp-dot" style="background:#5CB85C"></span>
+            <span>🟢 Low Priority</span>
+          </div>
+          <div class="rwd-xp-input-wrap">
+            <input type="number" class="rwd-inp" id="xpLow" min="0" max="999" value="10">
+            <span class="rwd-xp-unit">XP</span>
+          </div>
+        </div>
+        <div class="rwd-xp-row rwd-bonus-row">
+          <div class="rwd-xp-label">
+            <span class="rwd-xp-dot" style="background:#5B9BD5"></span>
+            <span>📅 Bonus: completed on due date</span>
+          </div>
+          <div class="rwd-xp-input-wrap">
+            <input type="number" class="rwd-inp" id="xpToday" min="0" max="999" value="5">
+            <span class="rwd-xp-unit">XP</span>
+          </div>
+        </div>
+        <div class="rwd-xp-row rwd-bonus-row">
+          <div class="rwd-xp-label">
+            <span class="rwd-xp-dot" style="background:#9B59B6"></span>
+            <span>⚡ Bonus: completed before due date</span>
+          </div>
+          <div class="rwd-xp-input-wrap">
+            <input type="number" class="rwd-inp" id="xpEarly" min="0" max="999" value="10">
+            <span class="rwd-xp-unit">XP</span>
+          </div>
+        </div>
+      </div>
+      <div class="rwd-save-msg" id="rwdXpMsg"></div>
+    </div>
+
+    <!-- ── Levels Editor ── -->
+    <div class="rwd-section">
+      <div class="rwd-section-head">
+        <div>
+          <div class="rwd-section-title">🏆 Level Thresholds</div>
+          <div class="rwd-section-sub">Edit level names, icons and XP thresholds. Each level's start equals the previous level's end.</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="rwd-add-btn" id="rwdAddLevel">＋ Add Level</button>
+          <button class="rwd-save-btn" id="rwdSaveLevels">Save Levels</button>
+        </div>
+      </div>
+
+      <div id="rwdLevelsTable">
+        <!-- Rendered by JS -->
+      </div>
+      <div class="rwd-save-msg" id="rwdLevelsMsg"></div>
+    </div>
+
+    <!-- ── Levels Preview ── -->
+    <div class="rwd-section">
+      <div class="rwd-section-title" style="margin-bottom:12px">📊 Level Progression Preview</div>
+      <div id="rwdLevelsPreview"><!-- Rendered by JS --></div>
+    </div>
+
+  </div>
+</div>
+
+<footer><strong>CD Scheduler</strong> · Dashboard · Planner · Tasks · Notes · Rewards · Sync across all devices</footer>
+
 </div><!-- #app -->
 
 <!-- ══════════════════════════════════════════════════════
@@ -1151,6 +1398,7 @@ function switchTab(name){
   currentTab=name;
   if(name==='dashboard')renderDashboard();
   if(name==='tasks'){renderTasks();gamiRenderHud();}
+  if(name==='rewards')renderRewards();
   if(name==='notes')renderNotes();
   if(name==='planner'){buildGrid();applyPlannerLayout();}
 }
@@ -4342,7 +4590,210 @@ function gamiConfetti(){
 renderTasks();
 renderNotes();
 renderDashboard();
+
+// ════════════════════════════════════════════════════════
+// REWARDS TAB — live editor for XP values & levels
+// ════════════════════════════════════════════════════════
+
+var GCK = 'cds_gami_cfg_v1';
+
+function gamiCfgGet(){
+  try{
+    var c=JSON.parse(localStorage.getItem(GCK)||'null');
+    if(c&&c.xp&&c.levels) return c;
+  }catch(e){}
+  return{
+    xp:{high:30,medium:20,low:10,today:5,early:10},
+    levels:[
+      {lvl:1,min:0,   max:50,   name:'Beginner',  icon:'🌱'},
+      {lvl:2,min:50,  max:150,  name:'Focused',   icon:'⚡'},
+      {lvl:3,min:150, max:300,  name:'Productive',icon:'🚀'},
+      {lvl:4,min:300, max:500,  name:'Achiever',  icon:'🏆'},
+      {lvl:5,min:500, max:800,  name:'Expert',    icon:'🔥'},
+      {lvl:6,min:800, max:1200, name:'Master',    icon:'⭐'},
+      {lvl:7,min:1200,max:1800, name:'Elite',     icon:'💎'},
+      {lvl:8,min:1800,max:9999, name:'Legend',    icon:'👑'}
+    ]
+  };
+}
+function gamiCfgSet(c){try{localStorage.setItem(GCK,JSON.stringify(c));}catch(e){}}
+
+function gamiApplyCfg(){
+  var c=gamiCfgGet();
+  GAMI_XP.high=c.xp.high; GAMI_XP.medium=c.xp.medium; GAMI_XP.low=c.xp.low;
+  GAMI_XP.today=c.xp.today; GAMI_XP.early=c.xp.early;
+  GAMI_LEVELS.length=0;
+  c.levels.forEach(function(l){GAMI_LEVELS.push(l);});
+}
+gamiApplyCfg();
+
+function rwdMsg(elId,text,ok){
+  var el=document.getElementById(elId); if(!el) return;
+  el.textContent=text; el.style.color=ok?'#2E7D32':'#E85252'; el.style.opacity=1;
+  setTimeout(function(){el.style.opacity=0;},2400);
+}
+
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderRewards(){
+  var cfg=gamiCfgGet();
+  var g=gamiGet();
+  var lvl=gamiGetLevel(g.xp);
+  var nextLvl=GAMI_LEVELS[Math.min(lvl.lvl,GAMI_LEVELS.length-1)];
+  var pct=nextLvl.max===9999?100:Math.round(((g.xp-lvl.min)/(nextLvl.max-lvl.min))*100);
+  pct=Math.max(0,Math.min(100,pct));
+  var streak=gamiStreak();
+  var done=Object.keys(g.completedIds||{}).length;
+
+  // Status card
+  var si=document.getElementById('rwdStatusIcon'); if(si) si.textContent=lvl.icon;
+  var sl=document.getElementById('rwdStatusLevel'); if(sl) sl.textContent='Level '+lvl.lvl+' — '+lvl.name;
+  var sx=document.getElementById('rwdStatusXp'); if(sx) sx.textContent=g.xp+' XP total · '+(nextLvl.max===9999?'Max level reached! 👑':(g.xp-lvl.min)+' / '+(nextLvl.max-lvl.min)+' to next level');
+  var sb=document.getElementById('rwdStatusBar'); if(sb) sb.style.width=pct+'%';
+  var sv=document.getElementById('rwdStreakVal'); if(sv) sv.textContent=streak;
+  var dv=document.getElementById('rwdDoneVal');  if(dv) dv.textContent=done;
+
+  // XP inputs from live values
+  var xpMap={high:'xpHigh',medium:'xpMedium',low:'xpLow',today:'xpToday',early:'xpEarly'};
+  Object.keys(xpMap).forEach(function(k){var el=document.getElementById(xpMap[k]);if(el)el.value=GAMI_XP[k];});
+
+  rwdRenderLevelsTable(cfg.levels);
+  rwdRenderPreview(g.xp);
+
+  // Save XP
+  var saveXpBtn=document.getElementById('rwdSaveXp');
+  if(saveXpBtn) saveXpBtn.onclick=function(){
+    var c=gamiCfgGet();
+    c.xp.high  =Math.max(0,parseInt(document.getElementById('xpHigh').value)||0);
+    c.xp.medium=Math.max(0,parseInt(document.getElementById('xpMedium').value)||0);
+    c.xp.low   =Math.max(0,parseInt(document.getElementById('xpLow').value)||0);
+    c.xp.today =Math.max(0,parseInt(document.getElementById('xpToday').value)||0);
+    c.xp.early =Math.max(0,parseInt(document.getElementById('xpEarly').value)||0);
+    gamiCfgSet(c); gamiApplyCfg(); gamiRenderHud();
+    rwdMsg('rwdXpMsg','✓ XP values saved and applied immediately!',true);
+  };
+
+  // Save Levels
+  var saveLvlBtn=document.getElementById('rwdSaveLevels');
+  if(saveLvlBtn) saveLvlBtn.onclick=function(){
+    var rows=document.querySelectorAll('.rwd-level-row');
+    var levels=[]; var valid=true;
+    rows.forEach(function(row,i){
+      var nameEl=row.querySelector('.rwd-level-name-inp');
+      var iconEl=row.querySelector('.rwd-level-icon-inp');
+      var maxEl =row.querySelector('.rwd-level-max-inp');
+      var name=(nameEl?nameEl.value.trim():'')||('Level '+(i+1));
+      var icon=(iconEl?iconEl.value.trim():'')||'⭐';
+      var maxVal=i===rows.length-1?9999:Math.max(1,parseInt(maxEl?maxEl.value:0)||0);
+      if(i>0&&levels.length>0&&maxVal<=levels[i-1].min) valid=false;
+      levels.push({lvl:i+1,min:i===0?0:levels[i-1].max,max:maxVal,name:name,icon:icon});
+    });
+    if(!valid){rwdMsg('rwdLevelsMsg','⚠ Each XP threshold must be higher than the previous.',false);return;}
+    var c=gamiCfgGet(); c.levels=levels;
+    gamiCfgSet(c); gamiApplyCfg(); gamiRenderHud();
+    rwdRenderPreview(g.xp);
+    rwdMsg('rwdLevelsMsg','✓ Levels saved and applied immediately!',true);
+  };
+
+  // Add Level
+  var addLvlBtn=document.getElementById('rwdAddLevel');
+  if(addLvlBtn) addLvlBtn.onclick=function(){
+    var c=gamiCfgGet();
+    var last=c.levels[c.levels.length-1];
+    var newMin=last.min+200;
+    c.levels[c.levels.length-1].max=newMin;
+    c.levels.push({lvl:c.levels.length+1,min:newMin,max:9999,name:'New Level',icon:'🌟'});
+    c.levels.forEach(function(l,i){l.lvl=i+1;});
+    gamiCfgSet(c); gamiApplyCfg();
+    rwdRenderLevelsTable(c.levels); rwdRenderPreview(g.xp);
+    rwdMsg('rwdLevelsMsg','Level added — edit the name, icon and XP threshold, then Save Levels.',true);
+  };
+
+  // Reset XP
+  var resetBtn=document.getElementById('rwdResetBtn');
+  if(resetBtn) resetBtn.onclick=function(){
+    if(!confirm('Reset all XP and progress to 0? This cannot be undone.')) return;
+    var g2=gamiGet(); g2.xp=0; g2.completedIds={};
+    gamiSet(g2); gamiRenderHud(); renderRewards();
+  };
+}
+
+function rwdRenderLevelsTable(levels){
+  var wrap=document.getElementById('rwdLevelsTable'); if(!wrap) return;
+  var html='<table class="rwd-levels-table"><thead><tr>'+
+    '<th>#</th><th>Icon</th><th>Level Name</th><th>Starts at XP</th><th>Ends at XP</th><th></th>'+
+    '</tr></thead><tbody>';
+  levels.forEach(function(l,i){
+    var isLast=i===levels.length-1;
+    html+='<tr class="rwd-level-row">'+
+      '<td><span class="rwd-level-num">'+l.lvl+'</span></td>'+
+      '<td><input class="rwd-inp-sm rwd-inp-icon rwd-level-icon-inp" value="'+escHtml(l.icon)+'" maxlength="4" title="Emoji icon"></td>'+
+      '<td><input class="rwd-inp-sm rwd-level-name-inp" value="'+escHtml(l.name)+'" placeholder="Level name" style="min-width:110px"></td>'+
+      '<td><input class="rwd-inp-sm rwd-inp-xp" value="'+l.min+'" disabled></td>'+
+      '<td>'+(isLast?'<span class="rwd-max-note">∞ max</span>':
+        '<input class="rwd-inp-sm rwd-inp-xp rwd-level-max-inp" type="number" value="'+l.max+'" min="1">')+
+      '</td>'+
+      '<td>'+(i===0?'':'<button class="rwd-del-btn rwd-del-level" title="Delete">🗑</button>')+'</td>'+
+    '</tr>';
+  });
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+
+  // Delete level
+  wrap.querySelectorAll('.rwd-del-level').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var allRows=Array.from(wrap.querySelectorAll('.rwd-level-row'));
+      var idx=allRows.indexOf(btn.closest('.rwd-level-row'));
+      if(idx<1) return;
+      var c=gamiCfgGet();
+      c.levels.splice(idx,1);
+      c.levels.forEach(function(l,i){
+        l.lvl=i+1;
+        l.min=i===0?0:c.levels[i-1].max;
+      });
+      c.levels[c.levels.length-1].max=9999;
+      gamiCfgSet(c); gamiApplyCfg();
+      rwdRenderLevelsTable(c.levels);
+      rwdRenderPreview(gamiGet().xp);
+    });
+  });
+
+  // Live-update "Starts at" when max changes
+  wrap.querySelectorAll('.rwd-level-max-inp').forEach(function(inp,i){
+    inp.addEventListener('input',function(){
+      var starts=Array.from(wrap.querySelectorAll('.rwd-inp-xp[disabled]'));
+      if(starts[i+1]) starts[i+1].value=inp.value||'';
+    });
+  });
+}
+
+function rwdRenderPreview(currentXp){
+  var wrap=document.getElementById('rwdLevelsPreview'); if(!wrap) return;
+  var html='<div class="rwd-preview-list">';
+  GAMI_LEVELS.forEach(function(l){
+    var isCurrent=currentXp>=l.min&&(l.max===9999||currentXp<l.max);
+    var reached=currentXp>=l.max&&l.max!==9999;
+    var pct=reached?100:(isCurrent&&l.max!==9999?Math.min(100,Math.round(((currentXp-l.min)/(l.max-l.min))*100)):0);
+    var range=l.max===9999?(l.min+' XP — ∞'):(l.min+' – '+l.max+' XP');
+    html+='<div class="rwd-preview-row'+(isCurrent?' current-level':'')+'">'+
+      '<div class="rwd-preview-icon">'+l.icon+'</div>'+
+      '<div class="rwd-preview-body">'+
+        '<div class="rwd-preview-name">Level '+l.lvl+' — '+escHtml(l.name)+'</div>'+
+        '<div class="rwd-preview-range">'+range+'</div>'+
+      '</div>'+
+      '<div class="rwd-preview-bar-wrap"><div class="rwd-preview-bar" style="width:'+pct+'%"></div></div>'+
+      (isCurrent?'<div class="rwd-preview-badge">◀ You are here</div>':
+       reached?'<div class="rwd-preview-badge" style="background:#5CB85C">✓ Done</div>':'')+
+    '</div>';
+  });
+  html+='</div>';
+  wrap.innerHTML=html;
+}
+
 gamiRenderHud();
+
 
 // ════════════════════════════════════════════════════════
 // GOOGLE CALENDAR SYNC
