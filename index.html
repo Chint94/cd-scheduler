@@ -4331,54 +4331,55 @@ function rwdMsg(elId,text,ok){
 }
 
 function renderRewards(){
-  var cfg=gamiCfgGet();var g=gamiGet();
+  var g=gamiGet();
   var lvl=gamiGetLevel(g.xp);
   var nextLvl=GAMI_LEVELS[Math.min(lvl.lvl,GAMI_LEVELS.length-1)];
   var pct=nextLvl.max===9999?100:Math.round(((g.xp-lvl.min)/(nextLvl.max-lvl.min))*100);
   pct=Math.max(0,Math.min(100,pct));
-  var streak=gamiStreak();var done=Object.keys(g.completedIds||{}).length;
-  var el=function(id){return document.getElementById(id);};
-  if(el('rwdStatusIcon'))  el('rwdStatusIcon').textContent=lvl.icon;
-  if(el('rwdStatusLevel')) el('rwdStatusLevel').textContent='Level '+lvl.lvl+' — '+lvl.name;
-  if(el('rwdStatusXp'))    el('rwdStatusXp').textContent=g.xp+' XP total · '+(nextLvl.max===9999?'Max level reached! 👑':(g.xp-lvl.min)+' / '+(nextLvl.max-lvl.min)+' to next level');
-  if(el('rwdStatusBar'))   el('rwdStatusBar').style.width=pct+'%';
-  if(el('rwdStreakVal'))    el('rwdStreakVal').textContent=streak;
-  if(el('rwdDoneVal'))     el('rwdDoneVal').textContent=done;
-  var xpMap={high:'xpHigh',medium:'xpMedium',low:'xpLow',today:'xpToday',early:'xpEarly'};
-  Object.keys(xpMap).forEach(function(k){var e=el(xpMap[k]);if(e)e.value=GAMI_XP[k];});
-  rwdRenderLevelsTable(cfg.levels);
+  var streak=gamiStreak();
+  var done=Object.keys(g.completedIds||{}).length;
+
+  // Status card
+  var si=document.getElementById('rwdStatusIcon');   if(si) si.textContent=lvl.icon;
+  var sl=document.getElementById('rwdStatusLevel');  if(sl) sl.textContent='Level '+lvl.lvl+' — '+lvl.name;
+  var sx=document.getElementById('rwdStatusXp');     if(sx) sx.textContent=g.xp+' XP total · '+(nextLvl.max===9999?'Max level reached! 👑':(g.xp-lvl.min)+' / '+(nextLvl.max-lvl.min)+' to next level');
+  var sb=document.getElementById('rwdStatusBar');    if(sb) sb.style.width=pct+'%';
+  var sv=document.getElementById('rwdStreakVal');    if(sv) sv.textContent=streak;
+  var dv=document.getElementById('rwdDoneVal');      if(dv) dv.textContent=done;
+
+  // XP inputs — always reflect live GAMI_XP
+  var xpFields={high:'xpHigh',medium:'xpMedium',low:'xpLow',today:'xpToday',early:'xpEarly'};
+  Object.keys(xpFields).forEach(function(k){
+    var e=document.getElementById(xpFields[k]);if(e)e.value=GAMI_XP[k];
+  });
+
+  // Table and preview — always read from live GAMI_LEVELS
+  rwdRenderLevelsTable(GAMI_LEVELS);
   rwdRenderPreview(g.xp);
+}
 
-  var saveXpBtn=el('rwdSaveXp');
-  if(saveXpBtn)saveXpBtn.onclick=function(){
+// ── All button handlers wired ONCE at startup ─────────────────────────────────
+function rwdInitHandlers(){
+  // Save XP
+  var saveXpBtn=document.getElementById('rwdSaveXp');
+  if(saveXpBtn) saveXpBtn.addEventListener('click',function(){
     var c=gamiCfgGet();
-    c.xp.high  =Math.max(0,parseInt(el('xpHigh').value)||0);
-    c.xp.medium=Math.max(0,parseInt(el('xpMedium').value)||0);
-    c.xp.low   =Math.max(0,parseInt(el('xpLow').value)||0);
-    c.xp.today =Math.max(0,parseInt(el('xpToday').value)||0);
-    c.xp.early =Math.max(0,parseInt(el('xpEarly').value)||0);
+    c.xp.high  =Math.max(0,parseInt(document.getElementById('xpHigh').value)||0);
+    c.xp.medium=Math.max(0,parseInt(document.getElementById('xpMedium').value)||0);
+    c.xp.low   =Math.max(0,parseInt(document.getElementById('xpLow').value)||0);
+    c.xp.today =Math.max(0,parseInt(document.getElementById('xpToday').value)||0);
+    c.xp.early =Math.max(0,parseInt(document.getElementById('xpEarly').value)||0);
     gamiCfgSet(c);
-    gamiApplyCfg(); // GAMI_XP is now updated
-    // Update XP input fields to reflect saved values
-    var xpMap2={high:'xpHigh',medium:'xpMedium',low:'xpLow',today:'xpToday',early:'xpEarly'};
-    Object.keys(xpMap2).forEach(function(k){var e=el(xpMap2[k]);if(e)e.value=GAMI_XP[k];});
-    // Refresh status card and preview
-    var g2=gamiGet();
-    var lvl2=gamiGetLevel(g2.xp);
-    var nextLvl2=GAMI_LEVELS[Math.min(lvl2.lvl,GAMI_LEVELS.length-1)];
-    var pct2=nextLvl2.max===9999?100:Math.round(((g2.xp-lvl2.min)/(nextLvl2.max-lvl2.min))*100);
-    pct2=Math.max(0,Math.min(100,pct2));
-    if(el('rwdStatusIcon'))  el('rwdStatusIcon').textContent=lvl2.icon;
-    if(el('rwdStatusLevel')) el('rwdStatusLevel').textContent='Level '+lvl2.lvl+' — '+lvl2.name;
-    if(el('rwdStatusXp'))    el('rwdStatusXp').textContent=g2.xp+' XP total · '+(nextLvl2.max===9999?'Max level reached! 👑':(g2.xp-lvl2.min)+' / '+(nextLvl2.max-lvl2.min)+' to next level');
-    if(el('rwdStatusBar'))   el('rwdStatusBar').style.width=pct2+'%';
-    rwdRenderPreview(g2.xp);
-    gamiRefreshAll();
+    gamiApplyCfg();
+    renderRewards();        // re-render entire tab from fresh data
+    gamiRenderHud();        // update Tasks HUD
+    renderDashboard();      // update Dashboard
     rwdMsg('rwdXpMsg','✓ XP values saved and applied to all tabs!',true);
-  };
+  });
 
-  var saveLvlBtn=el('rwdSaveLevels');
-  if(saveLvlBtn)saveLvlBtn.onclick=function(){
+  // Save Levels
+  var saveLvlBtn=document.getElementById('rwdSaveLevels');
+  if(saveLvlBtn) saveLvlBtn.addEventListener('click',function(){
     var rows=document.querySelectorAll('.rwd-level-row');
     var levels=[];var valid=true;
     rows.forEach(function(row,i){
@@ -4390,46 +4391,37 @@ function renderRewards(){
       levels.push({lvl:i+1,min:i===0?0:levels[i-1].max,max:maxVal,name:name,icon:icon});
     });
     if(!valid){rwdMsg('rwdLevelsMsg','⚠ Each XP threshold must be higher than the previous.',false);return;}
-    var c=gamiCfgGet();c.levels=levels;
+    var c=gamiCfgGet();
+    c.levels=levels;
     gamiCfgSet(c);
-    gamiApplyCfg(); // GAMI_LEVELS is now updated
-    // Refresh both the table and preview directly from the updated GAMI_LEVELS
-    var g2=gamiGet();
-    var lvl2=gamiGetLevel(g2.xp);
-    var nextLvl2=GAMI_LEVELS[Math.min(lvl2.lvl,GAMI_LEVELS.length-1)];
-    var pct2=nextLvl2.max===9999?100:Math.round(((g2.xp-lvl2.min)/(nextLvl2.max-lvl2.min))*100);
-    pct2=Math.max(0,Math.min(100,pct2));
-    if(el('rwdStatusIcon'))  el('rwdStatusIcon').textContent=lvl2.icon;
-    if(el('rwdStatusLevel')) el('rwdStatusLevel').textContent='Level '+lvl2.lvl+' — '+lvl2.name;
-    if(el('rwdStatusXp'))    el('rwdStatusXp').textContent=g2.xp+' XP total · '+(nextLvl2.max===9999?'Max level reached! 👑':(g2.xp-lvl2.min)+' / '+(nextLvl2.max-lvl2.min)+' to next level');
-    if(el('rwdStatusBar'))   el('rwdStatusBar').style.width=pct2+'%';
-    rwdRenderLevelsTable(GAMI_LEVELS); // re-render table from live GAMI_LEVELS
-    rwdRenderPreview(g2.xp);          // re-render preview from live GAMI_LEVELS
-    gamiRefreshAll();
+    gamiApplyCfg();         // GAMI_LEVELS updated
+    renderRewards();        // re-render entire tab from fresh GAMI_LEVELS
+    gamiRenderHud();        // update Tasks HUD
+    renderDashboard();      // update Dashboard
     rwdMsg('rwdLevelsMsg','✓ Levels saved and applied to all tabs!',true);
-  };
+  });
 
-  var addLvlBtn=el('rwdAddLevel');
-  if(addLvlBtn)addLvlBtn.onclick=function(){
-    var c=gamiCfgGet();var last=c.levels[c.levels.length-1];
+  // Add Level
+  var addLvlBtn=document.getElementById('rwdAddLevel');
+  if(addLvlBtn) addLvlBtn.addEventListener('click',function(){
+    var c=gamiCfgGet();
+    var last=c.levels[c.levels.length-1];
     var newMin=last.min+200;
     c.levels[c.levels.length-1].max=newMin;
     c.levels.push({lvl:c.levels.length+1,min:newMin,max:9999,name:'New Level',icon:'🌟'});
     c.levels.forEach(function(l,i){l.lvl=i+1;});
     gamiCfgSet(c);gamiApplyCfg();
-    rwdRenderLevelsTable(c.levels);
-    rwdRenderPreview(gamiGet().xp);
-    gamiRefreshAll();
+    renderRewards();
     rwdMsg('rwdLevelsMsg','Level added — edit name, icon and XP, then Save Levels.',true);
-  };
+  });
 
-  var resetBtn=el('rwdResetBtn');
-  if(resetBtn)resetBtn.onclick=function(){
+  // Reset XP
+  var resetBtn=document.getElementById('rwdResetBtn');
+  if(resetBtn) resetBtn.addEventListener('click',function(){
     if(!confirm('Reset all XP and progress to 0? This cannot be undone.'))return;
     var g2=gamiGet();g2.xp=0;g2.completedIds={};gamiSet(g2);
-    gamiRefreshAll();
-    renderRewards();
-  };
+    renderRewards();gamiRenderHud();renderDashboard();
+  });
 }
 
 function rwdRenderLevelsTable(levels){
@@ -4489,6 +4481,7 @@ renderTasks();
 renderNotes();
 renderDashboard();
 gamiRenderHud();
+rwdInitHandlers();
 // ════════════════════════════════════════════════════════
 // GOOGLE CALENDAR SYNC
 // ════════════════════════════════════════════════════════
