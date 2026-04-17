@@ -4006,9 +4006,11 @@ setInterval(function(){if(currentTab==='tasks')renderTasks(); if(currentTab==='d
 
   function isMobileLikeBrowser() {
     var ua = navigator.userAgent || '';
+    // Screen-size check removed — small laptop screens were incorrectly
+    // triggering signInWithRedirect, causing a silent login loop on devices
+    // where third-party cookies are restricted.
     return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
-           (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
-           Math.min(window.innerWidth || 0, window.innerHeight || 0) < 820;
+           (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   }
 
   function isFileProtocol() {
