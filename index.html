@@ -18,6 +18,35 @@
     var img=document.getElementById("brandLogo");
     if(img)img.src=L;
   });
+
+// ════════════════════════════════════════════════════════
+// NEWSFEED
+// ════════════════════════════════════════════════════════
+var NEWS_CACHE_KEY='cds_newsfeed_cache_v1';
+var NEWS_FEED_URL='https://thedailybrief.zerodha.com/feed';
+var NEWS_ARCHIVE_URL='https://thedailybrief.zerodha.com/archive';
+var newsState={items:[],selectedId:null,lastLoadedAt:0,lastError:'',isLoading:false};
+function stripTags(html){var d=document.createElement('div');d.innerHTML=html||'';return (d.textContent||d.innerText||'').replace(/\s+/g,' ').trim();}
+function fmtNewsDate(s){var d=new Date(s);if(isNaN(d.getTime())) return '';return d.toLocaleString([], {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+function safeNewsHtml(html){var doc=new DOMParser().parseFromString('<div>'+(html||'')+'</div>','text/html');doc.querySelectorAll('script,noscript,style,form,button,svg,canvas,input,textarea,select').forEach(function(el){el.remove()});doc.querySelectorAll('*').forEach(function(el){Array.from(el.attributes).forEach(function(attr){var n=attr.name.toLowerCase(),v=attr.value||'';if(n.indexOf('on')===0) el.removeAttribute(attr.name);if((n==='src'||n==='href')&&/^javascript:/i.test(v)) el.removeAttribute(attr.name);if(n==='style') el.removeAttribute('style');});if(el.tagName==='A'){el.setAttribute('target','_blank');el.setAttribute('rel','noopener noreferrer');}if(el.tagName==='IMG'){el.setAttribute('loading','lazy');}if(el.tagName==='IFRAME'&&!/spotify|youtube|youtu\.be/i.test(el.getAttribute('src')||'')) el.remove();});return doc.body.innerHTML;}
+function extractArticleHtmlFromPage(html){if(!html) return '';var doc=new DOMParser().parseFromString(html,'text/html');var candidates=['.body.markup','.available-content .body','article .body','article','main article'];for(var i=0;i<candidates.length;i++){var node=doc.querySelector(candidates[i]);if(node&&stripTags(node.innerHTML).length>500) return node.innerHTML;}return '';}
+async function fetchTextWithFallbacks(urls){var lastErr=null;for(var i=0;i<urls.length;i++){try{var res=await fetch(urls[i],{cache:'no-store'});if(!res.ok) throw new Error('HTTP '+res.status);var txt=await res.text();if(txt&&txt.trim()) return txt;}catch(err){lastErr=err;}}throw lastErr||new Error('Fetch failed');}
+async function fetchDailyBriefFeedXML(){return fetchTextWithFallbacks(['https://api.allorigins.win/raw?url='+encodeURIComponent(NEWS_FEED_URL),'https://r.jina.ai/http://thedailybrief.zerodha.com/feed']);}
+async function fetchDailyBriefArchiveHTML(){return fetchTextWithFallbacks(['https://api.allorigins.win/raw?url='+encodeURIComponent(NEWS_ARCHIVE_URL),'https://r.jina.ai/http://thedailybrief.zerodha.com/archive']);}
+async function fetchDailyBriefArticleHTML(url){return fetchTextWithFallbacks(['https://api.allorigins.win/raw?url='+encodeURIComponent(url),'https://r.jina.ai/http://'+url.replace(/^https?:\/\//,'')]);}
+function parseFeedItems(xmlText){var xml=new DOMParser().parseFromString(xmlText,'text/xml');return Array.from(xml.querySelectorAll('item')).slice(0,3).map(function(item,idx){var contentNode=item.getElementsByTagName('content:encoded')[0];var description=item.querySelector('description')?item.querySelector('description').textContent:'';var title=item.querySelector('title')?item.querySelector('title').textContent:'Untitled';var link=item.querySelector('link')?item.querySelector('link').textContent:'';var pubDate=item.querySelector('pubDate')?item.querySelector('pubDate').textContent:'';var guid=item.querySelector('guid')?item.querySelector('guid').textContent:(link||('news-'+idx));var content=contentNode?contentNode.textContent:'';return {id:guid,title:title,link:link,pubDate:pubDate,excerpt:stripTags(description||content).slice(0,240),contentHtml:content||description||'',source:'feed'};}).filter(function(item){return item.link;});}
+function parseArchiveFallback(html){var doc=new DOMParser().parseFromString(html,'text/html');var links=Array.from(doc.querySelectorAll('a[href*="/p/"]'));var seen={},items=[];links.forEach(function(a){var href=a.getAttribute('href')||'';var abs=href.indexOf('http')===0?href:('https://thedailybrief.zerodha.com'+href);if(seen[abs]) return;var title=(a.textContent||'').replace(/\s+/g,' ').trim();if(!title||title.length<8) return;seen[abs]=true;var container=a.parentElement||doc.body;var text=(container.textContent||'').replace(/\s+/g,' ').trim();var excerpt=text&&text!==title?text.replace(title,'').trim():'';items.push({id:abs,title:title,link:abs,pubDate:'',excerpt:excerpt.slice(0,240),contentHtml:'',source:'archive'});});return items.slice(0,3);}
+function saveNewsCache(items){try{localStorage.setItem(NEWS_CACHE_KEY,JSON.stringify({savedAt:Date.now(),items:items}))}catch(e){}}
+function loadNewsCache(){try{var data=JSON.parse(localStorage.getItem(NEWS_CACHE_KEY)||'null');return data&&data.items?data:null;}catch(e){return null;}}
+function setNewsStatus(text){var el=document.getElementById('newsStatus');if(el) el.textContent=text||'';}
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function renderNewsList(){var list=document.getElementById('newsList');if(!list) return;if(!newsState.items.length){list.innerHTML='<div class="news-empty">No recent Daily Brief stories could be loaded yet.</div>';return;}list.innerHTML='';newsState.items.forEach(function(item){var card=document.createElement('button');card.type='button';card.className='news-card'+(item.id===newsState.selectedId?' active':'');card.innerHTML='<h4>'+escapeHtml(item.title)+'</h4><div class="news-meta">'+escapeHtml(fmtNewsDate(item.pubDate)||'Latest story')+'</div><div class="news-excerpt">'+escapeHtml(item.excerpt||'Open to read the full write-up.')+'</div>';card.addEventListener('click',function(){newsState.selectedId=item.id;renderNewsList();renderNewsReader();maybeHydrateSelectedArticle(item);});list.appendChild(card);});}
+function renderNewsReader(){var reader=document.getElementById('newsReader');if(!reader) return;var item=newsState.items.find(function(x){return x.id===newsState.selectedId;})||newsState.items[0];if(!item){reader.innerHTML='<div class="news-empty">No article selected.</div>';return;}newsState.selectedId=item.id;var hasBody=item.contentHtml&&stripTags(item.contentHtml).length>300;var body=hasBody?safeNewsHtml(item.contentHtml):'<div class="news-loading">Loading full article…</div>';reader.innerHTML='<div class="news-reader-head"><h2>'+escapeHtml(item.title)+'</h2><div class="news-reader-sub"><span>'+escapeHtml(fmtNewsDate(item.pubDate)||'Recent Daily Brief story')+'</span><span>Zerodha · The Daily Brief</span></div></div><div class="news-reader-body">'+body+'</div><div class="news-note">Live feed powered from Zerodha's Daily Brief. If direct loading is blocked by the source, the reader falls back to mirrored feed/page access.</div>';}
+async function maybeHydrateSelectedArticle(item){if(!item||(item.contentHtml&&stripTags(item.contentHtml).length>700)) return;try{setNewsStatus('Loading full article…');var pageHtml=await fetchDailyBriefArticleHTML(item.link);var articleHtml=extractArticleHtmlFromPage(pageHtml);if(articleHtml){item.contentHtml=articleHtml;saveNewsCache(newsState.items);renderNewsReader();setNewsStatus('Latest Daily Brief loaded.');return;}setNewsStatus('Loaded list, but full article content is limited by source access.');}catch(err){setNewsStatus('Loaded recent stories, but full article fetch failed right now.');}}
+async function loadNewsfeed(force){if(newsState.isLoading) return;newsState.isLoading=true;var refreshBtn=document.getElementById('newsRefreshBtn');if(refreshBtn) refreshBtn.disabled=true;setNewsStatus('Loading latest Daily Brief stories…');try{var cache=loadNewsCache();if(!force&&cache&&cache.items&&cache.items.length){newsState.items=cache.items;newsState.selectedId=newsState.selectedId||cache.items[0].id;renderNewsList();renderNewsReader();setNewsStatus('Showing cached Daily Brief stories while refreshing…');}var items=[];try{items=parseFeedItems(await fetchDailyBriefFeedXML());}catch(feedErr){}if(!items.length) items=parseArchiveFallback(await fetchDailyBriefArchiveHTML());if(!items.length) throw new Error('No recent articles found');newsState.items=items.slice(0,3);newsState.selectedId=(newsState.items.find(function(x){return x.id===newsState.selectedId;})||newsState.items[0]).id;newsState.lastLoadedAt=Date.now();saveNewsCache(newsState.items);renderNewsList();renderNewsReader();setNewsStatus('Updated '+newsState.items.length+' recent Daily Brief article'+(newsState.items.length>1?'s':'')+'.');maybeHydrateSelectedArticle(newsState.items.find(function(x){return x.id===newsState.selectedId;}));}catch(err){newsState.lastError=(err&&err.message)?err.message:'Unable to load newsfeed';if(!newsState.items.length){var reader=document.getElementById('newsReader');if(reader) reader.innerHTML='<div class="news-error">Unable to load the Daily Brief right now. This can happen when the source or proxy blocks cross-site fetches. Tap Refresh to retry.</div>';var list=document.getElementById('newsList');if(list) list.innerHTML='<div class="news-error">Newsfeed unavailable right now.</div>';}setNewsStatus('Could not refresh live feed right now.');}finally{newsState.isLoading=false;if(refreshBtn) refreshBtn.disabled=false;}}
+function renderNewsfeed(){renderNewsList();renderNewsReader();if(!newsState.items.length) loadNewsfeed(false);}
+var newsRefreshBtn=document.getElementById('newsRefreshBtn');if(newsRefreshBtn) newsRefreshBtn.addEventListener('click',function(){loadNewsfeed(true);});
+
 })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -586,7 +615,7 @@ footer strong{color:rgba(255,253,245,0.85)}
     <img id="brandLogo" src="" alt="CD" style="width:38px;height:38px;object-fit:contain;border-radius:4px;flex-shrink:0;">
     <div style="display:flex;flex-direction:column;justify-content:center;gap:1px;">
       <span class="brand-title">CD Scheduler</span>
-      <span class="brand-sub">Dashboard · Planner · Tasks · Notes</span>
+      <span class="brand-sub">Dashboard · Planner · Tasks · Notes · Newsfeed</span>
     </div>
   </div>
   <div class="header-right">
@@ -611,6 +640,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   <button class="tab-btn" data-tab="planner">📅 Planner</button>
   <button class="tab-btn" data-tab="tasks">✅ Tasks</button>
   <button class="tab-btn" data-tab="notes">📓 Notes</button>
+  <button class="tab-btn" data-tab="newsfeed">📰 Newsfeed</button>
 </nav>
 
 <!-- DASHBOARD TAB -->
@@ -723,7 +753,29 @@ footer strong{color:rgba(255,253,245,0.85)}
   </div>
 </div>
 
-<footer><strong>CD Scheduler</strong> · Dashboard · Planner · Tasks · Notes · Sync across all devices</footer>
+<!-- NEWSFEED TAB -->
+<div id="tab-newsfeed" class="tab-panel">
+  <div class="sw">
+    <div class="sh">
+      <div>
+        <div class="st">Daily Brief Newsfeed</div>
+        <div class="ss">Latest 2–3 live Daily Brief stories by Zerodha, shown in an in-page reader.</div>
+      </div>
+      <button class="btn-add" id="newsRefreshBtn" type="button">↻ Refresh</button>
+    </div>
+    <div class="news-actions">
+      <div class="news-status" id="newsStatus">Loading latest stories…</div>
+    </div>
+    <div class="news-shell">
+      <div class="news-list" id="newsList"></div>
+      <div class="news-reader" id="newsReader">
+        <div class="news-loading">Loading the latest Daily Brief articles…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer><strong>CD Scheduler</strong> · Dashboard · Planner · Tasks · Notes · Newsfeed · Newsfeed · Sync across all devices</footer>
 </div><!-- #app -->
 
 <!-- ══════════════════════════════════════════════════════
@@ -815,6 +867,7 @@ function switchTab(name){
   if(name==='dashboard')renderDashboard();
   if(name==='tasks')renderTasks();
   if(name==='notes')renderNotes();
+  if(name==='newsfeed')renderNewsfeed();
   if(name==='planner'){buildGrid();applyPlannerLayout();}
 }
 document.querySelectorAll('.tab-btn').forEach(function(btn){
@@ -4146,6 +4199,35 @@ setInterval(function(){if(currentTab==='tasks')renderTasks(); if(currentTab==='d
       document.getElementById('syncBadge').style.display = 'none';
     }
   });
+
+
+// ════════════════════════════════════════════════════════
+// NEWSFEED
+// ════════════════════════════════════════════════════════
+var NEWS_CACHE_KEY='cds_newsfeed_cache_v1';
+var NEWS_FEED_URL='https://thedailybrief.zerodha.com/feed';
+var NEWS_ARCHIVE_URL='https://thedailybrief.zerodha.com/archive';
+var newsState={items:[],selectedId:null,lastLoadedAt:0,lastError:'',isLoading:false};
+function stripTags(html){var d=document.createElement('div');d.innerHTML=html||'';return (d.textContent||d.innerText||'').replace(/\s+/g,' ').trim();}
+function fmtNewsDate(s){var d=new Date(s);if(isNaN(d.getTime())) return '';return d.toLocaleString([], {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+function safeNewsHtml(html){var doc=new DOMParser().parseFromString('<div>'+(html||'')+'</div>','text/html');doc.querySelectorAll('script,noscript,style,form,button,svg,canvas,input,textarea,select').forEach(function(el){el.remove()});doc.querySelectorAll('*').forEach(function(el){Array.from(el.attributes).forEach(function(attr){var n=attr.name.toLowerCase(),v=attr.value||'';if(n.indexOf('on')===0) el.removeAttribute(attr.name);if((n==='src'||n==='href')&&/^javascript:/i.test(v)) el.removeAttribute(attr.name);if(n==='style') el.removeAttribute('style');});if(el.tagName==='A'){el.setAttribute('target','_blank');el.setAttribute('rel','noopener noreferrer');}if(el.tagName==='IMG'){el.setAttribute('loading','lazy');}if(el.tagName==='IFRAME'&&!/spotify|youtube|youtu\.be/i.test(el.getAttribute('src')||'')) el.remove();});return doc.body.innerHTML;}
+function extractArticleHtmlFromPage(html){if(!html) return '';var doc=new DOMParser().parseFromString(html,'text/html');var candidates=['.body.markup','.available-content .body','article .body','article','main article'];for(var i=0;i<candidates.length;i++){var node=doc.querySelector(candidates[i]);if(node&&stripTags(node.innerHTML).length>500) return node.innerHTML;}return '';}
+async function fetchTextWithFallbacks(urls){var lastErr=null;for(var i=0;i<urls.length;i++){try{var res=await fetch(urls[i],{cache:'no-store'});if(!res.ok) throw new Error('HTTP '+res.status);var txt=await res.text();if(txt&&txt.trim()) return txt;}catch(err){lastErr=err;}}throw lastErr||new Error('Fetch failed');}
+async function fetchDailyBriefFeedXML(){return fetchTextWithFallbacks(['https://api.allorigins.win/raw?url='+encodeURIComponent(NEWS_FEED_URL),'https://r.jina.ai/http://thedailybrief.zerodha.com/feed']);}
+async function fetchDailyBriefArchiveHTML(){return fetchTextWithFallbacks(['https://api.allorigins.win/raw?url='+encodeURIComponent(NEWS_ARCHIVE_URL),'https://r.jina.ai/http://thedailybrief.zerodha.com/archive']);}
+async function fetchDailyBriefArticleHTML(url){return fetchTextWithFallbacks(['https://api.allorigins.win/raw?url='+encodeURIComponent(url),'https://r.jina.ai/http://'+url.replace(/^https?:\/\//,'')]);}
+function parseFeedItems(xmlText){var xml=new DOMParser().parseFromString(xmlText,'text/xml');return Array.from(xml.querySelectorAll('item')).slice(0,3).map(function(item,idx){var contentNode=item.getElementsByTagName('content:encoded')[0];var description=item.querySelector('description')?item.querySelector('description').textContent:'';var title=item.querySelector('title')?item.querySelector('title').textContent:'Untitled';var link=item.querySelector('link')?item.querySelector('link').textContent:'';var pubDate=item.querySelector('pubDate')?item.querySelector('pubDate').textContent:'';var guid=item.querySelector('guid')?item.querySelector('guid').textContent:(link||('news-'+idx));var content=contentNode?contentNode.textContent:'';return {id:guid,title:title,link:link,pubDate:pubDate,excerpt:stripTags(description||content).slice(0,240),contentHtml:content||description||'',source:'feed'};}).filter(function(item){return item.link;});}
+function parseArchiveFallback(html){var doc=new DOMParser().parseFromString(html,'text/html');var links=Array.from(doc.querySelectorAll('a[href*="/p/"]'));var seen={},items=[];links.forEach(function(a){var href=a.getAttribute('href')||'';var abs=href.indexOf('http')===0?href:('https://thedailybrief.zerodha.com'+href);if(seen[abs]) return;var title=(a.textContent||'').replace(/\s+/g,' ').trim();if(!title||title.length<8) return;seen[abs]=true;var container=a.parentElement||doc.body;var text=(container.textContent||'').replace(/\s+/g,' ').trim();var excerpt=text&&text!==title?text.replace(title,'').trim():'';items.push({id:abs,title:title,link:abs,pubDate:'',excerpt:excerpt.slice(0,240),contentHtml:'',source:'archive'});});return items.slice(0,3);}
+function saveNewsCache(items){try{localStorage.setItem(NEWS_CACHE_KEY,JSON.stringify({savedAt:Date.now(),items:items}))}catch(e){}}
+function loadNewsCache(){try{var data=JSON.parse(localStorage.getItem(NEWS_CACHE_KEY)||'null');return data&&data.items?data:null;}catch(e){return null;}}
+function setNewsStatus(text){var el=document.getElementById('newsStatus');if(el) el.textContent=text||'';}
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function renderNewsList(){var list=document.getElementById('newsList');if(!list) return;if(!newsState.items.length){list.innerHTML='<div class="news-empty">No recent Daily Brief stories could be loaded yet.</div>';return;}list.innerHTML='';newsState.items.forEach(function(item){var card=document.createElement('button');card.type='button';card.className='news-card'+(item.id===newsState.selectedId?' active':'');card.innerHTML='<h4>'+escapeHtml(item.title)+'</h4><div class="news-meta">'+escapeHtml(fmtNewsDate(item.pubDate)||'Latest story')+'</div><div class="news-excerpt">'+escapeHtml(item.excerpt||'Open to read the full write-up.')+'</div>';card.addEventListener('click',function(){newsState.selectedId=item.id;renderNewsList();renderNewsReader();maybeHydrateSelectedArticle(item);});list.appendChild(card);});}
+function renderNewsReader(){var reader=document.getElementById('newsReader');if(!reader) return;var item=newsState.items.find(function(x){return x.id===newsState.selectedId;})||newsState.items[0];if(!item){reader.innerHTML='<div class="news-empty">No article selected.</div>';return;}newsState.selectedId=item.id;var hasBody=item.contentHtml&&stripTags(item.contentHtml).length>300;var body=hasBody?safeNewsHtml(item.contentHtml):'<div class="news-loading">Loading full article…</div>';reader.innerHTML='<div class="news-reader-head"><h2>'+escapeHtml(item.title)+'</h2><div class="news-reader-sub"><span>'+escapeHtml(fmtNewsDate(item.pubDate)||'Recent Daily Brief story')+'</span><span>Zerodha · The Daily Brief</span></div></div><div class="news-reader-body">'+body+'</div><div class="news-note">Live feed powered from Zerodha's Daily Brief. If direct loading is blocked by the source, the reader falls back to mirrored feed/page access.</div>';}
+async function maybeHydrateSelectedArticle(item){if(!item||(item.contentHtml&&stripTags(item.contentHtml).length>700)) return;try{setNewsStatus('Loading full article…');var pageHtml=await fetchDailyBriefArticleHTML(item.link);var articleHtml=extractArticleHtmlFromPage(pageHtml);if(articleHtml){item.contentHtml=articleHtml;saveNewsCache(newsState.items);renderNewsReader();setNewsStatus('Latest Daily Brief loaded.');return;}setNewsStatus('Loaded list, but full article content is limited by source access.');}catch(err){setNewsStatus('Loaded recent stories, but full article fetch failed right now.');}}
+async function loadNewsfeed(force){if(newsState.isLoading) return;newsState.isLoading=true;var refreshBtn=document.getElementById('newsRefreshBtn');if(refreshBtn) refreshBtn.disabled=true;setNewsStatus('Loading latest Daily Brief stories…');try{var cache=loadNewsCache();if(!force&&cache&&cache.items&&cache.items.length){newsState.items=cache.items;newsState.selectedId=newsState.selectedId||cache.items[0].id;renderNewsList();renderNewsReader();setNewsStatus('Showing cached Daily Brief stories while refreshing…');}var items=[];try{items=parseFeedItems(await fetchDailyBriefFeedXML());}catch(feedErr){}if(!items.length) items=parseArchiveFallback(await fetchDailyBriefArchiveHTML());if(!items.length) throw new Error('No recent articles found');newsState.items=items.slice(0,3);newsState.selectedId=(newsState.items.find(function(x){return x.id===newsState.selectedId;})||newsState.items[0]).id;newsState.lastLoadedAt=Date.now();saveNewsCache(newsState.items);renderNewsList();renderNewsReader();setNewsStatus('Updated '+newsState.items.length+' recent Daily Brief article'+(newsState.items.length>1?'s':'')+'.');maybeHydrateSelectedArticle(newsState.items.find(function(x){return x.id===newsState.selectedId;}));}catch(err){newsState.lastError=(err&&err.message)?err.message:'Unable to load newsfeed';if(!newsState.items.length){var reader=document.getElementById('newsReader');if(reader) reader.innerHTML='<div class="news-error">Unable to load the Daily Brief right now. This can happen when the source or proxy blocks cross-site fetches. Tap Refresh to retry.</div>';var list=document.getElementById('newsList');if(list) list.innerHTML='<div class="news-error">Newsfeed unavailable right now.</div>';}setNewsStatus('Could not refresh live feed right now.');}finally{newsState.isLoading=false;if(refreshBtn) refreshBtn.disabled=false;}}
+function renderNewsfeed(){renderNewsList();renderNewsReader();if(!newsState.items.length) loadNewsfeed(false);}
+var newsRefreshBtn=document.getElementById('newsRefreshBtn');if(newsRefreshBtn) newsRefreshBtn.addEventListener('click',function(){loadNewsfeed(true);});
 
 })();
 </script>
