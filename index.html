@@ -757,6 +757,90 @@ footer strong{color:rgba(255,253,245,0.85)}
   .tab-btn{padding:10px 7px;font-size:10px}
   .dash-chart-bar-wrap{height:90px}
 }
+
+/* ══════════════════════════════════════════════
+   GAMIFICATION — Tasks Section
+   ══════════════════════════════════════════════ */
+
+/* ── HUD bar (sits between header and gcal/search) ── */
+.gami-hud{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 100%);
+  border-radius:12px;padding:12px 16px;margin-bottom:13px;
+  box-shadow:0 3px 12px rgba(139,105,20,.25)}
+
+/* Level badge */
+.gami-level{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.gami-level-icon{font-size:22px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.3))}
+.gami-level-info{display:flex;flex-direction:column;gap:1px}
+.gami-level-name{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;
+  color:white;line-height:1.1}
+.gami-level-num{font-size:10px;font-weight:600;color:rgba(255,253,245,.7);
+  text-transform:uppercase;letter-spacing:.07em}
+
+/* XP bar */
+.gami-xp{flex:1;min-width:120px;display:flex;flex-direction:column;gap:4px}
+.gami-xp-row{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.gami-xp-label{font-size:10px;font-weight:700;color:rgba(255,253,245,.8);
+  text-transform:uppercase;letter-spacing:.07em}
+.gami-xp-val{font-size:11px;font-weight:700;color:white}
+.gami-xp-track{height:7px;background:rgba(255,255,255,.2);border-radius:999px;overflow:hidden}
+.gami-xp-fill{height:7px;border-radius:999px;background:white;
+  transition:width .6s cubic-bezier(.34,1.56,.64,1)}
+
+/* Streak */
+.gami-streak{display:flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.15);border-radius:8px;padding:6px 10px;flex-shrink:0}
+.gami-streak-fire{font-size:16px;line-height:1}
+.gami-streak-info{display:flex;flex-direction:column;gap:0}
+.gami-streak-num{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;
+  color:white;line-height:1}
+.gami-streak-lbl{font-size:9px;font-weight:600;color:rgba(255,253,245,.7);
+  text-transform:uppercase;letter-spacing:.07em}
+
+/* Today progress */
+.gami-today{display:flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.15);border-radius:8px;padding:6px 10px;flex-shrink:0}
+.gami-today-icon{font-size:15px;line-height:1}
+.gami-today-info{display:flex;flex-direction:column;gap:2px}
+.gami-today-frac{font-size:12px;font-weight:700;color:white;line-height:1}
+.gami-today-lbl{font-size:9px;font-weight:600;color:rgba(255,253,245,.7);
+  text-transform:uppercase;letter-spacing:.07em}
+.gami-today-mini{width:48px;height:5px;background:rgba(255,255,255,.2);
+  border-radius:999px;overflow:hidden;margin-top:2px}
+.gami-today-mini-fill{height:5px;border-radius:999px;background:white;
+  transition:width .5s ease}
+
+/* ── Level-up toast ── */
+.gami-toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-20px);
+  background:linear-gradient(135deg,var(--gd),var(--gm));color:white;
+  padding:10px 22px;border-radius:999px;font-family:'Playfair Display',serif;
+  font-size:15px;font-weight:700;z-index:9999;pointer-events:none;
+  box-shadow:0 6px 24px rgba(139,105,20,.5);opacity:0;
+  transition:opacity .3s ease,transform .3s ease}
+.gami-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── +XP pop animation on task complete ── */
+@keyframes xpPop{
+  0%{opacity:1;transform:translateY(0) scale(1)}
+  60%{opacity:1;transform:translateY(-28px) scale(1.1)}
+  100%{opacity:0;transform:translateY(-48px) scale(.9)}
+}
+.xp-pop{position:absolute;right:8px;top:8px;font-family:'Playfair Display',serif;
+  font-size:13px;font-weight:700;color:var(--gm);pointer-events:none;
+  animation:xpPop .9s ease forwards;z-index:10}
+
+/* ── Confetti canvas ── */
+#gamiConfetti{position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:9998}
+
+/* ── Mobile HUD ── */
+@media(max-width:600px){
+  .gami-hud{padding:10px 12px;gap:8px}
+  .gami-level-icon{font-size:18px}
+  .gami-level-name{font-size:12px}
+  .gami-streak-num,.gami-today-frac{font-size:14px}
+  .gami-xp{min-width:80px}
+}
 </style>
 </head>
 <body>
@@ -878,6 +962,51 @@ footer strong{color:rgba(255,253,245,0.85)}
         <button class="btn-add" id="addRecurringBtn" style="background:rgba(91,155,213,0.85);">🔁 Add Recurring</button>
       </div>
     </div>
+
+    <!-- ══ Gamification HUD ══ -->
+    <div class="gami-hud" id="gamiHud">
+      <!-- Level badge -->
+      <div class="gami-level">
+        <div class="gami-level-icon" id="gamiLevelIcon">🌱</div>
+        <div class="gami-level-info">
+          <div class="gami-level-name" id="gamiLevelName">Beginner</div>
+          <div class="gami-level-num" id="gamiLevelNum">Level 1</div>
+        </div>
+      </div>
+      <!-- XP bar -->
+      <div class="gami-xp">
+        <div class="gami-xp-row">
+          <span class="gami-xp-label">XP</span>
+          <span class="gami-xp-val" id="gamiXpVal">0 / 50</span>
+        </div>
+        <div class="gami-xp-track">
+          <div class="gami-xp-fill" id="gamiXpFill" style="width:0%"></div>
+        </div>
+      </div>
+      <!-- Streak -->
+      <div class="gami-streak">
+        <div class="gami-streak-fire">🔥</div>
+        <div class="gami-streak-info">
+          <div class="gami-streak-num" id="gamiStreakNum">0</div>
+          <div class="gami-streak-lbl">Day streak</div>
+        </div>
+      </div>
+      <!-- Today progress -->
+      <div class="gami-today">
+        <div class="gami-today-icon">📅</div>
+        <div class="gami-today-info">
+          <div class="gami-today-frac" id="gamiTodayFrac">0/0</div>
+          <div class="gami-today-lbl">Today</div>
+          <div class="gami-today-mini">
+            <div class="gami-today-mini-fill" id="gamiTodayBar" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Level-up toast (shared) -->
+    <div class="gami-toast" id="gamiToast">🎉 Level Up!</div>
+    <!-- Confetti canvas -->
+    <canvas id="gamiConfetti"></canvas>
 
     <!-- Google Calendar sync dropdown -->
     <div class="gcal-wrap" id="gcalWrap">
@@ -1021,7 +1150,7 @@ function switchTab(name){
   if(panel) panel.classList.add('active');
   currentTab=name;
   if(name==='dashboard')renderDashboard();
-  if(name==='tasks')renderTasks();
+  if(name==='tasks'){renderTasks();gamiRenderHud();}
   if(name==='notes')renderNotes();
   if(name==='planner'){buildGrid();applyPlannerLayout();}
 }
@@ -3428,9 +3557,23 @@ function renderTasks(){
     setTimeout(calcDuration, 0);
 
     chk.addEventListener('change',function(){
+      // Save completedAt timestamp when checking off
+      if(chk.checked){
+        saveLocal('completedAt', Date.now());
+      } else {
+        saveLocal('completedAt', null);
+      }
       saveField('done',chk.checked);
       card.querySelector('.task-bd').className='task-bd'+(chk.checked?' task-done':'');
       buildGrid();
+      // Gamification: award or revoke XP
+      var tasks2=lsGet(TK);
+      var tNow=tasks2[t.id]||t;
+      if(chk.checked){
+        gamiAwardXp(tNow, card);
+      } else {
+        gamiRevokeXp(tNow);
+      }
       // Auto-remove from Google Calendar when task is marked done
       if(chk.checked && typeof gcalDeleteEvent==='function'){
         gcalDeleteEvent(t.id);
@@ -3954,9 +4097,253 @@ document.getElementById('dismissWarning').addEventListener('click',function(){
 })();
 setWeek(new Date());
 applyPlannerLayout();
+
+// ════════════════════════════════════════════════════════
+// GAMIFICATION ENGINE
+// ════════════════════════════════════════════════════════
+var GK = 'cds_gami_v1'; // storage key for gamification state
+
+// XP rewards
+var GAMI_XP = {
+  high:   30,  // high priority task
+  medium: 20,  // medium priority task
+  low:    10,  // low priority task
+  today:   5,  // bonus: completed on due date
+  early:  10   // bonus: completed before due date
+};
+
+// Level thresholds & metadata
+var GAMI_LEVELS = [
+  {lvl:1,  min:0,    max:50,   name:'Beginner',    icon:'🌱'},
+  {lvl:2,  min:50,   max:150,  name:'Focused',     icon:'⚡'},
+  {lvl:3,  min:150,  max:300,  name:'Productive',  icon:'🚀'},
+  {lvl:4,  min:300,  max:500,  name:'Achiever',    icon:'🏆'},
+  {lvl:5,  min:500,  max:800,  name:'Expert',      icon:'🔥'},
+  {lvl:6,  min:800,  max:1200, name:'Master',      icon:'⭐'},
+  {lvl:7,  min:1200, max:1800, name:'Elite',       icon:'💎'},
+  {lvl:8,  min:1800, max:9999, name:'Legend',      icon:'👑'}
+];
+
+function gamiGet(){
+  try{return JSON.parse(localStorage.getItem(GK)||'null')||{xp:0,completedIds:{}};}
+  catch(e){return{xp:0,completedIds:{}};}
+}
+function gamiSet(g){
+  try{localStorage.setItem(GK,JSON.stringify(g));}catch(e){}
+}
+
+function gamiGetLevel(xp){
+  for(var i=GAMI_LEVELS.length-1;i>=0;i--){
+    if(xp>=GAMI_LEVELS[i].min) return GAMI_LEVELS[i];
+  }
+  return GAMI_LEVELS[0];
+}
+
+// ── Compute streak from task completedAt data ────────────────────────────────
+function gamiStreak(){
+  var tasks=Object.values(lsGet(TK)||{});
+  var completed=tasks.filter(function(t){return t.done;});
+  var streak=0;
+  var now=new Date();
+  var check=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  for(var s=0;s<60;s++){
+    var found=completed.some(function(t){
+      var ref=t.completedAt?new Date(t.completedAt):(t.date?parseDate(t.date):null);
+      return ref&&sameDay(ref,check);
+    });
+    if(found){streak++;check=addDays(check,-1);}
+    else if(s===0) break; // nothing today → streak = 0
+    else break;
+  }
+  return streak;
+}
+
+// ── Compute today's progress ─────────────────────────────────────────────────
+function gamiTodayProgress(){
+  var tasks=Object.values(lsGet(TK)||{});
+  var now=new Date();
+  var todayAll=tasks.filter(function(t){
+    var dt=dashboardDateTime(t);
+    return dt&&sameDay(dt,now);
+  });
+  var todayDone=todayAll.filter(function(t){return t.done;});
+  return{done:todayDone.length, total:todayAll.length};
+}
+
+// ── Render the HUD ────────────────────────────────────────────────────────────
+function gamiRenderHud(){
+  var g=gamiGet();
+  var lvl=gamiGetLevel(g.xp);
+  var nextLvl=GAMI_LEVELS[Math.min(lvl.lvl,GAMI_LEVELS.length-1)];
+  var pct=nextLvl.max===9999?100:Math.round(((g.xp-lvl.min)/(nextLvl.max-lvl.min))*100);
+  pct=Math.max(0,Math.min(100,pct));
+
+  var streak=gamiStreak();
+  var tp=gamiTodayProgress();
+  var todayPct=tp.total>0?Math.round((tp.done/tp.total)*100):0;
+
+  var icon=document.getElementById('gamiLevelIcon');
+  var name=document.getElementById('gamiLevelName');
+  var num=document.getElementById('gamiLevelNum');
+  var xpVal=document.getElementById('gamiXpVal');
+  var xpFill=document.getElementById('gamiXpFill');
+  var streakNum=document.getElementById('gamiStreakNum');
+  var todayFrac=document.getElementById('gamiTodayFrac');
+  var todayBar=document.getElementById('gamiTodayBar');
+
+  if(icon) icon.textContent=lvl.icon;
+  if(name) name.textContent=lvl.name;
+  if(num)  num.textContent='Level '+lvl.lvl;
+  if(xpVal){
+    xpVal.textContent=nextLvl.max===9999
+      ? g.xp+' XP (max level!)'
+      : g.xp+' / '+nextLvl.max+' XP';
+  }
+  if(xpFill) xpFill.style.width=pct+'%';
+  if(streakNum) streakNum.textContent=streak;
+  if(todayFrac) todayFrac.textContent=tp.done+'/'+tp.total;
+  if(todayBar)  todayBar.style.width=todayPct+'%';
+}
+
+// ── Award XP when task is checked ────────────────────────────────────────────
+function gamiAwardXp(task, cardEl){
+  var g=gamiGet();
+  // Prevent double-awarding the same task
+  if(g.completedIds[task.id]) return;
+  g.completedIds[task.id]=Date.now();
+
+  var xp=GAMI_XP[task.priority||'medium']||GAMI_XP.medium;
+  // Bonus: completed on time or early
+  if(task.date){
+    var due=parseDate(task.date);
+    if(due){
+      var now=new Date();
+      if(sameDay(due,now)) xp+=GAMI_XP.today;
+      else if(due>now)     xp+=GAMI_XP.early;
+    }
+  }
+
+  var oldLvl=gamiGetLevel(g.xp).lvl;
+  g.xp+=xp;
+  gamiSet(g);
+  var newLvl=gamiGetLevel(g.xp);
+
+  // +XP float pop on the card
+  if(cardEl){
+    var pop=document.createElement('span');
+    pop.className='xp-pop';
+    pop.textContent='+'+xp+' XP';
+    cardEl.style.position='relative';
+    cardEl.appendChild(pop);
+    setTimeout(function(){pop.remove();},950);
+  }
+
+  // Level-up toast
+  if(newLvl.lvl>oldLvl){
+    gamiShowToast(newLvl.icon+' Level Up! '+newLvl.name+' (Lv.'+newLvl.lvl+')');
+  }
+
+  // Confetti
+  gamiConfetti();
+
+  // Refresh HUD
+  gamiRenderHud();
+}
+
+// Reverse: un-award when task is unchecked
+function gamiRevokeXp(task){
+  var g=gamiGet();
+  if(!g.completedIds[task.id]) return;
+  // Estimate original XP (base only, we can't recover bonus precisely)
+  var xp=GAMI_XP[task.priority||'medium']||GAMI_XP.medium;
+  delete g.completedIds[task.id];
+  g.xp=Math.max(0, g.xp-xp);
+  gamiSet(g);
+  gamiRenderHud();
+}
+
+// ── Level-up toast ────────────────────────────────────────────────────────────
+function gamiShowToast(msg){
+  var t=document.getElementById('gamiToast');
+  if(!t) return;
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2800);
+}
+
+// ── Confetti ──────────────────────────────────────────────────────────────────
+function gamiConfetti(){
+  var canvas=document.getElementById('gamiConfetti');
+  if(!canvas) return;
+  var ctx=canvas.getContext('2d');
+  canvas.width=window.innerWidth;
+  canvas.height=window.innerHeight;
+
+  var colors=['#E8B84B','#C4942A','#8B6914','#5CB85C','#5B9BD5','#E85252','#9B59B6'];
+  var pieces=[];
+  for(var i=0;i<90;i++){
+    pieces.push({
+      x:Math.random()*canvas.width,
+      y:-10-Math.random()*40,
+      r:Math.random()*5+3,
+      d:Math.random()*4+2,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      tilt:Math.random()*10-5,
+      tiltInc:Math.random()*.07+.05,
+      opacity:1
+    });
+  }
+
+  var frame=0, maxFrames=90;
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pieces.forEach(function(p){
+      p.tilt+=p.tiltInc;
+      p.y+=p.d+Math.sin(frame*0.04)*1.5;
+      p.x+=Math.sin(frame*0.03+p.r)*1.2;
+      p.opacity=frame<60?1:(1-(frame-60)/30);
+      ctx.save();
+      ctx.globalAlpha=Math.max(0,p.opacity);
+      ctx.fillStyle=p.color;
+      ctx.beginPath();
+      ctx.ellipse(p.x,p.y,p.r,p.r*0.5,p.tilt,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    });
+    frame++;
+    if(frame<maxFrames) requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  draw();
+}
+
+// ── Patch the checkbox handler to award XP ───────────────────────────────────
+// We hook into renderTasks post-card-creation via a MutationObserver
+// AND by directly patching the chk event after card is built.
+// The patch is applied inside renderTasks — see modified chk handler below.
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+// Backfill: award XP for tasks already completed (one-time migration)
+(function gamiMigrate(){
+  var g=gamiGet();
+  var tasks=Object.values(lsGet(TK)||{});
+  var migrated=false;
+  tasks.forEach(function(t){
+    if(t.done&&!g.completedIds[t.id]){
+      var xp=GAMI_XP[t.priority||'medium']||GAMI_XP.medium;
+      g.completedIds[t.id]=t.completedAt||Date.now();
+      g.xp+=xp;
+      migrated=true;
+    }
+  });
+  if(migrated) gamiSet(g);
+})();
+
 renderTasks();
 renderNotes();
 renderDashboard();
+gamiRenderHud();
+
 // ════════════════════════════════════════════════════════
 // GOOGLE CALENDAR SYNC
 // ════════════════════════════════════════════════════════
