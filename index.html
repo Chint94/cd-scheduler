@@ -4391,16 +4391,28 @@ function rwdInitHandlers(){
   if(saveLvlBtn) saveLvlBtn.addEventListener('click',function(){
     var rows=document.querySelectorAll('.rwd-level-row');
     if(!rows.length){rwdMsg('rwdLevelsMsg','⚠ No levels found.',false);return;}
-    var levels=[];var valid=true;
+    var levels=[];
+    // First pass: collect all values from the DOM
     rows.forEach(function(row,i){
       var name=(row.querySelector('.rwd-level-name-inp').value.trim())||('Level '+(i+1));
       var icon=(row.querySelector('.rwd-level-icon-inp').value.trim())||'⭐';
       var maxEl=row.querySelector('.rwd-level-max-inp');
-      var maxVal=i===rows.length-1?9999:Math.max(1,parseInt(maxEl?maxEl.value:0)||0);
-      if(i>0&&levels.length>0&&maxVal<=levels[i-1].min)valid=false;
-      levels.push({lvl:i+1,min:i===0?0:levels[i-1].max,max:maxVal,name:name,icon:icon});
+      // Last row has no max input (shows ∞) — treat as 9999
+      var maxVal=(i===rows.length-1)||!maxEl ? 9999 : (parseInt(maxEl.value)||0);
+      var minVal=i===0 ? 0 : levels[i-1].max;
+      levels.push({lvl:i+1, min:minVal, max:maxVal, name:name, icon:icon});
     });
-    if(!valid){rwdMsg('rwdLevelsMsg','⚠ Each XP threshold must be higher than the previous.',false);return;}
+    // Second pass: validate — each level's max must be greater than its min
+    var valid=true;
+    var badRow=-1;
+    for(var vi=0;vi<levels.length-1;vi++){
+      if(levels[vi].max<=levels[vi].min){valid=false;badRow=vi+1;break;}
+      if(vi>0 && levels[vi].max<=levels[vi-1].max){valid=false;badRow=vi+1;break;}
+    }
+    if(!valid){
+      rwdMsg('rwdLevelsMsg','⚠ Level '+(badRow)+': "Ends at XP" must be higher than the previous level\'s end value.',false);
+      return;
+    }
 
     // 1. Persist to localStorage
     var c=gamiCfgGet();
@@ -4472,21 +4484,19 @@ function rwdInitHandlers(){
     if(!rows.length){rwdMsg('rwdPreviewMsg','No levels to preview.',false);return;}
     // Build a temporary levels array purely from DOM inputs
     var tempLevels=[];
-    var valid=true;
     rows.forEach(function(row,i){
       var name=(row.querySelector('.rwd-level-name-inp').value.trim())||('Level '+(i+1));
       var icon=(row.querySelector('.rwd-level-icon-inp').value.trim())||'⭐';
       var maxEl=row.querySelector('.rwd-level-max-inp');
-      var maxVal=i===rows.length-1?9999:Math.max(1,parseInt(maxEl?maxEl.value:0)||0);
-      if(i>0&&tempLevels.length>0&&maxVal<=tempLevels[i-1].min)valid=false;
-      tempLevels.push({
-        lvl:i+1,
-        min:i===0?0:tempLevels[i-1].max,
-        max:maxVal,
-        name:name,
-        icon:icon
-      });
+      var maxVal=(i===rows.length-1)||!maxEl ? 9999 : (parseInt(maxEl.value)||0);
+      var minVal=i===0 ? 0 : tempLevels[i-1].max;
+      tempLevels.push({lvl:i+1, min:minVal, max:maxVal, name:name, icon:icon});
     });
+    // Validate
+    var valid=true;
+    for(var vi=0;vi<tempLevels.length-1;vi++){
+      if(tempLevels[vi].max<=tempLevels[vi].min||(vi>0&&tempLevels[vi].max<=tempLevels[vi-1].max)){valid=false;break;}
+    }
     if(!valid){
       rwdMsg('rwdPreviewMsg','⚠ Preview skipped — XP threshold in a row is not higher than the previous.',false);
       return;
