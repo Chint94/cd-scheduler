@@ -4244,6 +4244,15 @@ function gamiRenderHud(){
   if(el('gamiTodayBar')) el('gamiTodayBar').style.width=todayPct+'%';
 }
 
+// Call this after any XP/level config change to sync every tab
+function gamiRefreshAll(){
+  gamiRenderHud();
+  // Re-render dashboard if it's visible or always (it's fast)
+  if(typeof renderDashboard==='function') renderDashboard();
+  // Re-render rewards status card if rewards tab is open
+  if(currentTab==='rewards' && typeof renderRewards==='function') renderRewards();
+}
+
 function gamiAwardXp(task,cardEl){
   var g=gamiGet();
   if(g.completedIds[task.id])return;
@@ -4347,8 +4356,21 @@ function renderRewards(){
     c.xp.low   =Math.max(0,parseInt(el('xpLow').value)||0);
     c.xp.today =Math.max(0,parseInt(el('xpToday').value)||0);
     c.xp.early =Math.max(0,parseInt(el('xpEarly').value)||0);
-    gamiCfgSet(c);gamiApplyCfg();gamiRenderHud();
-    rwdMsg('rwdXpMsg','✓ XP values saved and applied immediately!',true);
+    gamiCfgSet(c);
+    gamiApplyCfg();
+    // Refresh status card immediately with fresh data
+    var g2=gamiGet();
+    var lvl2=gamiGetLevel(g2.xp);
+    var nextLvl2=GAMI_LEVELS[Math.min(lvl2.lvl,GAMI_LEVELS.length-1)];
+    var pct2=nextLvl2.max===9999?100:Math.round(((g2.xp-lvl2.min)/(nextLvl2.max-lvl2.min))*100);
+    pct2=Math.max(0,Math.min(100,pct2));
+    if(el('rwdStatusIcon'))  el('rwdStatusIcon').textContent=lvl2.icon;
+    if(el('rwdStatusLevel')) el('rwdStatusLevel').textContent='Level '+lvl2.lvl+' — '+lvl2.name;
+    if(el('rwdStatusXp'))    el('rwdStatusXp').textContent=g2.xp+' XP total · '+(nextLvl2.max===9999?'Max level reached! 👑':(g2.xp-lvl2.min)+' / '+(nextLvl2.max-lvl2.min)+' to next level');
+    if(el('rwdStatusBar'))   el('rwdStatusBar').style.width=pct2+'%';
+    rwdRenderPreview(g2.xp);
+    gamiRefreshAll();
+    rwdMsg('rwdXpMsg','✓ XP values saved and applied to all tabs!',true);
   };
 
   var saveLvlBtn=el('rwdSaveLevels');
@@ -4365,8 +4387,21 @@ function renderRewards(){
     });
     if(!valid){rwdMsg('rwdLevelsMsg','⚠ Each XP threshold must be higher than the previous.',false);return;}
     var c=gamiCfgGet();c.levels=levels;
-    gamiCfgSet(c);gamiApplyCfg();gamiRenderHud();rwdRenderPreview(g.xp);
-    rwdMsg('rwdLevelsMsg','✓ Levels saved and applied immediately!',true);
+    gamiCfgSet(c);
+    gamiApplyCfg();
+    // Refresh status card immediately with fresh data
+    var g2=gamiGet();
+    var lvl2=gamiGetLevel(g2.xp);
+    var nextLvl2=GAMI_LEVELS[Math.min(lvl2.lvl,GAMI_LEVELS.length-1)];
+    var pct2=nextLvl2.max===9999?100:Math.round(((g2.xp-lvl2.min)/(nextLvl2.max-lvl2.min))*100);
+    pct2=Math.max(0,Math.min(100,pct2));
+    if(el('rwdStatusIcon'))  el('rwdStatusIcon').textContent=lvl2.icon;
+    if(el('rwdStatusLevel')) el('rwdStatusLevel').textContent='Level '+lvl2.lvl+' — '+lvl2.name;
+    if(el('rwdStatusXp'))    el('rwdStatusXp').textContent=g2.xp+' XP total · '+(nextLvl2.max===9999?'Max level reached! 👑':(g2.xp-lvl2.min)+' / '+(nextLvl2.max-lvl2.min)+' to next level');
+    if(el('rwdStatusBar'))   el('rwdStatusBar').style.width=pct2+'%';
+    rwdRenderPreview(g2.xp);
+    gamiRefreshAll();
+    rwdMsg('rwdLevelsMsg','✓ Levels saved and applied to all tabs!',true);
   };
 
   var addLvlBtn=el('rwdAddLevel');
@@ -4376,14 +4411,19 @@ function renderRewards(){
     c.levels[c.levels.length-1].max=newMin;
     c.levels.push({lvl:c.levels.length+1,min:newMin,max:9999,name:'New Level',icon:'🌟'});
     c.levels.forEach(function(l,i){l.lvl=i+1;});
-    gamiCfgSet(c);gamiApplyCfg();rwdRenderLevelsTable(c.levels);rwdRenderPreview(g.xp);
+    gamiCfgSet(c);gamiApplyCfg();
+    rwdRenderLevelsTable(c.levels);
+    rwdRenderPreview(gamiGet().xp);
+    gamiRefreshAll();
     rwdMsg('rwdLevelsMsg','Level added — edit name, icon and XP, then Save Levels.',true);
   };
 
   var resetBtn=el('rwdResetBtn');
   if(resetBtn)resetBtn.onclick=function(){
     if(!confirm('Reset all XP and progress to 0? This cannot be undone.'))return;
-    var g2=gamiGet();g2.xp=0;g2.completedIds={};gamiSet(g2);gamiRenderHud();renderRewards();
+    var g2=gamiGet();g2.xp=0;g2.completedIds={};gamiSet(g2);
+    gamiRefreshAll();
+    renderRewards();
   };
 }
 
@@ -4411,6 +4451,7 @@ function rwdRenderLevelsTable(levels){
       c.levels.forEach(function(l,i){l.lvl=i+1;l.min=i===0?0:c.levels[i-1].max;});
       c.levels[c.levels.length-1].max=9999;
       gamiCfgSet(c);gamiApplyCfg();rwdRenderLevelsTable(c.levels);rwdRenderPreview(gamiGet().xp);
+      gamiRefreshAll();
     });
   });
   wrap.querySelectorAll('.rwd-level-max-inp').forEach(function(inp,i){
