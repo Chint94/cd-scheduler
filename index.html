@@ -4247,10 +4247,11 @@ function gamiRenderHud(){
 // Call this after any XP/level config change to sync every tab
 function gamiRefreshAll(){
   gamiRenderHud();
-  // Re-render dashboard if it's visible or always (it's fast)
+  // Re-render dashboard to reflect new level data
   if(typeof renderDashboard==='function') renderDashboard();
-  // Re-render rewards status card if rewards tab is open
-  if(currentTab==='rewards' && typeof renderRewards==='function') renderRewards();
+  // Do NOT call renderRewards() here — it would re-register handlers
+  // and overwrite the just-rendered preview. The save handlers update
+  // the Rewards UI directly instead.
 }
 
 function gamiAwardXp(task,cardEl){
@@ -4357,8 +4358,11 @@ function renderRewards(){
     c.xp.today =Math.max(0,parseInt(el('xpToday').value)||0);
     c.xp.early =Math.max(0,parseInt(el('xpEarly').value)||0);
     gamiCfgSet(c);
-    gamiApplyCfg();
-    // Refresh status card immediately with fresh data
+    gamiApplyCfg(); // GAMI_XP is now updated
+    // Update XP input fields to reflect saved values
+    var xpMap2={high:'xpHigh',medium:'xpMedium',low:'xpLow',today:'xpToday',early:'xpEarly'};
+    Object.keys(xpMap2).forEach(function(k){var e=el(xpMap2[k]);if(e)e.value=GAMI_XP[k];});
+    // Refresh status card and preview
     var g2=gamiGet();
     var lvl2=gamiGetLevel(g2.xp);
     var nextLvl2=GAMI_LEVELS[Math.min(lvl2.lvl,GAMI_LEVELS.length-1)];
@@ -4388,8 +4392,8 @@ function renderRewards(){
     if(!valid){rwdMsg('rwdLevelsMsg','⚠ Each XP threshold must be higher than the previous.',false);return;}
     var c=gamiCfgGet();c.levels=levels;
     gamiCfgSet(c);
-    gamiApplyCfg();
-    // Refresh status card immediately with fresh data
+    gamiApplyCfg(); // GAMI_LEVELS is now updated
+    // Refresh both the table and preview directly from the updated GAMI_LEVELS
     var g2=gamiGet();
     var lvl2=gamiGetLevel(g2.xp);
     var nextLvl2=GAMI_LEVELS[Math.min(lvl2.lvl,GAMI_LEVELS.length-1)];
@@ -4399,7 +4403,8 @@ function renderRewards(){
     if(el('rwdStatusLevel')) el('rwdStatusLevel').textContent='Level '+lvl2.lvl+' — '+lvl2.name;
     if(el('rwdStatusXp'))    el('rwdStatusXp').textContent=g2.xp+' XP total · '+(nextLvl2.max===9999?'Max level reached! 👑':(g2.xp-lvl2.min)+' / '+(nextLvl2.max-lvl2.min)+' to next level');
     if(el('rwdStatusBar'))   el('rwdStatusBar').style.width=pct2+'%';
-    rwdRenderPreview(g2.xp);
+    rwdRenderLevelsTable(GAMI_LEVELS); // re-render table from live GAMI_LEVELS
+    rwdRenderPreview(g2.xp);          // re-render preview from live GAMI_LEVELS
     gamiRefreshAll();
     rwdMsg('rwdLevelsMsg','✓ Levels saved and applied to all tabs!',true);
   };
