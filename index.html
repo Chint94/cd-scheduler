@@ -680,7 +680,82 @@ footer strong{color:rgba(255,253,245,0.85)}
 
 @media(max-width:980px){
   .dash-stat-row{grid-template-columns:repeat(2,1fr)}
-  .dash-section-grid{grid-template-columns:1fr}
+  .dash-section-grid{grid-template-columns:1fr!important}
+  .dash-layout{grid-template-columns:1fr}
+  .dash-week-strip{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+
+@media(max-width:700px){
+  /* ── Greeting ── */
+  .dash-greeting{flex-direction:column;align-items:flex-start;gap:10px;padding:14px 16px}
+  .dash-greeting-right{align-items:flex-start}
+  .dash-greeting-title{font-size:16px}
+  .dash-greeting-time{font-size:18px}
+
+  /* ── Stat cards ── */
+  .dash-stat-row{grid-template-columns:repeat(2,1fr);gap:9px}
+  .dash-stat-card{padding:11px 12px;gap:9px}
+  .dash-stat-icon{width:32px;height:32px;font-size:15px}
+  .dash-stat-val{font-size:22px}
+  .dash-stat-sub{font-size:10px}
+
+  /* ── Section grids ── */
+  .dash-section-grid{grid-template-columns:1fr!important;gap:10px}
+  .dash-layout{grid-template-columns:1fr;gap:10px}
+
+  /* ── Chart ── */
+  .dash-chart-card,.dash-pri-card,.dash-score-card,.dash-notes-card{padding:12px 13px}
+  .dash-chart-bar-wrap{height:110px}
+  .dash-chart-day{font-size:8px}
+
+  /* ── Priority ── */
+  .dash-pri-label{min-width:44px;font-size:11px}
+  .dash-pri-count{min-width:18px;font-size:11px}
+
+  /* ── Score ── */
+  .dash-score-ring-wrap svg{width:70px;height:70px}
+
+  /* ── Week strip ── */
+  .dash-week-strip{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .dash-day{padding:10px 10px;min-height:auto}
+  .dash-day-count{font-size:20px}
+
+  /* ── Task cards ── */
+  .dash-task{flex-direction:column;gap:8px}
+  .dash-task-actions{width:100%;justify-content:flex-start}
+  .dash-task-title{font-size:13px}
+
+  /* ── Section head ── */
+  .section-head{margin-bottom:12px}
+  .dash-mini-actions{width:100%;flex-wrap:wrap}
+  .dash-panel,.dash-card{padding:11px 12px}
+  .dash-panel-title{font-size:16px}
+
+  /* ── Notes preview ── */
+  .dash-note-ttl{font-size:12px}
+  .dash-note-snippet{font-size:10px}
+
+  /* ── Tab nav: prevent text cutoff ── */
+  .tab-nav{padding:0 8px;gap:0}
+  .tab-btn{padding:10px 9px;font-size:11px;white-space:nowrap}
+
+  /* ── Header: hide subtitle on very small screens ── */
+  .brand-sub{display:none}
+
+  /* ── General section padding ── */
+  .sw{padding:10px}
+
+  /* ── Buttons min touch target ── */
+  .dash-btn{min-height:36px;min-width:36px;padding:6px 10px;font-size:11px}
+  .btn-add{padding:8px 13px;font-size:12px}
+}
+
+@media(max-width:420px){
+  /* ── Single column stat cards on very small phones ── */
+  .dash-stat-row{grid-template-columns:1fr}
+  .dash-greeting-title{font-size:15px}
+  .tab-btn{padding:10px 7px;font-size:10px}
+  .dash-chart-bar-wrap{height:90px}
 }
 </style>
 </head>
@@ -2973,7 +3048,7 @@ function renderDashboard(){
   html+='<div class="dash-list" id="dashWeekList"></div>';
   html+='</div>';
 
-  html+='<div style="display:flex;flex-direction:column;gap:14px">';
+  html+='<div style="display:flex;flex-direction:column;gap:14px;min-width:0">';
 
   // Overdue panel
   html+='<div class="dash-panel overdue-panel">';
