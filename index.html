@@ -563,6 +563,124 @@ footer strong{color:rgba(255,253,245,0.85)}
   .sched-mobile .ci{font-size:16px;padding:8px 10px;min-height:48px}
   .tc{font-size:13px;height:48px}
   .tc.half{font-size:12px}
+  .dash-stat-row{grid-template-columns:1fr 1fr!important}
+  .dash-stat-card{padding:13px 14px!important}
+  .dash-stat-icon{width:34px!important;height:34px!important;font-size:16px!important}
+  .dash-stat-val{font-size:24px!important}
+  .dash-section-grid{grid-template-columns:1fr!important}
+  .dash-chart-bar-wrap{height:130px!important}
+  .dash-pri-row{gap:8px!important}
+}
+
+/* ══ Dashboard v2 — stat cards ══ */
+.dash-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.dash-stat-card{background:white;border:1.5px solid var(--gp);border-radius:12px;
+  padding:14px 16px;display:flex;align-items:center;gap:12px;
+  box-shadow:0 2px 8px var(--sg);cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s}
+.dash-stat-card:hover{border-color:var(--gm);transform:translateY(-2px);box-shadow:0 6px 18px var(--sg)}
+.dash-stat-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:18px;flex-shrink:0}
+.dash-stat-body{min-width:0;flex:1}
+.dash-stat-kicker{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--inkl);margin-bottom:3px}
+.dash-stat-val{font-family:'Playfair Display',serif;font-size:28px;line-height:1;
+  color:var(--gd);margin-bottom:3px}
+.dash-stat-sub{font-size:11px;color:var(--inkl);line-height:1.4}
+
+/* ══ Greeting banner ══ */
+.dash-greeting{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 100%);
+  border-radius:12px;padding:16px 20px;margin-bottom:14px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.dash-greeting-left{display:flex;flex-direction:column;gap:3px}
+.dash-greeting-title{font-family:'Playfair Display',serif;font-size:18px;color:white;
+  font-weight:700;line-height:1.2}
+.dash-greeting-sub{font-size:12px;color:rgba(255,253,245,0.75);line-height:1.4}
+.dash-greeting-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.dash-greeting-date{font-size:13px;font-weight:700;color:white}
+.dash-greeting-time{font-family:'Playfair Display',serif;font-size:22px;color:white;
+  font-weight:700;letter-spacing:1px}
+
+/* ══ Section grid (two-col layout) ══ */
+.dash-section-grid{display:grid;grid-template-columns:1.3fr 0.7fr;gap:14px;margin-bottom:14px}
+.dash-section-grid.full{grid-template-columns:1fr}
+
+/* ══ Priority breakdown ══ */
+.dash-pri-card{background:white;border:1.5px solid var(--gp);border-radius:12px;
+  padding:14px 16px;box-shadow:0 2px 8px var(--sg)}
+.dash-pri-title{font-family:'Playfair Display',serif;font-size:15px;color:var(--gd);
+  margin-bottom:12px;font-weight:700}
+.dash-pri-row{display:flex;flex-direction:column;gap:10px}
+.dash-pri-item{display:flex;align-items:center;gap:10px}
+.dash-pri-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.dash-pri-label{font-size:12px;font-weight:600;color:var(--inkm);min-width:52px}
+.dash-pri-bar-wrap{flex:1;background:var(--gc);border-radius:999px;height:8px;overflow:hidden}
+.dash-pri-bar{height:8px;border-radius:999px;transition:width .4s ease}
+.dash-pri-count{font-size:12px;font-weight:700;color:var(--inkm);min-width:22px;text-align:right}
+
+/* ══ Productivity / streak ══ */
+.dash-score-card{background:white;border:1.5px solid var(--gp);border-radius:12px;
+  padding:14px 16px;box-shadow:0 2px 8px var(--sg);display:flex;flex-direction:column;gap:10px}
+.dash-score-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dash-score-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--inkl)}
+.dash-score-val{font-family:'Playfair Display',serif;font-size:22px;color:var(--gd);font-weight:700}
+.dash-score-ring-wrap{display:flex;justify-content:center;margin:4px 0}
+.dash-streak-row{display:flex;align-items:center;gap:8px;
+  background:var(--gc);border-radius:8px;padding:9px 12px}
+.dash-streak-icon{font-size:18px}
+.dash-streak-text{font-size:12px;color:var(--inkm);line-height:1.45;flex:1}
+.dash-streak-num{font-family:'Playfair Display',serif;font-size:20px;color:var(--gm);font-weight:700}
+
+/* ══ Weekly chart ══ */
+.dash-chart-card{background:white;border:1.5px solid var(--gp);border-radius:12px;
+  padding:14px 16px;box-shadow:0 2px 8px var(--sg)}
+.dash-chart-title{font-family:'Playfair Display',serif;font-size:15px;color:var(--gd);
+  margin-bottom:4px;font-weight:700}
+.dash-chart-sub{font-size:11px;color:var(--inkl);margin-bottom:14px}
+.dash-chart-bar-wrap{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:8px}
+.dash-chart-col{display:flex;flex-direction:column;align-items:center;flex:1;gap:4px;height:100%}
+.dash-chart-bars{display:flex;align-items:flex-end;gap:2px;flex:1;width:100%}
+.dash-chart-bar{flex:1;border-radius:4px 4px 0 0;transition:height .4s ease;min-height:2px}
+.dash-chart-bar.done{background:var(--gm)}
+.dash-chart-bar.pending{background:var(--gp);border:1.5px solid var(--gp)}
+.dash-chart-day{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--inkl);
+  letter-spacing:.05em}
+.dash-chart-day.today{color:var(--gm)}
+.dash-chart-legend{display:flex;gap:14px;justify-content:flex-end;margin-top:10px}
+.dash-chart-leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--inkl)}
+.dash-chart-leg-dot{width:9px;height:9px;border-radius:2px}
+
+/* ══ Notes preview ══ */
+.dash-notes-card{background:white;border:1.5px solid var(--gp);border-radius:12px;
+  padding:14px 16px;box-shadow:0 2px 8px var(--sg)}
+.dash-notes-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.dash-notes-title{font-family:'Playfair Display',serif;font-size:15px;color:var(--gd);font-weight:700}
+.dash-note-pill{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;
+  border-radius:9px;margin-bottom:8px;cursor:pointer;transition:opacity .15s}
+.dash-note-pill:last-child{margin-bottom:0}
+.dash-note-pill:hover{opacity:.85}
+.dash-note-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;margin-top:3px}
+.dash-note-body{min-width:0;flex:1}
+.dash-note-ttl{font-size:13px;font-weight:700;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.dash-note-snippet{font-size:11px;color:var(--inkl);line-height:1.4;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dash-notes-empty{font-size:12px;color:var(--inkl);text-align:center;
+  padding:16px 0;line-height:1.5}
+
+/* ══ Week strip — today highlight ══ */
+.dash-day.is-today{background:linear-gradient(180deg,var(--gc) 0%,var(--gp) 100%);
+  border-color:var(--gm)!important}
+.dash-day.is-today .dash-day-head{color:var(--gm)}
+.dash-day.is-today .dash-day-date{color:var(--gd)}
+
+/* ══ Task card — priority badge ══ */
+.dash-task-pri-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;
+  padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.06em;margin-right:6px}
+
+@media(max-width:980px){
+  .dash-stat-row{grid-template-columns:repeat(2,1fr)}
+  .dash-section-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -2622,15 +2740,18 @@ function dashboardTaskCard(t, isOverdue){
     when=shortD(dt)+' · '+(t.time?t.time:'No time');
   }
   var priority=(t.priority||'medium');
+  var pc=PRIORITY_COLORS[priority]||PRIORITY_COLORS.medium;
   var wrap=document.createElement('div');
   wrap.className='dash-task'+(isOverdue?' overdue':'');
   wrap.innerHTML=
     '<div class="dash-task-main">'+
-      '<div class="dash-task-title">'+(t.title||'(no title)')+'</div>'+
+      '<div class="dash-task-title">'+
+        '<span class="dash-task-pri-badge" style="background:'+pc+'22;color:'+pc+'">'+priority+'</span>'+
+        (t.title||'(no title)')+
+      '</div>'+
       '<div class="dash-task-meta">'+
         '<span>'+(isOverdue?'⚠️ Overdue':'📌 Due')+'</span>'+
         '<span>'+when+'</span>'+
-        '<span>'+priority.charAt(0).toUpperCase()+priority.slice(1)+'</span>'+
       '</div>'+
     '</div>'+
     '<div class="dash-task-actions">'+
@@ -2652,77 +2773,278 @@ function renderDashboard(){
   var mount=document.getElementById('dashboardContent');
   if(!mount) return;
   var tasks=Object.values(lsGet(TK)||{});
+  var notes=Object.values(lsGet(NK)||{});
   var now=new Date();
   var weekBase=weekStart?new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate(),0,0,0,0):toMon(now);
   if(!weekStart) weekStart=weekBase;
+
+  // ── Derived data ──────────────────────────────────────────────────────────
   var incomplete=tasks.filter(function(t){return !t.done;});
-  var overdue=tasks.filter(function(t){return taskStatus(t)==='overdue';}).sort(function(a,b){return ((dashboardDateTime(a)&&dashboardDateTime(a).getTime())||0)-((dashboardDateTime(b)&&dashboardDateTime(b).getTime())||0);});
-  var dueToday=incomplete.filter(function(t){ var dt=dashboardDateTime(t); return dt&&sameDay(dt,now)&&taskStatus(t)!=='overdue'; }).sort(function(a,b){return ((dashboardDateTime(a)&&dashboardDateTime(a).getTime())||0)-((dashboardDateTime(b)&&dashboardDateTime(b).getTime())||0);});
-  var dueThisWeek=incomplete.filter(function(t){return isTaskInCurrentWeek(t) && taskStatus(t)!=='overdue';}).sort(function(a,b){return ((dashboardDateTime(a)&&dashboardDateTime(a).getTime())||0)-((dashboardDateTime(b)&&dashboardDateTime(b).getTime())||0);});
+  var overdue=tasks.filter(function(t){return taskStatus(t)==='overdue';}).sort(function(a,b){return((dashboardDateTime(a)&&dashboardDateTime(a).getTime())||0)-((dashboardDateTime(b)&&dashboardDateTime(b).getTime())||0);});
+  var dueToday=incomplete.filter(function(t){var dt=dashboardDateTime(t);return dt&&sameDay(dt,now)&&taskStatus(t)!=='overdue';}).sort(function(a,b){return((dashboardDateTime(a)&&dashboardDateTime(a).getTime())||0)-((dashboardDateTime(b)&&dashboardDateTime(b).getTime())||0);});
+  var dueThisWeek=incomplete.filter(function(t){return isTaskInCurrentWeek(t)&&taskStatus(t)!=='overdue';}).sort(function(a,b){return((dashboardDateTime(a)&&dashboardDateTime(a).getTime())||0)-((dashboardDateTime(b)&&dashboardDateTime(b).getTime())||0);});
   var completed=tasks.filter(function(t){return !!t.done;});
-  var scheduled=tasks.filter(function(t){return !!t.date;});
   var todayCount=dueToday.length;
   var weekCount=dueThisWeek.length;
   var overdueCount=overdue.length;
   var completionRate=tasks.length?Math.round((completed.length/tasks.length)*100):0;
 
+  // Priority counts (incomplete only)
+  var priHigh=incomplete.filter(function(t){return(t.priority||'medium')==='high';}).length;
+  var priMed=incomplete.filter(function(t){return(t.priority||'medium')==='medium';}).length;
+  var priLow=incomplete.filter(function(t){return(t.priority||'medium')==='low';}).length;
+  var priTotal=incomplete.length||1;
+
+  // Productivity score: 0-100 based on completion rate + no overdue bonus
+  var score=Math.min(100,Math.round(completionRate*0.7+(overdueCount===0?30:Math.max(0,30-overdueCount*5))));
+
+  // Streak: count consecutive days (ending today) where at least one task was completed
+  var streak=0;
+  (function(){
+    var check=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    for(var s=0;s<30;s++){
+      var dayCompleted=completed.some(function(t){
+        if(!t.completedAt&&!t.date) return false;
+        var ref=t.completedAt?new Date(t.completedAt):(t.date?parseDate(t.date):null);
+        return ref&&sameDay(ref,check);
+      });
+      if(dayCompleted){streak++;check=addDays(check,-1);}
+      else if(s===0){break;} // no tasks completed today → streak=0
+      else break;
+    }
+  })();
+
+  // Weekly chart: for each day this week, count done + pending tasks
+  var chartData=[];
+  for(var ci=0;ci<7;ci++){
+    var cday=addDays(weekBase,ci);
+    var cdone=tasks.filter(function(t){var d=t.date?parseDate(t.date):null;return t.done&&d&&sameDay(d,cday);}).length;
+    var cpend=tasks.filter(function(t){var d=t.date?parseDate(t.date):null;return !t.done&&d&&sameDay(d,cday);}).length;
+    chartData.push({day:cday,done:cdone,pend:cpend,isToday:sameDay(cday,now)});
+  }
+  var chartMax=Math.max(1,Math.max.apply(null,chartData.map(function(d){return d.done+d.pend;})));
+
+  // Notes sorted by updated desc
+  var recentNotes=notes.slice().sort(function(a,b){return(b.updated||0)-(a.updated||0);}).slice(0,4);
+
+  // ── Greeting ──────────────────────────────────────────────────────────────
+  var hour=now.getHours();
+  var greet=hour<12?'Good morning':(hour<17?'Good afternoon':'Good evening');
+  // fix string
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var days2=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var dateStr=days2[now.getDay()]+', '+now.getDate()+' '+months[now.getMonth()]+' '+now.getFullYear();
+  var timeStr=pad(now.getHours())+':'+pad(now.getMinutes());
+
+  // ── Build HTML ─────────────────────────────────────────────────────────────
   var html='';
-  html+='<div class="dash-grid">';
-  html+='<div class="dash-card" data-dash-action="today"><div class="dash-kicker">Due today</div><div class="dash-value">'+todayCount+'</div><div class="dash-sub">Tasks due today from Task section</div></div>';
-  html+='<div class="dash-card" data-dash-action="week"><div class="dash-kicker">Due this week</div><div class="dash-value">'+weekCount+'</div><div class="dash-sub">Open items scheduled in the current planner week</div></div>';
-  html+='<div class="dash-card" data-dash-action="overdue"><div class="dash-kicker">Overdue</div><div class="dash-value">'+overdueCount+'</div><div class="dash-sub">Separate overdue section below</div></div>';
-  html+='<div class="dash-card" data-dash-action="tasks"><div class="dash-kicker">Completed</div><div class="dash-value">'+completionRate+'%</div><div class="dash-sub">'+completed.length+' of '+tasks.length+' tasks completed</div></div>';
+
+  // Greeting banner
+  html+='<div class="dash-greeting">';
+  html+='<div class="dash-greeting-left">';
+  html+='<div class="dash-greeting-title">'+greet+' 👋</div>';
+  html+='<div class="dash-greeting-sub">'+
+    (overdueCount>0?'You have <strong style="color:white">'+overdueCount+' overdue</strong> task'+(overdueCount>1?'s':'')+' to catch up on.':
+    todayCount>0?'You have <strong style="color:white">'+todayCount+' task'+(todayCount>1?'s':'')+' due</strong> today. Keep it up!':
+    'All clear for today. Great work! ✨')+
+  '</div>';
+  html+='</div>';
+  html+='<div class="dash-greeting-right">';
+  html+='<div class="dash-greeting-date">'+dateStr+'</div>';
+  html+='<div class="dash-greeting-time" id="dashLiveClock">'+timeStr+'</div>';
+  html+='</div>';
   html+='</div>';
 
+  // Stat cards row
+  html+='<div class="dash-stat-row">';
+  html+='<div class="dash-stat-card" data-dash-action="today">';
+  html+='<div class="dash-stat-icon" style="background:rgba(91,155,213,.12);">📅</div>';
+  html+='<div class="dash-stat-body"><div class="dash-stat-kicker">Due today</div><div class="dash-stat-val">'+todayCount+'</div><div class="dash-stat-sub">task'+(todayCount===1?'':'s')+' remaining today</div></div>';
+  html+='</div>';
+  html+='<div class="dash-stat-card" data-dash-action="week">';
+  html+='<div class="dash-stat-icon" style="background:rgba(196,148,42,.12);">📆</div>';
+  html+='<div class="dash-stat-body"><div class="dash-stat-kicker">This week</div><div class="dash-stat-val">'+weekCount+'</div><div class="dash-stat-sub">open items this week</div></div>';
+  html+='</div>';
+  html+='<div class="dash-stat-card" data-dash-action="overdue">';
+  html+='<div class="dash-stat-icon" style="background:rgba(232,82,82,.12);">⚠️</div>';
+  html+='<div class="dash-stat-body"><div class="dash-stat-kicker">Overdue</div><div class="dash-stat-val" style="color:'+(overdueCount>0?'#E85252':'var(--gd)')+'">'+overdueCount+'</div><div class="dash-stat-sub">'+(overdueCount>0?overdueCount+' past due date':'All on track ✓')+'</div></div>';
+  html+='</div>';
+  html+='<div class="dash-stat-card" data-dash-action="tasks">';
+  html+='<div class="dash-stat-icon" style="background:rgba(92,184,92,.12);">✅</div>';
+  html+='<div class="dash-stat-body"><div class="dash-stat-kicker">Completed</div><div class="dash-stat-val">'+completionRate+'%</div><div class="dash-stat-sub">'+completed.length+' of '+tasks.length+' done</div></div>';
+  html+='</div>';
+  html+='</div>';
+
+  // Section grid row 1: Weekly chart + Priority + Score
+  html+='<div class="dash-section-grid" style="grid-template-columns:1.6fr 0.7fr 0.7fr;margin-bottom:14px">';
+
+  // Weekly chart
+  html+='<div class="dash-chart-card">';
+  html+='<div class="dash-chart-title">Weekly Task Overview</div>';
+  html+='<div class="dash-chart-sub">'+shortD(weekBase)+' – '+shortD(addDays(weekBase,6))+' · Completed vs Pending per day</div>';
+  html+='<div class="dash-chart-bar-wrap">';
+  chartData.forEach(function(d,idx){
+    var doneH=chartMax>0?Math.round((d.done/chartMax)*100):0;
+    var pendH=chartMax>0?Math.round((d.pend/chartMax)*100):0;
+    var dayLabel=DAY_SHORT[idx];
+    html+='<div class="dash-chart-col" data-day-index="'+idx+'" style="cursor:pointer">';
+    html+='<div class="dash-chart-bars" style="align-items:flex-end;gap:2px">';
+    html+='<div class="dash-chart-bar done" style="height:'+doneH+'%" title="'+d.done+' completed"></div>';
+    html+='<div class="dash-chart-bar pending" style="height:'+pendH+'%;background:var(--gp);border:1.5px solid var(--gb)" title="'+d.pend+' pending"></div>';
+    html+='</div>';
+    html+='<div class="dash-chart-day'+(d.isToday?' today':'')+'">'+dayLabel+'</div>';
+    html+='</div>';
+  });
+  html+='</div>';
+  html+='<div class="dash-chart-legend">';
+  html+='<div class="dash-chart-leg-item"><div class="dash-chart-leg-dot" style="background:var(--gm)"></div>Completed</div>';
+  html+='<div class="dash-chart-leg-item"><div class="dash-chart-leg-dot" style="background:var(--gp);border:1.5px solid var(--gb)"></div>Pending</div>';
+  html+='</div>';
+  html+='</div>';
+
+  // Priority breakdown
+  html+='<div class="dash-pri-card">';
+  html+='<div class="dash-pri-title">By Priority</div>';
+  html+='<div class="dash-pri-row">';
+  [['high','#E85252','🔴',priHigh],['medium','#C4942A','🟡',priMed],['low','#5CB85C','🟢',priLow]].forEach(function(p){
+    var pct=priTotal>0?Math.round((p[3]/priTotal)*100):0;
+    html+='<div class="dash-pri-item">';
+    html+='<div class="dash-pri-dot" style="background:'+p[1]+'"></div>';
+    html+='<div class="dash-pri-label">'+p[0].charAt(0).toUpperCase()+p[0].slice(1)+'</div>';
+    html+='<div class="dash-pri-bar-wrap"><div class="dash-pri-bar" style="width:'+pct+'%;background:'+p[1]+'"></div></div>';
+    html+='<div class="dash-pri-count">'+p[3]+'</div>';
+    html+='</div>';
+  });
+  html+='</div>';
+  html+='<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--gp)">';
+  html+='<div class="dash-stat-kicker" style="margin-bottom:6px">Open tasks</div>';
+  html+='<div style="font-family:\'Playfair Display\',serif;font-size:26px;color:var(--gd);line-height:1">'+incomplete.length+'</div>';
+  html+='<div class="dash-stat-sub">'+tasks.length+' total</div>';
+  html+='</div>';
+  html+='</div>';
+
+  // Productivity score + streak
+  html+='<div class="dash-score-card">';
+  html+='<div>';
+  html+='<div class="dash-score-label">Productivity</div>';
+  // SVG ring
+  var r=32,cx=40,cy=40,circ=2*Math.PI*r;
+  var dash=Math.round((score/100)*circ);
+  html+='<div class="dash-score-ring-wrap">';
+  html+='<svg width="80" height="80" viewBox="0 0 80 80">';
+  html+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="var(--gp)" stroke-width="7"/>';
+  html+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="var(--gm)" stroke-width="7"';
+  html+=' stroke-dasharray="'+dash+' '+circ+'" stroke-dashoffset="'+circ/4+'" stroke-linecap="round"/>';
+  html+='<text x="40" y="45" text-anchor="middle" font-family="Playfair Display,serif" font-size="17" fill="var(--gd)" font-weight="700">'+score+'</text>';
+  html+='</svg>';
+  html+='</div>';
+  html+='</div>';
+  html+='<div class="dash-streak-row">';
+  html+='<div class="dash-streak-icon">🔥</div>';
+  html+='<div class="dash-streak-text">Day streak</div>';
+  html+='<div class="dash-streak-num">'+streak+'</div>';
+  html+='</div>';
+  html+='<div style="font-size:11px;color:var(--inkl);line-height:1.5;margin-top:4px">';
+  html+=score>=80?'Excellent momentum!':score>=50?'Good progress, keep going.':'Start completing tasks to build your score.';
+  html+='</div>';
+  html+='</div>';
+
+  html+='</div>'; // end section grid row 1
+
+  // Section grid row 2: week strip + tasks + notes
   html+='<div class="dash-layout">';
   html+='<div class="dash-panel">';
-  html+='<div class="dash-panel-head"><div><div class="dash-panel-title">This week</div><div class="dash-panel-sub">Based on your current planner week: '+shortD(weekBase)+' – '+shortD(addDays(weekBase,6))+'</div></div><div class="dash-mini-actions"><button class="dash-btn" id="dashJumpWeekTasks">Open weekly tasks</button></div></div>';
+  html+='<div class="dash-panel-head"><div><div class="dash-panel-title">This week</div><div class="dash-panel-sub">'+shortD(weekBase)+' – '+shortD(addDays(weekBase,6))+'</div></div><div class="dash-mini-actions"><button class="dash-btn" id="dashJumpWeekTasks">Weekly tasks</button></div></div>';
   html+='<div class="dash-week-strip">';
-  for(var i=0;i<7;i++){
-    var day=addDays(weekBase,i);
-    var count=dueThisWeek.filter(function(t){ var dt=dashboardDateTime(t); return dt&&sameDay(dt,day); }).length;
-    html+='<div class="dash-day" data-day-index="'+i+'"><div class="dash-day-head">'+DAYS[i]+'</div><div class="dash-day-date">'+pad(day.getDate())+'/'+pad(day.getMonth()+1)+'</div><div class="dash-day-count">'+count+'</div><div class="dash-day-label">task'+(count===1?'':'s')+'</div></div>';
+  for(var wi=0;wi<7;wi++){
+    var wday=addDays(weekBase,wi);
+    var wcount=dueThisWeek.filter(function(t){var dt=dashboardDateTime(t);return dt&&sameDay(dt,wday);}).length;
+    var isToday=sameDay(wday,now);
+    html+='<div class="dash-day'+(isToday?' is-today':'')+'" data-day-index="'+wi+'">';
+    html+='<div class="dash-day-head">'+DAY_SHORT[wi]+'</div>';
+    html+='<div class="dash-day-date">'+pad(wday.getDate())+'/'+pad(wday.getMonth()+1)+'</div>';
+    html+='<div class="dash-day-count">'+wcount+'</div>';
+    html+='<div class="dash-day-label">task'+(wcount===1?'':'s')+'</div>';
+    html+='</div>';
   }
   html+='</div>';
   html+='<div style="height:12px"></div>';
-  html+='<div class="dash-panel-head"><div><div class="dash-panel-title">Tasks due this week</div><div class="dash-panel-sub">Interactive list from your Task section</div></div><div class="dash-mini-actions"><button class="dash-btn" id="dashViewAllTasksBtn">All tasks</button></div></div>';
+  html+='<div class="dash-panel-head"><div><div class="dash-panel-title">Due this week</div><div class="dash-panel-sub">Interactive task list</div></div><div class="dash-mini-actions"><button class="dash-btn" id="dashViewAllTasksBtn">All tasks</button></div></div>';
   html+='<div class="dash-list" id="dashWeekList"></div>';
   html+='</div>';
 
+  html+='<div style="display:flex;flex-direction:column;gap:14px">';
+
+  // Overdue panel
   html+='<div class="dash-panel overdue-panel">';
-  html+='<div class="dash-panel-head"><div><div class="dash-panel-title">Overdue</div><div class="dash-panel-sub">Tasks that have already passed their due date/time</div></div><div class="dash-mini-actions"><button class="dash-btn" id="dashOpenOverdueTasks">Open overdue tasks</button></div></div>';
+  html+='<div class="dash-panel-head"><div><div class="dash-panel-title">Overdue</div><div class="dash-panel-sub">Past due date/time</div></div><div class="dash-mini-actions"><button class="dash-btn" id="dashOpenOverdueTasks">Open all</button></div></div>';
   html+='<div class="dash-list" id="dashOverdueList"></div>';
-  html+='<div style="height:12px"></div>';
-  html+='<div class="dash-panel-head"><div><div class="dash-panel-title">Due today</div><div class="dash-panel-sub">Quick look at today\'s remaining tasks</div></div></div>';
+  html+='<div style="height:8px"></div>';
+  html+='<div class="dash-panel-head"><div><div class="dash-panel-title">Due today</div><div class="dash-panel-sub">Quick look at today\'s tasks</div></div></div>';
   html+='<div class="dash-list" id="dashTodayList"></div>';
   html+='</div>';
+
+  // Notes preview
+  html+='<div class="dash-notes-card">';
+  html+='<div class="dash-notes-head">';
+  html+='<div class="dash-notes-title">📓 Recent Notes</div>';
+  html+='<button class="dash-btn" id="dashOpenNotes" style="font-size:11px">All notes</button>';
   html+='</div>';
+  if(recentNotes.length===0){
+    html+='<div class="dash-notes-empty">No notes yet.<br>Go to Notes tab to add one.</div>';
+  } else {
+    recentNotes.forEach(function(n){
+      var snippet=(n.body||'').replace(/\n/g,' ').trim();
+      html+='<div class="dash-note-pill" style="background:'+(n.color||'#E8B84B')+'22;border-left:3px solid '+(n.color||'#E8B84B')+'" data-note-id="'+n.id+'">';
+      html+='<div class="dash-note-dot" style="background:'+(n.color||'#E8B84B')+'"></div>';
+      html+='<div class="dash-note-body">';
+      html+='<div class="dash-note-ttl">'+(n.title||'Untitled note')+'</div>';
+      if(snippet) html+='<div class="dash-note-snippet">'+snippet+'</div>';
+      html+='</div></div>';
+    });
+  }
+  html+='</div>';
+
+  html+='</div>'; // end right column
+
+  html+='</div>'; // end dash-layout
 
   mount.innerHTML=html;
 
-  function fillList(id, arr, isOver){
+  // ── Clock ticker ─────────────────────────────────────────────────────────
+  (function tickClock(){
+    var el=document.getElementById('dashLiveClock');
+    if(!el||currentTab!=='dashboard') return;
+    var t=new Date();
+    el.textContent=pad(t.getHours())+':'+pad(t.getMinutes());
+    setTimeout(tickClock,10000);
+  })();
+
+  // ── Fill task lists ───────────────────────────────────────────────────────
+  function fillList(id,arr,isOver){
     var el=document.getElementById(id); if(!el) return;
     el.innerHTML='';
     if(!arr.length){
       var empty=document.createElement('div');
       empty.className='dash-empty';
-      empty.textContent=isOver?'No overdue tasks right now.':'Nothing due here right now.';
+      empty.textContent=isOver?'No overdue tasks right now ✓':'Nothing due here right now.';
       el.appendChild(empty);
       return;
     }
-    arr.slice(0, isOver?8:10).forEach(function(t){ el.appendChild(dashboardTaskCard(t, !!isOver)); });
+    arr.slice(0,isOver?8:10).forEach(function(t){el.appendChild(dashboardTaskCard(t,!!isOver));});
   }
 
-  fillList('dashWeekList', dueThisWeek, false);
-  fillList('dashOverdueList', overdue, true);
-  fillList('dashTodayList', dueToday, false);
+  fillList('dashWeekList',dueThisWeek,false);
+  fillList('dashOverdueList',overdue,true);
+  fillList('dashTodayList',dueToday,false);
 
+  // ── Event bindings ────────────────────────────────────────────────────────
   Array.from(mount.querySelectorAll('[data-dash-action]')).forEach(function(card){
     card.addEventListener('click',function(){
       var action=card.getAttribute('data-dash-action');
-      if(action==='today'){curFilter='today'; switchTab('tasks');}
-      else if(action==='week' || action==='tasks'){curFilter='all'; switchTab('tasks');}
-      else if(action==='overdue'){curFilter='overdue'; switchTab('tasks');}
+      if(action==='today'){curFilter='today';switchTab('tasks');}
+      else if(action==='week'||action==='tasks'){curFilter='all';switchTab('tasks');}
+      else if(action==='overdue'){curFilter='overdue';switchTab('tasks');}
     });
   });
 
@@ -2734,12 +3056,26 @@ function renderDashboard(){
     });
   });
 
-  var openTasksTop=document.getElementById('dashOpenTasksTop'); if(openTasksTop) openTasksTop.onclick=function(){curFilter='all'; switchTab('tasks');};
+  Array.from(mount.querySelectorAll('.dash-chart-col')).forEach(function(col){
+    col.addEventListener('click',function(){
+      var idx=parseInt(col.getAttribute('data-day-index'))||0;
+      currentDayIdx=idx;
+      switchTab('planner');
+    });
+  });
+
+  Array.from(mount.querySelectorAll('.dash-note-pill')).forEach(function(pill){
+    pill.addEventListener('click',function(){switchTab('notes');});
+  });
+
+  var openTasksTop=document.getElementById('dashOpenTasksTop'); if(openTasksTop) openTasksTop.onclick=function(){curFilter='all';switchTab('tasks');};
   var openPlannerTop=document.getElementById('dashOpenPlannerTop'); if(openPlannerTop) openPlannerTop.onclick=function(){switchTab('planner');};
-  var jumpWeek=document.getElementById('dashJumpWeekTasks'); if(jumpWeek) jumpWeek.onclick=function(){curFilter='all'; switchTab('tasks');};
-  var viewAll=document.getElementById('dashViewAllTasksBtn'); if(viewAll) viewAll.onclick=function(){curFilter='all'; switchTab('tasks');};
-  var openOv=document.getElementById('dashOpenOverdueTasks'); if(openOv) openOv.onclick=function(){curFilter='overdue'; switchTab('tasks');};
+  var jumpWeek=document.getElementById('dashJumpWeekTasks'); if(jumpWeek) jumpWeek.onclick=function(){curFilter='all';switchTab('tasks');};
+  var viewAll=document.getElementById('dashViewAllTasksBtn'); if(viewAll) viewAll.onclick=function(){curFilter='all';switchTab('tasks');};
+  var openOv=document.getElementById('dashOpenOverdueTasks'); if(openOv) openOv.onclick=function(){curFilter='overdue';switchTab('tasks');};
+  var openNotes=document.getElementById('dashOpenNotes'); if(openNotes) openNotes.onclick=function(){switchTab('notes');};
 }
+
 
 function renderTasks(){
   var tasks=lsGet(TK);
