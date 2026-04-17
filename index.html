@@ -344,6 +344,40 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .empty-st{text-align:center;padding:44px 20px;color:var(--inkl)}
 .empty-st .ei{font-size:32px;margin-bottom:8px}
 
+/* ── Dashboard ── */
+.dash-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.dash-card{background:white;border:1.5px solid var(--gp);border-radius:14px;padding:14px 15px;box-shadow:0 6px 18px rgba(139,105,20,0.08);cursor:pointer;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
+.dash-card:hover{transform:translateY(-1px);border-color:var(--gm);box-shadow:0 10px 22px rgba(139,105,20,0.12)}
+.dash-kicker{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--inkl);margin-bottom:7px}
+.dash-value{font-family:'Playfair Display',serif;font-size:28px;line-height:1;color:var(--gd);margin-bottom:6px}
+.dash-sub{font-size:12px;color:var(--inkl)}
+.dash-layout{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;align-items:start}
+.dash-panel{background:white;border:1.5px solid var(--gp);border-radius:14px;padding:14px 15px;box-shadow:0 6px 18px rgba(139,105,20,0.08)}
+.dash-panel.overdue-panel{border-color:rgba(179,32,32,.35);background:linear-gradient(180deg,#fff 0%,#fff7f7 100%)}
+.dash-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.dash-panel-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--gd)}
+.dash-panel-sub{font-size:12px;color:var(--inkl)}
+.dash-mini-actions{display:flex;gap:8px;flex-wrap:wrap}
+.dash-btn{font-family:DM Sans,sans-serif;font-size:12px;font-weight:700;color:var(--gd);background:rgba(196,148,42,.1);border:1px solid rgba(196,148,42,.35);border-radius:999px;padding:7px 11px;cursor:pointer}
+.dash-btn:hover{background:rgba(196,148,42,.16)}
+.dash-list{display:flex;flex-direction:column;gap:10px}
+.dash-task{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid rgba(196,148,42,.22);border-radius:12px;background:linear-gradient(180deg,rgba(255,250,240,.95),#fff)}
+.dash-task-main{min-width:0;flex:1}
+.dash-task-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px;word-break:break-word}
+.dash-task-meta{font-size:12px;color:var(--inkl);display:flex;gap:8px;flex-wrap:wrap}
+.dash-task-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.dash-task.overdue{border-color:rgba(179,32,32,.35);background:linear-gradient(180deg,#fff8f8,#fff)}
+.dash-empty{padding:18px 14px;border:1px dashed rgba(196,148,42,.35);border-radius:12px;background:rgba(255,250,240,.6);font-size:13px;color:var(--inkl);text-align:center}
+.dash-week-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:4px}
+.dash-day{background:rgba(255,250,240,.92);border:1px solid rgba(196,148,42,.22);border-radius:12px;padding:10px 8px;min-height:88px;cursor:pointer}
+.dash-day:hover{border-color:var(--gm)}
+.dash-day-head{font-size:11px;font-weight:700;color:var(--inkl);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.dash-day-date{font-size:15px;font-weight:700;color:var(--gd);margin-bottom:6px}
+.dash-day-count{font-size:24px;font-family:'Playfair Display',serif;color:var(--ink);line-height:1}
+.dash-day-label{font-size:11px;color:var(--inkl);margin-top:4px}
+@media (max-width:980px){.dash-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-layout{grid-template-columns:1fr}.dash-week-strip{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:640px){.dash-grid{grid-template-columns:1fr}.dash-week-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-card,.dash-panel{padding:13px}.dash-task{flex-direction:column}.dash-task-actions{width:100%;justify-content:flex-start}}
+
 /* ── Notes ── */
 .notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:13px}
 .note-card{background:white;border:1.5px solid var(--gp);border-radius:12px;padding:13px 15px;
@@ -547,7 +581,7 @@ footer strong{color:rgba(255,253,245,0.85)}
     <img id="brandLogo" src="" alt="CD" style="width:38px;height:38px;object-fit:contain;border-radius:4px;flex-shrink:0;">
     <div style="display:flex;flex-direction:column;justify-content:center;gap:1px;">
       <span class="brand-title">CD Scheduler</span>
-      <span class="brand-sub">Planner · Tasks · Notes</span>
+      <span class="brand-sub">Dashboard · Planner · Tasks · Notes</span>
     </div>
   </div>
   <div class="header-right">
@@ -568,10 +602,28 @@ footer strong{color:rgba(255,253,245,0.85)}
 
 <!-- Tab Nav -->
 <nav class="tab-nav">
-  <button class="tab-btn active" data-tab="planner">📅 Planner</button>
+  <button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button>
+  <button class="tab-btn" data-tab="planner">📅 Planner</button>
   <button class="tab-btn" data-tab="tasks">✅ Tasks</button>
   <button class="tab-btn" data-tab="notes">📓 Notes</button>
 </nav>
+
+<!-- DASHBOARD TAB -->
+<div id="tab-dashboard" class="tab-panel active">
+  <div class="section-card">
+    <div class="section-head">
+      <div>
+        <div class="st">Dashboard</div>
+        <div class="ss">Live view from your Task section — today, this week, and overdue.</div>
+      </div>
+      <div class="dash-mini-actions">
+        <button class="dash-btn" id="dashOpenTasksTop">Open Tasks</button>
+        <button class="dash-btn" id="dashOpenPlannerTop">Open Planner</button>
+      </div>
+    </div>
+    <div id="dashboardContent"></div>
+  </div>
+</div>
 
 <!-- PLANNER TAB -->
 <div id="tab-planner" class="tab-panel active">
@@ -666,7 +718,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   </div>
 </div>
 
-<footer><strong>CD Scheduler</strong> · Planner · Tasks · Notes · Sync across all devices</footer>
+<footer><strong>CD Scheduler</strong> · Dashboard · Planner · Tasks · Notes · Sync across all devices</footer>
 </div><!-- #app -->
 
 <!-- ══════════════════════════════════════════════════════
@@ -747,19 +799,22 @@ function fmtTs(ts){
 }
 
 // ── Tab switching ────────────────────────────────────────────────────────────
-var currentTab='planner';
+var currentTab='dashboard';
+function switchTab(name){
+  closePopover();
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-tab')===name)});
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
+  var panel=document.getElementById('tab-'+name);
+  if(panel) panel.classList.add('active');
+  currentTab=name;
+  if(name==='dashboard')renderDashboard();
+  if(name==='tasks')renderTasks();
+  if(name==='notes')renderNotes();
+  if(name==='planner'){buildGrid();applyPlannerLayout();}
+}
 document.querySelectorAll('.tab-btn').forEach(function(btn){
   btn.addEventListener('click',function(){
-    closePopover();
-    var name=btn.getAttribute('data-tab');
-    document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active')});
-    document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
-    btn.classList.add('active');
-    document.getElementById('tab-'+name).classList.add('active');
-    currentTab=name;
-    if(name==='tasks')renderTasks();
-    if(name==='notes')renderNotes();
-    if(name==='planner'){buildGrid();applyPlannerLayout();}
+    switchTab(btn.getAttribute('data-tab'));
   });
 });
 
@@ -1589,6 +1644,7 @@ function setWeek(d){
   document.getElementById('weekRangeLabel').textContent=shortD(weekStart)+' – '+shortD(end)+' '+weekStart.getFullYear();
   buildGrid();
   FB.reattachPlanner(fmtDate(weekStart));
+  if(currentTab==='dashboard') renderDashboard();
 }
 
 document.getElementById('prevWeek').addEventListener('click',function(){if(weekStart)setWeek(addDays(weekStart,-7))});
@@ -1835,6 +1891,7 @@ function openTaskEditModal(taskId, editScope){
     Object.keys(tasks).forEach(function(k){if(!tasks2[k])delete tasks[k];});
     closePopover();buildGrid();
     if(currentTab==='tasks')renderTasks();
+    if(currentTab==='dashboard')renderDashboard();
   });
 
   var saveBtn=document.createElement('button');saveBtn.className='pop-btn pri';
@@ -1886,6 +1943,7 @@ function openTaskEditModal(taskId, editScope){
     lsSet(TK,tasks2);
     closePopover();buildGrid();
     if(currentTab==='tasks')renderTasks();
+    if(currentTab==='dashboard')renderDashboard();
   });
 
   actRow.appendChild(delBtn);actRow.appendChild(saveBtn);modal.appendChild(actRow);
@@ -1895,12 +1953,7 @@ function openTaskEditModal(taskId, editScope){
     var gotoBtn=document.createElement('button');gotoBtn.className='pop-goto';
     gotoBtn.textContent='Open in Tasks tab →';
     gotoBtn.addEventListener('click',function(){
-      closePopover();
-      document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active')});
-      document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
-      document.querySelector('[data-tab="tasks"]').classList.add('active');
-      document.getElementById('tab-tasks').classList.add('active');
-      currentTab='tasks';renderTasks();
+      switchTab('tasks');
       setTimeout(function(){
         var el=document.getElementById('tt-'+taskId);
         if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus();}
@@ -2512,6 +2565,160 @@ function openRecurringSetupModal(existingGroupId){
 function autoResize(el){
   el.style.height='auto';
   el.style.height=Math.max(el.scrollHeight,28)+'px';
+}
+
+function dashboardDateTime(t){
+  if(!t||!t.date) return null;
+  var d=parseDate(t.date); if(!d) return null;
+  var h=23,m=59;
+  if(t.time){var tp=t.time.split(':');h=parseInt(tp[0])||0;m=parseInt(tp[1])||0;}
+  return new Date(d.getFullYear(),d.getMonth(),d.getDate(),h,m);
+}
+
+function isTaskInCurrentWeek(t){
+  if(!weekStart||!t||!t.date||t.done) return false;
+  var dt=dashboardDateTime(t); if(!dt) return false;
+  var ws=new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate(),0,0,0,0);
+  var we=new Date(ws); we.setDate(we.getDate()+7);
+  return dt>=ws && dt<we;
+}
+
+function sameDay(a,b){
+  return a&&b&&a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
+}
+
+function openTaskFromDashboard(taskId){
+  switchTab('tasks');
+  setTimeout(function(){
+    var el=document.getElementById('tt-'+taskId);
+    if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus();}
+  },90);
+}
+
+function dashboardTaskCard(t, isOverdue){
+  var dt=dashboardDateTime(t);
+  var when='No due date';
+  if(dt){
+    when=shortD(dt)+' · '+(t.time?t.time:'No time');
+  }
+  var priority=(t.priority||'medium');
+  var wrap=document.createElement('div');
+  wrap.className='dash-task'+(isOverdue?' overdue':'');
+  wrap.innerHTML=
+    '<div class="dash-task-main">'+
+      '<div class="dash-task-title">'+(t.title||'(no title)')+'</div>'+
+      '<div class="dash-task-meta">'+
+        '<span>'+(isOverdue?'⚠️ Overdue':'📌 Due')+'</span>'+
+        '<span>'+when+'</span>'+
+        '<span>'+priority.charAt(0).toUpperCase()+priority.slice(1)+'</span>'+
+      '</div>'+
+    '</div>'+
+    '<div class="dash-task-actions">'+
+      '<button class="dash-btn dash-open-task">Edit</button>'+
+      '<button class="dash-btn dash-open-planner">Planner</button>'+
+    '</div>';
+  wrap.querySelector('.dash-open-task').addEventListener('click',function(){openTaskFromDashboard(t.id);});
+  wrap.querySelector('.dash-open-planner').addEventListener('click',function(){
+    if(t.date){
+      var d=parseDate(t.date);
+      if(d) setWeek(d);
+    }
+    switchTab('planner');
+  });
+  return wrap;
+}
+
+function renderDashboard(){
+  var mount=document.getElementById('dashboardContent');
+  if(!mount) return;
+  var tasks=Object.values(lsGet(TK)||{});
+  var now=new Date();
+  var weekBase=weekStart?new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate(),0,0,0,0):toMon(now);
+  if(!weekStart) weekStart=weekBase;
+  var incomplete=tasks.filter(function(t){return !t.done;});
+  var overdue=tasks.filter(function(t){return taskStatus(t)==='overdue';}).sort(function(a,b){return ((dashboardDateTime(a)&&dashboardDateTime(a).getTime())||0)-((dashboardDateTime(b)&&dashboardDateTime(b).getTime())||0);});
+  var dueToday=incomplete.filter(function(t){ var dt=dashboardDateTime(t); return dt&&sameDay(dt,now)&&taskStatus(t)!=='overdue'; }).sort(function(a,b){return ((dashboardDateTime(a)&&dashboardDateTime(a).getTime())||0)-((dashboardDateTime(b)&&dashboardDateTime(b).getTime())||0);});
+  var dueThisWeek=incomplete.filter(function(t){return isTaskInCurrentWeek(t) && taskStatus(t)!=='overdue';}).sort(function(a,b){return ((dashboardDateTime(a)&&dashboardDateTime(a).getTime())||0)-((dashboardDateTime(b)&&dashboardDateTime(b).getTime())||0);});
+  var completed=tasks.filter(function(t){return !!t.done;});
+  var scheduled=tasks.filter(function(t){return !!t.date;});
+  var todayCount=dueToday.length;
+  var weekCount=dueThisWeek.length;
+  var overdueCount=overdue.length;
+  var completionRate=tasks.length?Math.round((completed.length/tasks.length)*100):0;
+
+  var html='';
+  html+='<div class="dash-grid">';
+  html+='<div class="dash-card" data-dash-action="today"><div class="dash-kicker">Due today</div><div class="dash-value">'+todayCount+'</div><div class="dash-sub">Tasks due today from Task section</div></div>';
+  html+='<div class="dash-card" data-dash-action="week"><div class="dash-kicker">Due this week</div><div class="dash-value">'+weekCount+'</div><div class="dash-sub">Open items scheduled in the current planner week</div></div>';
+  html+='<div class="dash-card" data-dash-action="overdue"><div class="dash-kicker">Overdue</div><div class="dash-value">'+overdueCount+'</div><div class="dash-sub">Separate overdue section below</div></div>';
+  html+='<div class="dash-card" data-dash-action="tasks"><div class="dash-kicker">Completed</div><div class="dash-value">'+completionRate+'%</div><div class="dash-sub">'+completed.length+' of '+tasks.length+' tasks completed</div></div>';
+  html+='</div>';
+
+  html+='<div class="dash-layout">';
+  html+='<div class="dash-panel">';
+  html+='<div class="dash-panel-head"><div><div class="dash-panel-title">This week</div><div class="dash-panel-sub">Based on your current planner week: '+shortD(weekBase)+' – '+shortD(addDays(weekBase,6))+'</div></div><div class="dash-mini-actions"><button class="dash-btn" id="dashJumpWeekTasks">Open weekly tasks</button></div></div>';
+  html+='<div class="dash-week-strip">';
+  for(var i=0;i<7;i++){
+    var day=addDays(weekBase,i);
+    var count=dueThisWeek.filter(function(t){ var dt=dashboardDateTime(t); return dt&&sameDay(dt,day); }).length;
+    html+='<div class="dash-day" data-day-index="'+i+'"><div class="dash-day-head">'+DAYS[i]+'</div><div class="dash-day-date">'+pad(day.getDate())+'/'+pad(day.getMonth()+1)+'</div><div class="dash-day-count">'+count+'</div><div class="dash-day-label">task'+(count===1?'':'s')+'</div></div>';
+  }
+  html+='</div>';
+  html+='<div style="height:12px"></div>';
+  html+='<div class="dash-panel-head"><div><div class="dash-panel-title">Tasks due this week</div><div class="dash-panel-sub">Interactive list from your Task section</div></div><div class="dash-mini-actions"><button class="dash-btn" id="dashViewAllTasksBtn">All tasks</button></div></div>';
+  html+='<div class="dash-list" id="dashWeekList"></div>';
+  html+='</div>';
+
+  html+='<div class="dash-panel overdue-panel">';
+  html+='<div class="dash-panel-head"><div><div class="dash-panel-title">Overdue</div><div class="dash-panel-sub">Tasks that have already passed their due date/time</div></div><div class="dash-mini-actions"><button class="dash-btn" id="dashOpenOverdueTasks">Open overdue tasks</button></div></div>';
+  html+='<div class="dash-list" id="dashOverdueList"></div>';
+  html+='<div style="height:12px"></div>';
+  html+='<div class="dash-panel-head"><div><div class="dash-panel-title">Due today</div><div class="dash-panel-sub">Quick look at today\'s remaining tasks</div></div></div>';
+  html+='<div class="dash-list" id="dashTodayList"></div>';
+  html+='</div>';
+  html+='</div>';
+
+  mount.innerHTML=html;
+
+  function fillList(id, arr, isOver){
+    var el=document.getElementById(id); if(!el) return;
+    el.innerHTML='';
+    if(!arr.length){
+      var empty=document.createElement('div');
+      empty.className='dash-empty';
+      empty.textContent=isOver?'No overdue tasks right now.':'Nothing due here right now.';
+      el.appendChild(empty);
+      return;
+    }
+    arr.slice(0, isOver?8:10).forEach(function(t){ el.appendChild(dashboardTaskCard(t, !!isOver)); });
+  }
+
+  fillList('dashWeekList', dueThisWeek, false);
+  fillList('dashOverdueList', overdue, true);
+  fillList('dashTodayList', dueToday, false);
+
+  Array.from(mount.querySelectorAll('[data-dash-action]')).forEach(function(card){
+    card.addEventListener('click',function(){
+      var action=card.getAttribute('data-dash-action');
+      if(action==='today'){curFilter='today'; switchTab('tasks');}
+      else if(action==='week' || action==='tasks'){curFilter='all'; switchTab('tasks');}
+      else if(action==='overdue'){curFilter='overdue'; switchTab('tasks');}
+    });
+  });
+
+  Array.from(mount.querySelectorAll('.dash-day')).forEach(function(dayEl){
+    dayEl.addEventListener('click',function(){
+      var idx=parseInt(dayEl.getAttribute('data-day-index'))||0;
+      currentDayIdx=idx;
+      switchTab('planner');
+    });
+  });
+
+  var openTasksTop=document.getElementById('dashOpenTasksTop'); if(openTasksTop) openTasksTop.onclick=function(){curFilter='all'; switchTab('tasks');};
+  var openPlannerTop=document.getElementById('dashOpenPlannerTop'); if(openPlannerTop) openPlannerTop.onclick=function(){switchTab('planner');};
+  var jumpWeek=document.getElementById('dashJumpWeekTasks'); if(jumpWeek) jumpWeek.onclick=function(){curFilter='all'; switchTab('tasks');};
+  var viewAll=document.getElementById('dashViewAllTasksBtn'); if(viewAll) viewAll.onclick=function(){curFilter='all'; switchTab('tasks');};
+  var openOv=document.getElementById('dashOpenOverdueTasks'); if(openOv) openOv.onclick=function(){curFilter='overdue'; switchTab('tasks');};
 }
 
 function renderTasks(){
@@ -3310,6 +3517,7 @@ setWeek(new Date());
 applyPlannerLayout();
 renderTasks();
 renderNotes();
+renderDashboard();
 // ════════════════════════════════════════════════════════
 // GOOGLE CALENDAR SYNC
 // ════════════════════════════════════════════════════════
@@ -3722,7 +3930,7 @@ setTimeout(renderPlannerTimeBlocks, 300);
 
 window.addEventListener('resize',function(){setTimeout(renderPlannerTimeBlocks,80);});
 setInterval(markOverdue,60000);
-setInterval(function(){if(currentTab==='tasks')renderTasks();},60000);
+setInterval(function(){if(currentTab==='tasks')renderTasks(); if(currentTab==='dashboard')renderDashboard();},60000);
 
 </script>
 
