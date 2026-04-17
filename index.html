@@ -840,7 +840,8 @@ footer strong{color:rgba(255,253,245,0.85)}
 .rwd-inp:focus{border-color:var(--gd);box-shadow:0 0 0 3px rgba(196,148,42,.15)}
 .rwd-xp-unit{font-size:12px;font-weight:700;color:var(--inkl)}
 .rwd-save-msg{font-size:12px;font-weight:600;margin-top:9px;min-height:18px;transition:opacity .3s}
-.rwd-levels-table{width:100%;border-collapse:collapse}
+.rwd-levels-table{width:100%;border-collapse:collapse;min-width:360px}
+.rwd-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px}
 .rwd-levels-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--inkl);padding:6px 8px;text-align:left;border-bottom:2px solid var(--gp)}
 .rwd-levels-table td{padding:6px 6px;vertical-align:middle;border-bottom:1px solid var(--gc)}
 .rwd-levels-table tr:last-child td{border-bottom:none}
@@ -4236,9 +4237,10 @@ function gamiTodayProgress(){
 }
 
 function gamiRenderHud(){
-  var g=gamiGet();var lvl=gamiGetLevel(g.xp);
-  var nextLvl=GAMI_LEVELS[Math.min(lvl.lvl,GAMI_LEVELS.length-1)];
-  var pct=nextLvl.max===9999?100:Math.round(((g.xp-lvl.min)/(nextLvl.max-lvl.min))*100);
+  var g=gamiGet();
+  var lvl=gamiGetLevel(g.xp);
+  var isMax=lvl.max===9999;
+  var pct=isMax?100:Math.round(((g.xp-lvl.min)/(lvl.max-lvl.min))*100);
   pct=Math.max(0,Math.min(100,pct));
   var streak=gamiStreak();var tp=gamiTodayProgress();
   var todayPct=tp.total>0?Math.round((tp.done/tp.total)*100):0;
@@ -4246,7 +4248,7 @@ function gamiRenderHud(){
   if(el('gamiLevelIcon'))el('gamiLevelIcon').textContent=lvl.icon;
   if(el('gamiLevelName'))el('gamiLevelName').textContent=lvl.name;
   if(el('gamiLevelNum')) el('gamiLevelNum').textContent='Level '+lvl.lvl;
-  if(el('gamiXpVal'))    el('gamiXpVal').textContent=nextLvl.max===9999?g.xp+' XP (max!)':g.xp+' / '+nextLvl.max+' XP';
+  if(el('gamiXpVal'))    el('gamiXpVal').textContent=isMax?g.xp+' XP (max!)':g.xp+' / '+lvl.max+' XP';
   if(el('gamiXpFill'))   el('gamiXpFill').style.width=pct+'%';
   if(el('gamiStreakNum'))el('gamiStreakNum').textContent=streak;
   if(el('gamiTodayFrac'))el('gamiTodayFrac').textContent=tp.done+'/'+tp.total;
@@ -4342,8 +4344,8 @@ function rwdMsg(elId,text,ok){
 function renderRewards(){
   var g=gamiGet();
   var lvl=gamiGetLevel(g.xp);
-  var nextLvl=GAMI_LEVELS[Math.min(lvl.lvl,GAMI_LEVELS.length-1)];
-  var pct=nextLvl.max===9999?100:Math.round(((g.xp-lvl.min)/(nextLvl.max-lvl.min))*100);
+  var isMax=lvl.max===9999;
+  var pct=isMax?100:Math.round(((g.xp-lvl.min)/(lvl.max-lvl.min))*100);
   pct=Math.max(0,Math.min(100,pct));
   var streak=gamiStreak();
   var done=Object.keys(g.completedIds||{}).length;
@@ -4351,7 +4353,7 @@ function renderRewards(){
   // Status card
   var si=document.getElementById('rwdStatusIcon');   if(si) si.textContent=lvl.icon;
   var sl=document.getElementById('rwdStatusLevel');  if(sl) sl.textContent='Level '+lvl.lvl+' — '+lvl.name;
-  var sx=document.getElementById('rwdStatusXp');     if(sx) sx.textContent=g.xp+' XP total · '+(nextLvl.max===9999?'Max level reached! 👑':(g.xp-lvl.min)+' / '+(nextLvl.max-lvl.min)+' to next level');
+  var sx=document.getElementById('rwdStatusXp');     if(sx) sx.textContent=g.xp+' XP total · '+(isMax?'Max level reached! 👑':(g.xp-lvl.min)+' / '+(lvl.max-lvl.min)+' to next level');
   var sb=document.getElementById('rwdStatusBar');    if(sb) sb.style.width=pct+'%';
   var sv=document.getElementById('rwdStreakVal');    if(sv) sv.textContent=streak;
   var dv=document.getElementById('rwdDoneVal');      if(dv) dv.textContent=done;
@@ -4432,12 +4434,12 @@ function rwdInitHandlers(){
     // 4. Update status card at top of Rewards tab
     var g2=gamiGet();
     var lvl2=gamiGetLevel(g2.xp);
-    var nextLvl2=GAMI_LEVELS[Math.min(lvl2.lvl,GAMI_LEVELS.length-1)];
-    var pct2=nextLvl2.max===9999?100:Math.round(((g2.xp-lvl2.min)/(nextLvl2.max-lvl2.min))*100);
+    var isMax2=lvl2.max===9999;
+    var pct2=isMax2?100:Math.round(((g2.xp-lvl2.min)/(lvl2.max-lvl2.min))*100);
     pct2=Math.max(0,Math.min(100,pct2));
     var si=document.getElementById('rwdStatusIcon');   if(si) si.textContent=lvl2.icon;
     var sl=document.getElementById('rwdStatusLevel');  if(sl) sl.textContent='Level '+lvl2.lvl+' — '+lvl2.name;
-    var sx=document.getElementById('rwdStatusXp');     if(sx) sx.textContent=g2.xp+' XP total · '+(nextLvl2.max===9999?'Max level reached! 👑':(g2.xp-lvl2.min)+' / '+(nextLvl2.max-lvl2.min)+' to next level');
+    var sx=document.getElementById('rwdStatusXp');     if(sx) sx.textContent=g2.xp+' XP total · '+(isMax2?'Max level reached! 👑':(g2.xp-lvl2.min)+' / '+(lvl2.max-lvl2.min)+' to next level');
     var sb=document.getElementById('rwdStatusBar');    if(sb) sb.style.width=pct2+'%';
 
     // 5. Re-render the preview directly from the new GAMI_LEVELS
@@ -4511,7 +4513,7 @@ function rwdInitHandlers(){
 
 function rwdRenderLevelsTable(levels){
   var wrap=document.getElementById('rwdLevelsTable');if(!wrap)return;
-  var html='<table class="rwd-levels-table"><thead><tr><th>#</th><th>Icon</th><th>Level Name</th><th>Starts at XP</th><th>Ends at XP</th><th></th></tr></thead><tbody>';
+  var html='<div class="rwd-table-wrap"><table class="rwd-levels-table"><thead><tr><th>#</th><th>Icon</th><th>Level Name</th><th>Starts at XP</th><th>Ends at XP</th><th></th></tr></thead><tbody>';
   levels.forEach(function(l,i){
     var isLast=i===levels.length-1;
     html+='<tr class="rwd-level-row">'+
@@ -4523,7 +4525,7 @@ function rwdRenderLevelsTable(levels){
       '<td>'+(i===0?'':'<button class="rwd-del-btn rwd-del-level" title="Delete">🗑</button>')+'</td>'+
     '</tr>';
   });
-  html+='</tbody></table>';
+  html+='</tbody></table></div>';
   wrap.innerHTML=html;
   wrap.querySelectorAll('.rwd-del-level').forEach(function(btn){
     btn.addEventListener('click',function(){
