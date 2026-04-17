@@ -824,6 +824,10 @@ footer strong{color:rgba(255,253,245,0.85)}
 .rwd-section-sub{font-size:12px;color:var(--inkl);margin-top:3px;line-height:1.5}
 .rwd-save-btn{font-family:DM Sans,sans-serif;font-size:12px;font-weight:700;background:var(--gm);border:none;border-radius:8px;padding:8px 16px;color:white;cursor:pointer;transition:background .15s;white-space:nowrap}
 .rwd-save-btn:hover{background:var(--gd)}
+.rwd-refresh-btn{font-family:DM Sans,sans-serif;font-size:12px;font-weight:700;
+  background:white;border:1.5px solid var(--gm);border-radius:8px;padding:7px 15px;
+  color:var(--gd);cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.rwd-refresh-btn:hover{background:var(--gc);border-color:var(--gd)}
 .rwd-add-btn{font-family:DM Sans,sans-serif;font-size:12px;font-weight:700;background:rgba(91,155,213,.12);border:1.5px solid rgba(91,155,213,.4);border-radius:8px;padding:8px 14px;color:#185FA5;cursor:pointer;transition:all .15s}
 .rwd-add-btn:hover{background:rgba(91,155,213,.22)}
 .rwd-xp-grid{display:flex;flex-direction:column;gap:8px}
@@ -1124,8 +1128,13 @@ footer strong{color:rgba(255,253,245,0.85)}
       <div class="rwd-save-msg" id="rwdLevelsMsg"></div>
     </div>
     <div class="rwd-section">
-      <div class="rwd-section-title" style="margin-bottom:12px">📊 Level Progression Preview</div>
+      <div class="rwd-section-head">
+        <div class="rwd-section-title" style="margin-bottom:0">📊 Level Progression Preview</div>
+        <button class="rwd-refresh-btn" id="rwdRefreshPreview">↻ Refresh Preview</button>
+      </div>
+      <div class="rwd-section-sub" style="margin-bottom:12px">Shows a live preview based on current table values. Click Refresh Preview after editing XP thresholds to see the updated progression before saving.</div>
       <div id="rwdLevelsPreview"></div>
+      <div class="rwd-save-msg" id="rwdPreviewMsg"></div>
     </div>
   </div>
 </div>
@@ -4381,6 +4390,7 @@ function rwdInitHandlers(){
   var saveLvlBtn=document.getElementById('rwdSaveLevels');
   if(saveLvlBtn) saveLvlBtn.addEventListener('click',function(){
     var rows=document.querySelectorAll('.rwd-level-row');
+    if(!rows.length){rwdMsg('rwdLevelsMsg','⚠ No levels found.',false);return;}
     var levels=[];var valid=true;
     rows.forEach(function(row,i){
       var name=(row.querySelector('.rwd-level-name-inp').value.trim())||('Level '+(i+1));
@@ -4391,14 +4401,46 @@ function rwdInitHandlers(){
       levels.push({lvl:i+1,min:i===0?0:levels[i-1].max,max:maxVal,name:name,icon:icon});
     });
     if(!valid){rwdMsg('rwdLevelsMsg','⚠ Each XP threshold must be higher than the previous.',false);return;}
+
+    // 1. Persist to localStorage
     var c=gamiCfgGet();
     c.levels=levels;
     gamiCfgSet(c);
-    gamiApplyCfg();         // GAMI_LEVELS updated
-    renderRewards();        // re-render entire tab from fresh GAMI_LEVELS
-    gamiRenderHud();        // update Tasks HUD
-    renderDashboard();      // update Dashboard
-    rwdMsg('rwdLevelsMsg','✓ Levels saved and applied to all tabs!',true);
+
+    // 2. Push into live GAMI_LEVELS array in-place
+    GAMI_LEVELS.length=0;
+    levels.forEach(function(l){GAMI_LEVELS.push(l);});
+
+    // 3. Update the "Starts at XP" disabled cells in the table to match new mins
+    var allRows=document.querySelectorAll('.rwd-level-row');
+    allRows.forEach(function(row,i){
+      var startCell=row.querySelector('.rwd-inp-xp[disabled]');
+      if(startCell) startCell.value=levels[i]?levels[i].min:0;
+    });
+
+    // 4. Update status card at top of Rewards tab
+    var g2=gamiGet();
+    var lvl2=gamiGetLevel(g2.xp);
+    var nextLvl2=GAMI_LEVELS[Math.min(lvl2.lvl,GAMI_LEVELS.length-1)];
+    var pct2=nextLvl2.max===9999?100:Math.round(((g2.xp-lvl2.min)/(nextLvl2.max-lvl2.min))*100);
+    pct2=Math.max(0,Math.min(100,pct2));
+    var si=document.getElementById('rwdStatusIcon');   if(si) si.textContent=lvl2.icon;
+    var sl=document.getElementById('rwdStatusLevel');  if(sl) sl.textContent='Level '+lvl2.lvl+' — '+lvl2.name;
+    var sx=document.getElementById('rwdStatusXp');     if(sx) sx.textContent=g2.xp+' XP total · '+(nextLvl2.max===9999?'Max level reached! 👑':(g2.xp-lvl2.min)+' / '+(nextLvl2.max-lvl2.min)+' to next level');
+    var sb=document.getElementById('rwdStatusBar');    if(sb) sb.style.width=pct2+'%';
+
+    // 5. Re-render the preview directly from the new GAMI_LEVELS
+    rwdRenderPreviewFromLevels(GAMI_LEVELS, g2.xp);
+
+    // 6. Clear the Refresh Preview message since preview is now in sync with saved data
+    var pm=document.getElementById('rwdPreviewMsg');
+    if(pm){pm.textContent='';pm.style.opacity=0;}
+
+    // 7. Update Tasks HUD and Dashboard
+    gamiRenderHud();
+    renderDashboard();
+
+    rwdMsg('rwdLevelsMsg','✓ Levels saved! Level Progression Preview updated.',true);
   });
 
   // Add Level
@@ -4421,6 +4463,40 @@ function rwdInitHandlers(){
     if(!confirm('Reset all XP and progress to 0? This cannot be undone.'))return;
     var g2=gamiGet();g2.xp=0;g2.completedIds={};gamiSet(g2);
     renderRewards();gamiRenderHud();renderDashboard();
+  });
+
+  // Refresh Preview — reads current table inputs WITHOUT saving
+  var refreshBtn=document.getElementById('rwdRefreshPreview');
+  if(refreshBtn) refreshBtn.addEventListener('click',function(){
+    var rows=document.querySelectorAll('.rwd-level-row');
+    if(!rows.length){rwdMsg('rwdPreviewMsg','No levels to preview.',false);return;}
+    // Build a temporary levels array purely from DOM inputs
+    var tempLevels=[];
+    var valid=true;
+    rows.forEach(function(row,i){
+      var name=(row.querySelector('.rwd-level-name-inp').value.trim())||('Level '+(i+1));
+      var icon=(row.querySelector('.rwd-level-icon-inp').value.trim())||'⭐';
+      var maxEl=row.querySelector('.rwd-level-max-inp');
+      var maxVal=i===rows.length-1?9999:Math.max(1,parseInt(maxEl?maxEl.value:0)||0);
+      if(i>0&&tempLevels.length>0&&maxVal<=tempLevels[i-1].min)valid=false;
+      tempLevels.push({
+        lvl:i+1,
+        min:i===0?0:tempLevels[i-1].max,
+        max:maxVal,
+        name:name,
+        icon:icon
+      });
+    });
+    if(!valid){
+      rwdMsg('rwdPreviewMsg','⚠ Preview skipped — XP threshold in a row is not higher than the previous.',false);
+      return;
+    }
+    // Also update "Starts at" cells to reflect any max changes
+    var starts=Array.from(document.querySelectorAll('.rwd-inp-xp[disabled]'));
+    tempLevels.forEach(function(l,i){if(starts[i])starts[i].value=l.min;});
+    // Render preview from tempLevels (NOT GAMI_LEVELS — preview only)
+    rwdRenderPreviewFromLevels(tempLevels, gamiGet().xp);
+    rwdMsg('rwdPreviewMsg','✓ Preview updated from current table values. Click Save Levels to apply.',true);
   });
 }
 
@@ -4459,10 +4535,10 @@ function rwdRenderLevelsTable(levels){
   });
 }
 
-function rwdRenderPreview(currentXp){
+function rwdRenderPreviewFromLevels(levels, currentXp){
   var wrap=document.getElementById('rwdLevelsPreview');if(!wrap)return;
   var html='<div class="rwd-preview-list">';
-  GAMI_LEVELS.forEach(function(l){
+  levels.forEach(function(l){
     var isCurrent=currentXp>=l.min&&(l.max===9999||currentXp<l.max);
     var reached=currentXp>=l.max&&l.max!==9999;
     var pct=reached?100:(isCurrent&&l.max!==9999?Math.min(100,Math.round(((currentXp-l.min)/(l.max-l.min))*100)):0);
@@ -4475,6 +4551,10 @@ function rwdRenderPreview(currentXp){
     '</div>';
   });
   html+='</div>';wrap.innerHTML=html;
+}
+
+function rwdRenderPreview(currentXp){
+  rwdRenderPreviewFromLevels(GAMI_LEVELS, currentXp);
 }
 
 renderTasks();
