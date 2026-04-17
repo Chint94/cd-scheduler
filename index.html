@@ -4402,15 +4402,14 @@ function rwdInitHandlers(){
       var minVal=i===0 ? 0 : levels[i-1].max;
       levels.push({lvl:i+1, min:minVal, max:maxVal, name:name, icon:icon});
     });
-    // Second pass: validate — each level's max must be greater than its min
+    // Second pass: validate — each level's max must be strictly greater than its min
     var valid=true;
     var badRow=-1;
     for(var vi=0;vi<levels.length-1;vi++){
       if(levels[vi].max<=levels[vi].min){valid=false;badRow=vi+1;break;}
-      if(vi>0 && levels[vi].max<=levels[vi-1].max){valid=false;badRow=vi+1;break;}
     }
     if(!valid){
-      rwdMsg('rwdLevelsMsg','⚠ Level '+(badRow)+': "Ends at XP" must be higher than the previous level\'s end value.',false);
+      rwdMsg('rwdLevelsMsg','⚠ Level '+(badRow)+': "Ends at XP" must be greater than "Starts at XP".',false);
       return;
     }
 
@@ -4492,13 +4491,13 @@ function rwdInitHandlers(){
       var minVal=i===0 ? 0 : tempLevels[i-1].max;
       tempLevels.push({lvl:i+1, min:minVal, max:maxVal, name:name, icon:icon});
     });
-    // Validate
+    // Validate — each level's max must be strictly greater than its min
     var valid=true;
     for(var vi=0;vi<tempLevels.length-1;vi++){
-      if(tempLevels[vi].max<=tempLevels[vi].min||(vi>0&&tempLevels[vi].max<=tempLevels[vi-1].max)){valid=false;break;}
+      if(tempLevels[vi].max<=tempLevels[vi].min){valid=false;break;}
     }
     if(!valid){
-      rwdMsg('rwdPreviewMsg','⚠ Preview skipped — XP threshold in a row is not higher than the previous.',false);
+      rwdMsg('rwdPreviewMsg','⚠ Preview skipped — an "Ends at XP" value is not greater than that level\'s start.',false);
       return;
     }
     // Also update "Starts at" cells to reflect any max changes
@@ -5182,6 +5181,29 @@ setInterval(function(){if(currentTab==='tasks')renderTasks(); if(currentTab==='d
           if (ni && document.activeElement !== ni) ni.value = t.notes || '';
         });
         buildGrid();
+        // Keep gamification in sync with Firebase task state
+        (function(){
+          var g=gamiGet();var tasks2=Object.values(lsGet(TK)||{});var changed=false;
+          tasks2.forEach(function(t){
+            if(t.done&&!g.completedIds[t.id]){
+              g.completedIds[t.id]=t.completedAt||Date.now();
+              g.xp+=GAMI_XP[t.priority||'medium']||GAMI_XP.medium;
+              changed=true;
+            }
+          });
+          // Remove XP for tasks that are now un-done
+          Object.keys(g.completedIds).forEach(function(id){
+            var task=tasks2.find(function(t){return t.id===id;});
+            if(task&&!task.done){
+              g.xp=Math.max(0,g.xp-(GAMI_XP[task.priority||'medium']||GAMI_XP.medium));
+              delete g.completedIds[id];
+              changed=true;
+            }
+          });
+          if(changed)gamiSet(g);
+          gamiRenderHud();
+          if(currentTab==='rewards')renderRewards();
+        })();
       });
 
       // Notes listener
