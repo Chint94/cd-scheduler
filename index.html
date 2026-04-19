@@ -873,65 +873,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   .rwd-inp{width:60px}
   .rwd-preview-bar-wrap{display:none}
   .rwd-section{padding:13px}
-  .av-grid{grid-template-columns:repeat(4,1fr)}
-  .av-card-name{display:none}
 }
-
-/* ══ Avatar Gallery ══ */
-.av-gallery{display:flex;flex-direction:column;gap:14px}
-.av-active-wrap{display:flex;align-items:center;gap:16px;padding:14px 16px;
-  background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 100%);
-  border-radius:12px;box-shadow:0 3px 12px rgba(139,105,20,.25)}
-.av-active-char{font-size:52px;line-height:1;filter:drop-shadow(0 3px 8px rgba(0,0,0,.3));
-  transition:all .4s cubic-bezier(.34,1.56,.64,1)}
-.av-active-info{flex:1}
-.av-active-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:white}
-.av-active-sub{font-size:12px;color:rgba(255,253,245,.75);margin-top:2px}
-
-.av-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
-.av-card{display:flex;flex-direction:column;align-items:center;gap:4px;
-  padding:10px 6px;border-radius:10px;border:2px solid var(--gp);
-  background:var(--gc);cursor:pointer;transition:all .18s;position:relative}
-.av-card:hover{border-color:var(--gm);background:rgba(196,148,42,.08);transform:translateY(-2px)}
-.av-card.av-active{border-color:var(--gm);background:rgba(196,148,42,.12);
-  box-shadow:0 0 0 3px rgba(196,148,42,.2)}
-.av-card.av-done{border-color:#5CB85C;background:rgba(92,184,92,.07)}
-.av-card.av-locked{opacity:.4;cursor:default;filter:grayscale(.6)}
-.av-card.av-locked:hover{transform:none;border-color:var(--gp)}
-.av-card-emoji{font-size:28px;line-height:1}
-.av-card-name{font-size:9px;font-weight:700;color:var(--inkl);text-align:center;
-  line-height:1.2;text-transform:uppercase;letter-spacing:.04em;max-width:56px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.av-card-badge{position:absolute;top:4px;right:4px;font-size:9px;font-weight:700;
-  background:var(--gm);color:white;border-radius:999px;padding:1px 5px;line-height:1.4}
-.av-card-badge.done-badge{background:#5CB85C}
-
-/* Picker modal */
-.av-picker-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;
-  display:flex;align-items:center;justify-content:center;padding:16px;
-  animation:fadeIn .15s ease}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.av-picker-box{background:white;border-radius:16px;padding:20px;width:100%;max-width:360px;
-  box-shadow:0 12px 48px rgba(0,0,0,.25);max-height:80vh;display:flex;flex-direction:column;gap:12px}
-.av-picker-head{display:flex;align-items:center;justify-content:space-between}
-.av-picker-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--gd)}
-.av-picker-close{background:none;border:none;font-size:20px;cursor:pointer;
-  color:var(--inkl);padding:4px;border-radius:6px;line-height:1}
-.av-picker-close:hover{background:var(--gc)}
-.av-picker-input-wrap{display:flex;gap:8px;align-items:center}
-.av-picker-input{font-size:22px;width:56px;text-align:center;padding:6px 8px;
-  border:1.5px solid var(--gm);border-radius:8px;outline:none;background:var(--gc)}
-.av-picker-input-lbl{font-size:12px;color:var(--inkm);flex:1;line-height:1.4}
-.av-picker-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;
-  overflow-y:auto;max-height:280px;padding:4px 0}
-.av-picker-opt{font-size:24px;text-align:center;padding:7px 4px;border-radius:8px;
-  cursor:pointer;transition:background .12s;line-height:1;border:2px solid transparent}
-.av-picker-opt:hover{background:var(--gc)}
-.av-picker-opt.selected{border-color:var(--gm);background:rgba(196,148,42,.12)}
-.av-picker-save{width:100%;font-family:DM Sans,sans-serif;font-size:13px;font-weight:700;
-  background:var(--gm);border:none;border-radius:9px;padding:10px;color:white;
-  cursor:pointer;transition:background .15s}
-.av-picker-save:hover{background:var(--gd)}
 </style>
 </head>
 <body>
@@ -1161,18 +1103,6 @@ footer strong{color:rgba(255,253,245,0.85)}
         <button class="rwd-reset-btn" id="rwdResetBtn">↺ Reset XP</button>
       </div>
     </div>
-
-    <!-- Avatar Gallery Section -->
-    <div class="rwd-section">
-      <div class="rwd-section-head">
-        <div>
-          <div class="rwd-section-title">🧑&zwj;🎤 Character Avatars</div>
-          <div class="rwd-section-sub">Each level has its own character. Click any avatar to customise it. Locked levels show as greyed out until you reach them.</div>
-        </div>
-      </div>
-      <div class="av-gallery" id="avGallery"></div>
-    </div>
-
     <div class="rwd-section">
       <div class="rwd-section-head">
         <div><div class="rwd-section-title">⚡ XP Point Values</div><div class="rwd-section-sub">How many XP each completed task earns. Changes apply immediately.</div></div>
@@ -4263,14 +4193,14 @@ function gamiGetLevel(xp){for(var i=GAMI_LEVELS.length-1;i>=0;i--){if(xp>=GAMI_L
 function gamiCfgGet(){
   try{var c=JSON.parse(localStorage.getItem(GCK)||'null');if(c&&c.xp&&c.levels)return c;}catch(e){}
   return{xp:{high:30,medium:20,low:10,today:5,early:10},levels:[
-    {lvl:1,min:0,   max:50,   name:'Beginner',  icon:'🌱', avatar:'🐣'},
-    {lvl:2,min:50,  max:150,  name:'Focused',   icon:'⚡', avatar:'🐥'},
-    {lvl:3,min:150, max:300,  name:'Productive',icon:'🚀', avatar:'🦊'},
-    {lvl:4,min:300, max:500,  name:'Achiever',  icon:'🏆', avatar:'🦁'},
-    {lvl:5,min:500, max:800,  name:'Expert',    icon:'🔥', avatar:'🐯'},
-    {lvl:6,min:800, max:1200, name:'Master',    icon:'⭐', avatar:'🦅'},
-    {lvl:7,min:1200,max:1800, name:'Elite',     icon:'💎', avatar:'🐲'},
-    {lvl:8,min:1800,max:9999, name:'Legend',    icon:'👑', avatar:'🌟'}
+    {lvl:1,min:0,   max:50,   name:'Beginner',  icon:'🌱'},
+    {lvl:2,min:50,  max:150,  name:'Focused',   icon:'⚡'},
+    {lvl:3,min:150, max:300,  name:'Productive',icon:'🚀'},
+    {lvl:4,min:300, max:500,  name:'Achiever',  icon:'🏆'},
+    {lvl:5,min:500, max:800,  name:'Expert',    icon:'🔥'},
+    {lvl:6,min:800, max:1200, name:'Master',    icon:'⭐'},
+    {lvl:7,min:1200,max:1800, name:'Elite',     icon:'💎'},
+    {lvl:8,min:1800,max:9999, name:'Legend',    icon:'👑'}
   ]};
 }
 function gamiCfgSet(c){try{localStorage.setItem(GCK,JSON.stringify(c));}catch(e){}}
@@ -4349,11 +4279,7 @@ function gamiAwardXp(task,cardEl){
     cardEl.style.position='relative';cardEl.appendChild(pop);
     setTimeout(function(){pop.remove();},950);
   }
-  if(newLvl.lvl>oldLvl){
-    gamiShowToast(newLvl.icon+' Level Up! '+newLvl.name+' (Lv.'+newLvl.lvl+')');
-    // Update avatar gallery to reflect new active level
-    if(typeof avRenderGallery==='function')avRenderGallery();
-  }
+  if(newLvl.lvl>oldLvl)gamiShowToast(newLvl.icon+' Level Up! '+newLvl.name+' (Lv.'+newLvl.lvl+')');
   gamiConfetti();
   gamiRenderHud();
 }
@@ -4441,8 +4367,6 @@ function renderRewards(){
   // Table and preview — always read from live GAMI_LEVELS
   rwdRenderLevelsTable(GAMI_LEVELS);
   rwdRenderPreview(g.xp);
-  // Avatar gallery
-  avRenderGallery();
 }
 
 // ── All button handlers wired ONCE at startup ─────────────────────────────────
@@ -4518,9 +4442,8 @@ function rwdInitHandlers(){
     var sx=document.getElementById('rwdStatusXp');     if(sx) sx.textContent=g2.xp+' XP total · '+(isMax2?'Max level reached! 👑':(g2.xp-lvl2.min)+' / '+(lvl2.max-lvl2.min)+' to next level');
     var sb=document.getElementById('rwdStatusBar');    if(sb) sb.style.width=pct2+'%';
 
-    // 5. Re-render the preview and avatar gallery from the new GAMI_LEVELS
+    // 5. Re-render the preview directly from the new GAMI_LEVELS
     rwdRenderPreviewFromLevels(GAMI_LEVELS, g2.xp);
-    avRenderGallery();
 
     // 6. Clear the Refresh Preview message since preview is now in sync with saved data
     var pm=document.getElementById('rwdPreviewMsg');
@@ -4645,125 +4568,11 @@ function rwdRenderPreview(currentXp){
   rwdRenderPreviewFromLevels(GAMI_LEVELS, currentXp);
 }
 
-// ════════════════════════════════════════════════════
-// AVATAR GALLERY
-// ════════════════════════════════════════════════════
-var AV_PALETTE=[
-  '🐣','🐥','🐤','🐦','🦊','🐺','🦁','🐯','🐻','🐼','🐨','🐸',
-  '🐵','🦅','🦉','🦋','🐲','🐉','🦄','🐮','🐷','🐙','🦑','🐬',
-  '🐳','🦈','🦒','🦓','🐘','🦏','🦍','🧙','🧝','🧛','🧜','🧚',
-  '🥷','👨','👩','👷','🕵','🎤','🎨','💻','🏋','🌟','💫','⚡',
-  '🔥','💥','🌊','🌀','🌈','☀','🌙','❄','🍀','🌸','🌺','🌻',
-  '🎭','🏆','🥇','💎','👑','🎯','🗡','🛡','🚀','🛸','🌋','⛰'
-];
-
-function avMigrate(){
-  var c=gamiCfgGet();
-  var defaults=['🐣','🐥','🦊','🦁','🐯','🦅','🐲','🌟'];
-  var changed=false;
-  c.levels.forEach(function(l,i){if(!l.avatar){l.avatar=defaults[i]||'⭐';changed=true;}});
-  if(changed)gamiCfgSet(c);
-  GAMI_LEVELS.forEach(function(l,i){if(!l.avatar)l.avatar=c.levels[i]?c.levels[i].avatar:(defaults[i]||'⭐');});
-}
-
-function avRenderGallery(){
-  var wrap=document.getElementById('avGallery');if(!wrap)return;
-  avMigrate();
-  var g=gamiGet();
-  var curLvl=gamiGetLevel(g.xp);
-  var activeLvl=GAMI_LEVELS[curLvl.lvl-1]||GAMI_LEVELS[0];
-  var html='<div class="av-active-wrap">'+
-    '<div class="av-active-char" id="avActiveChar">'+(activeLvl.avatar||activeLvl.icon)+'</div>'+
-    '<div class="av-active-info">'+
-      '<div class="av-active-title">'+escHtml(activeLvl.name)+'\'s Character</div>'+
-      '<div class="av-active-sub">Level '+curLvl.lvl+' &middot; '+g.xp+' XP &middot; Click a card below to customise</div>'+
-    '</div>'+
-  '</div>';
-  html+='<div class="av-grid">';
-  GAMI_LEVELS.forEach(function(l,i){
-    var isCurrent=l.lvl===curLvl.lvl;
-    var isReached=g.xp>=l.min;
-    var cls='av-card'+(isCurrent?' av-active':isReached?' av-done':' av-locked');
-    html+='<div class="'+cls+'" data-lvl-idx="'+i+'" title="Level '+l.lvl+' — '+escHtml(l.name)+'">';
-    if(isCurrent) html+='<span class="av-card-badge">NOW</span>';
-    else if(isReached) html+='<span class="av-card-badge done-badge">✓</span>';
-    html+='<div class="av-card-emoji">'+(l.avatar||l.icon)+'</div>'+
-          '<div class="av-card-name">'+escHtml(l.name)+'</div>'+
-    '</div>';
-  });
-  html+='</div>';
-  wrap.innerHTML=html;
-  wrap.querySelectorAll('.av-card').forEach(function(card){
-    card.addEventListener('click',function(){
-      avOpenPicker(parseInt(card.getAttribute('data-lvl-idx')));
-    });
-  });
-}
-
-function avOpenPicker(lvlIdx){
-  var lvl=GAMI_LEVELS[lvlIdx];if(!lvl)return;
-  var current=lvl.avatar||lvl.icon||'⭐';
-  var existing=document.getElementById('avPickerOverlay');if(existing)existing.remove();
-  var overlay=document.createElement('div');
-  overlay.className='av-picker-overlay';overlay.id='avPickerOverlay';
-  var grid='';
-  AV_PALETTE.forEach(function(em){
-    grid+='<div class="av-picker-opt'+(em===current?' selected':'')+'" data-em="'+escHtml(em)+'">'+em+'</div>';
-  });
-  overlay.innerHTML=
-    '<div class="av-picker-box">'+
-      '<div class="av-picker-head">'+
-        '<div class="av-picker-title">Level '+lvl.lvl+' — '+escHtml(lvl.name)+'</div>'+
-        '<button class="av-picker-close" id="avPickerClose">✕</button>'+
-      '</div>'+
-      '<div class="av-picker-input-wrap">'+
-        '<input class="av-picker-input" id="avPickerCustom" type="text" maxlength="4" value="'+escHtml(current)+'">'+
-        '<span class="av-picker-input-lbl">Type or paste any emoji above, or pick from the grid below.</span>'+
-      '</div>'+
-      '<div class="av-picker-grid" id="avPickerGrid">'+grid+'</div>'+
-      '<button class="av-picker-save" id="avPickerSave">✓ Save Avatar</button>'+
-    '</div>';
-  document.body.appendChild(overlay);
-  var inp=overlay.querySelector('#avPickerCustom');
-  overlay.querySelector('#avPickerGrid').addEventListener('click',function(e){
-    var opt=e.target.closest('.av-picker-opt');if(!opt)return;
-    var em=opt.getAttribute('data-em');
-    inp.value=em;
-    overlay.querySelectorAll('.av-picker-opt').forEach(function(o){o.classList.remove('selected');});
-    opt.classList.add('selected');
-  });
-  overlay.querySelector('#avPickerClose').addEventListener('click',avClosePicker);
-  overlay.addEventListener('click',function(e){if(e.target===overlay)avClosePicker();});
-  overlay.querySelector('#avPickerSave').addEventListener('click',function(){
-    var chosen=inp.value.trim()||current;
-    avSaveAvatar(lvlIdx,chosen);
-    avClosePicker();
-  });
-  setTimeout(function(){inp.focus();inp.select();},60);
-}
-
-function avClosePicker(){
-  var o=document.getElementById('avPickerOverlay');if(o)o.remove();
-}
-
-function avSaveAvatar(lvlIdx,emoji){
-  if(GAMI_LEVELS[lvlIdx])GAMI_LEVELS[lvlIdx].avatar=emoji;
-  var c=gamiCfgGet();
-  if(c.levels[lvlIdx])c.levels[lvlIdx].avatar=emoji;
-  gamiCfgSet(c);
-  avRenderGallery();
-  var g=gamiGet();var curLvl=gamiGetLevel(g.xp);
-  if(lvlIdx===curLvl.lvl-1){
-    var si=document.getElementById('rwdStatusIcon');if(si)si.textContent=emoji;
-  }
-}
-
 renderTasks();
 renderNotes();
 renderDashboard();
 gamiRenderHud();
 rwdInitHandlers();
-avMigrate();
 // ════════════════════════════════════════════════════════
 // GOOGLE CALENDAR SYNC
 // ════════════════════════════════════════════════════════
@@ -5395,10 +5204,7 @@ setInterval(function(){if(currentTab==='tasks')renderTasks(); if(currentTab==='d
           });
           if(changed)gamiSet(g);
           gamiRenderHud();
-          if(currentTab==='rewards'){renderRewards();}
-          else if(document.getElementById('avGallery')&&document.getElementById('avGallery').children.length>0){
-            avRenderGallery();
-          }
+          if(currentTab==='rewards')renderRewards();
         })();
       });
 
