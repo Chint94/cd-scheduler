@@ -976,6 +976,13 @@ footer strong{color:rgba(255,253,245,0.85)}
   .gm-pill-label-left,.gm-pill-label-right{width:84px;}
   .gm-pill.gm-on .gm-pill-knob{transform:translateX(85px);}
 }
+
+/* ── Game Mode: hide HUD when off ── */
+#gamiHud.gm-hud-hidden,
+#gamiToast.gm-hud-hidden,
+#gamiConfetti.gm-hud-hidden{
+  display:none!important;
+}
 </style>
 </head>
 <body>
@@ -4839,12 +4846,19 @@ function gmSet(on){
   try { localStorage.setItem(GM_KEY, on ? '1' : '0'); } catch(e){}
 }
 function gmApply(on){
-  var pill  = document.getElementById('gmPill');
+  var pill       = document.getElementById('gmPill');
   var rewardsBtn = document.querySelector('.tab-btn[data-tab="rewards"]');
+  var gamiHud    = document.getElementById('gamiHud');
+  var gamiToast  = document.getElementById('gamiToast');
+  var gamiCanvas = document.getElementById('gamiConfetti');
+
+  // Pill toggle visual
   if(pill){
     if(on){ pill.classList.add('gm-on'); }
     else  { pill.classList.remove('gm-on'); }
   }
+
+  // Rewards tab button
   if(rewardsBtn){
     if(on){ rewardsBtn.classList.remove('gm-hidden'); }
     else  {
@@ -4852,6 +4866,13 @@ function gmApply(on){
       if(currentTab === 'rewards'){ switchTab('dashboard'); }
     }
   }
+
+  // Gamification HUD in tasks tab (+ toast + confetti canvas)
+  [gamiHud, gamiToast, gamiCanvas].forEach(function(el){
+    if(!el) return;
+    if(on){ el.classList.remove('gm-hud-hidden'); }
+    else  { el.classList.add('gm-hud-hidden'); }
+  });
 }
 function gmToggle(){
   var on = !gmIsOn();
