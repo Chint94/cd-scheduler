@@ -39,7 +39,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 /* ── Header ── */
 header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 100%);
   padding:0 18px;display:flex;align-items:center;justify-content:space-between;
-  flex-wrap:wrap;gap:8px;min-height:62px;box-shadow:0 4px 20px rgba(139,105,20,0.4);
+  flex-wrap:nowrap;gap:12px;min-height:62px;box-shadow:0 4px 20px rgba(139,105,20,0.4);
   position:sticky;top:0;z-index:200}
 .brand{display:flex;align-items:center;gap:10px}
 .brand-title{font-family:'Playfair Display',serif;font-size:clamp(18px,5vw,26px);font-weight:900;
@@ -934,47 +934,55 @@ footer strong{color:rgba(255,253,245,0.85)}
 .av-picker-save:hover{background:var(--gd)}
 
 /* ══ Game Mode Toggle ══ */
-.gm-wrap{display:flex;align-items:center;gap:10px;padding:11px 18px;
-  background:linear-gradient(90deg,var(--gc),var(--white));
-  border-bottom:1.5px solid var(--gp);margin-bottom:0;flex-wrap:wrap;}
-.gm-icon{font-size:18px;line-height:1;}
-.gm-title{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;
-  color:var(--gd);white-space:nowrap;}
-/* The pill toggle */
+.gm-wrap{display:flex;align-items:center;gap:10px;padding:0;
+  background:transparent;border:none;margin:0;flex-wrap:nowrap;flex-shrink:0;}
+.gm-icon{font-size:18px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.3));}
+.gm-title{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;
+  color:rgba(255,253,245,.9);white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.25);}
+/* The pill toggle — lives in the gold header */
 .gm-pill{position:relative;display:flex;align-items:center;
-  width:196px;height:36px;border-radius:999px;cursor:pointer;
-  background:var(--gc);border:2px solid var(--gm);
+  width:184px;height:32px;border-radius:999px;cursor:pointer;
+  background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.5);
   transition:background .3s,border-color .3s;
   user-select:none;-webkit-user-select:none;flex-shrink:0;overflow:hidden;
-  box-shadow:0 2px 8px var(--sg);}
-/* Game mode ON: pill turns gold */
-.gm-pill.gm-on{background:linear-gradient(90deg,var(--gd) 0%,var(--gm) 100%);
-  border-color:var(--gd);}
+  box-shadow:0 2px 8px rgba(0,0,0,.18);}
+/* Game mode ON: pill becomes solid white-tinted gold */
+.gm-pill.gm-on{background:rgba(255,255,255,.32);border-color:rgba(255,255,255,.8);}
 /* Sliding white knob */
 .gm-pill-knob{position:absolute;top:3px;left:3px;
-  width:90px;height:26px;border-radius:999px;
-  background:white;box-shadow:0 2px 8px rgba(139,105,20,.35);
+  width:84px;height:22px;border-radius:999px;
+  background:white;box-shadow:0 2px 6px rgba(0,0,0,.25);
   transition:transform .32s cubic-bezier(.4,0,.2,1);z-index:2;}
-.gm-pill.gm-on .gm-pill-knob{transform:translateX(100px);}
-/* Labels sit on opposite halves — always readable */
+.gm-pill.gm-on .gm-pill-knob{transform:translateX(93px);}
+/* Labels */
 .gm-pill-label-left,.gm-pill-label-right{
   position:absolute;font-family:DM Sans,sans-serif;
-  font-size:11px;font-weight:800;
+  font-size:10px;font-weight:800;
   text-transform:uppercase;letter-spacing:.07em;
   transition:color .3s;z-index:3;pointer-events:none;}
-/* REGULAR label: left half — dark on knob (default), white when knob moves away */
-.gm-pill-label-left{left:0;width:98px;text-align:center;color:var(--inkm);}
-.gm-pill.gm-on .gm-pill-label-left{color:rgba(255,255,255,.7);}
-/* GAME label: right half — white on gold bg (default), dark when knob covers it */
-.gm-pill-label-right{right:0;width:98px;text-align:center;color:rgba(139,105,20,.5);}
+/* REGULAR — dark on white knob by default, translucent white when knob leaves */
+.gm-pill-label-left{left:0;width:92px;text-align:center;color:var(--inkm);}
+.gm-pill.gm-on .gm-pill-label-left{color:rgba(255,255,255,.75);}
+/* GAME — translucent white when knob is left, dark on white knob when on */
+.gm-pill-label-right{right:0;width:92px;text-align:center;color:rgba(255,255,255,.6);}
 .gm-pill.gm-on .gm-pill-label-right{color:var(--inkm);}
 /* Hide Rewards tab when game mode OFF */
 .tab-btn[data-tab="rewards"].gm-hidden{display:none!important;}
 @media(max-width:600px){
-  .gm-pill{width:168px;}
-  .gm-pill-knob{width:76px;}
-  .gm-pill-label-left,.gm-pill-label-right{width:84px;}
-  .gm-pill.gm-on .gm-pill-knob{transform:translateX(85px);}
+  .gm-wrap{gap:7px;}
+  .gm-title{font-size:11px;}
+  .gm-pill{width:148px;height:28px;}
+  .gm-pill-knob{width:66px;height:20px;top:3px;left:3px;}
+  .gm-pill-label-left,.gm-pill-label-right{width:74px;font-size:9px;}
+  .gm-pill.gm-on .gm-pill-knob{transform:translateX(76px);}
+}
+@media(max-width:380px){
+  .gm-icon{display:none;}
+  .gm-title{display:none;}
+  .gm-pill{width:130px;height:26px;}
+  .gm-pill-knob{width:57px;height:18px;}
+  .gm-pill-label-left,.gm-pill-label-right{width:65px;font-size:9px;}
+  .gm-pill.gm-on .gm-pill-knob{transform:translateX(68px);}
 }
 
 /* ── Game Mode: hide HUD when off ── */
@@ -1023,6 +1031,17 @@ footer strong{color:rgba(255,253,245,0.85)}
       <span class="brand-sub">Dashboard · Planner · Tasks · Notes</span>
     </div>
   </div>
+  <!-- Game Mode Toggle – header centre -->
+  <div class="gm-wrap" id="gameModeWrap">
+    <span class="gm-icon">🎮</span>
+    <span class="gm-title">Mode</span>
+    <div class="gm-pill" id="gmPill" onclick="gmToggle()">
+      <div class="gm-pill-knob" id="gmKnob"></div>
+      <span class="gm-pill-label-left" id="gmLabelLeft">Regular</span>
+      <span class="gm-pill-label-right" id="gmLabelRight">Game</span>
+    </div>
+  </div>
+
   <div class="header-right">
     <div id="syncBadge"><div class="sync-dot"></div>Live Sync</div>
     <div id="loginPanel">
@@ -1051,15 +1070,6 @@ footer strong{color:rgba(255,253,245,0.85)}
 <!-- DASHBOARD TAB -->
 <div id="tab-dashboard" class="tab-panel active">
   <div class="section-card">
-  <div class="gm-wrap" id="gameModeWrap">
-    <span class="gm-icon">🎮</span>
-    <span class="gm-title">Mode</span>
-    <div class="gm-pill" id="gmPill" onclick="gmToggle()">
-      <div class="gm-pill-knob" id="gmKnob"></div>
-      <span class="gm-pill-label-left" id="gmLabelLeft">Regular</span>
-      <span class="gm-pill-label-right" id="gmLabelRight">Game</span>
-    </div>
-  </div>
     <div class="section-head">
       <div>
         <div class="st">Dashboard</div>
