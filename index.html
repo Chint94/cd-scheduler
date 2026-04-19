@@ -20,7 +20,8 @@
   });
 })();
 </script>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -4245,12 +4246,9 @@ document.getElementById('dismissWarning').addEventListener('click',function(){
     }
   }
 })();
-// ── Initial week + layout after DOM ready ────────────────────────────────────
+// ── Initial week + layout: ensure DOM is ready ──────────────────────────────
 if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',function(){
-    setWeek(new Date());
-    applyPlannerLayout();
-  });
+  document.addEventListener('DOMContentLoaded',function(){ setWeek(new Date()); applyPlannerLayout(); });
 } else {
   setWeek(new Date());
   applyPlannerLayout();
@@ -4776,7 +4774,7 @@ function avSaveAvatar(lvlIdx,emoji){
   }
 }
 
-// ── Bootstrap: run after DOM is ready ────────────────────────────────────────
+// ── App bootstrap: wait for DOM ─────────────────────────────────────────────
 function appBootstrap(){
   renderTasks();
   renderNotes();
