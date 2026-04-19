@@ -994,12 +994,23 @@ footer strong{color:rgba(255,253,245,0.85)}
   <button class="tab-btn" data-tab="planner">📅 Planner</button>
   <button class="tab-btn" data-tab="tasks">✅ Tasks</button>
   <button class="tab-btn" data-tab="notes">📓 Notes</button>
-  <button class="tab-btn" data-tab="rewards">🎮 Rewards</button>
+  <button class="tab-btn gm-hidden" data-tab="rewards">🎮 Rewards</button>
 </nav>
 
 <!-- DASHBOARD TAB -->
 <div id="tab-dashboard" class="tab-panel active">
   <div class="section-card">
+  <div class="game-mode-toggle-wrap" id="gameModeWrap">
+    <div class="game-mode-toggle-label">
+      🎮 Game Mode
+      <span id="gameModeDesc">Enable to unlock the Rewards &amp; XP system</span>
+    </div>
+    <span class="game-mode-badge regular" id="gameModeBadge">Regular</span>
+    <label class="gm-switch" title="Toggle Game Mode">
+      <input type="checkbox" id="gameModeSwitch">
+      <span class="gm-slider"></span>
+    </label>
+  </div>
     <div class="section-head">
       <div>
         <div class="st">Dashboard</div>
@@ -4775,6 +4786,49 @@ function avSaveAvatar(lvlIdx,emoji){
 }
 
 // ── App bootstrap: wait for DOM ─────────────────────────────────────────────
+
+// ── Game Mode Toggle ──────────────────────────────────────────────────────────
+var GM_KEY = 'cds_game_mode_v1';
+
+function gmIsOn(){
+  try { return localStorage.getItem(GM_KEY) === '1'; } catch(e){ return false; }
+}
+function gmSet(on){
+  try { localStorage.setItem(GM_KEY, on ? '1' : '0'); } catch(e){}
+}
+function gmApply(on){
+  // Badge
+  var badge = document.getElementById('gameModeBadge');
+  if(badge){ badge.textContent = on ? 'Game' : 'Regular'; badge.className = 'game-mode-badge ' + (on ? 'game' : 'regular'); }
+  // Description
+  var desc = document.getElementById('gameModeDesc');
+  if(desc){ desc.textContent = on ? 'Game Mode is ON — Rewards tab is now visible' : 'Enable to unlock the Rewards & XP system'; }
+  // Rewards tab button visibility
+  var rewardsBtn = document.querySelector('.tab-btn[data-tab="rewards"]');
+  if(rewardsBtn){
+    if(on){ rewardsBtn.classList.remove('gm-hidden'); }
+    else {
+      rewardsBtn.classList.add('gm-hidden');
+      // If currently on rewards tab, switch to dashboard
+      if(currentTab === 'rewards'){ switchTab('dashboard'); }
+    }
+  }
+  // Sync checkbox
+  var sw = document.getElementById('gameModeSwitch');
+  if(sw && sw.checked !== on){ sw.checked = on; }
+}
+function gmInit(){
+  var on = gmIsOn();
+  gmApply(on);
+  var sw = document.getElementById('gameModeSwitch');
+  if(!sw) return;
+  sw.addEventListener('change', function(){
+    var isOn = sw.checked;
+    gmSet(isOn);
+    gmApply(isOn);
+  });
+}
+
 function appBootstrap(){
   renderTasks();
   renderNotes();
@@ -4782,6 +4836,7 @@ function appBootstrap(){
   gamiRenderHud();
   rwdInitHandlers();
   avMigrate();
+  gmInit();
 }
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded', appBootstrap);
