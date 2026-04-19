@@ -942,34 +942,39 @@ footer strong{color:rgba(255,253,245,0.85)}
   color:var(--gd);white-space:nowrap;}
 /* The pill toggle */
 .gm-pill{position:relative;display:flex;align-items:center;
-  width:190px;height:34px;border-radius:999px;cursor:pointer;
-  background:#e0d4b0;border:2px solid var(--gp);
+  width:196px;height:36px;border-radius:999px;cursor:pointer;
+  background:var(--gc);border:2px solid var(--gm);
   transition:background .3s,border-color .3s;
   user-select:none;-webkit-user-select:none;flex-shrink:0;overflow:hidden;
-  box-shadow:inset 0 1px 4px rgba(0,0,0,.1);}
-.gm-pill.gm-on{background:linear-gradient(90deg,var(--gd),var(--gm));
+  box-shadow:0 2px 8px var(--sg);}
+/* Game mode ON: pill turns gold */
+.gm-pill.gm-on{background:linear-gradient(90deg,var(--gd) 0%,var(--gm) 100%);
   border-color:var(--gd);}
-/* Sliding knob */
+/* Sliding white knob */
 .gm-pill-knob{position:absolute;top:3px;left:3px;
-  width:86px;height:24px;border-radius:999px;
-  background:white;box-shadow:0 2px 6px rgba(0,0,0,.22);
-  transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:2;}
-.gm-pill.gm-on .gm-pill-knob{transform:translateX(96px);}
-/* Labels */
+  width:90px;height:26px;border-radius:999px;
+  background:white;box-shadow:0 2px 8px rgba(139,105,20,.35);
+  transition:transform .32s cubic-bezier(.4,0,.2,1);z-index:2;}
+.gm-pill.gm-on .gm-pill-knob{transform:translateX(100px);}
+/* Labels sit on opposite halves — always readable */
 .gm-pill-label-left,.gm-pill-label-right{
-  position:absolute;font-size:11px;font-weight:700;
-  text-transform:uppercase;letter-spacing:.06em;
-  transition:opacity .3s,color .3s;z-index:3;pointer-events:none;}
-.gm-pill-label-left{left:12px;color:var(--inkl);}
-.gm-pill-label-right{right:10px;color:rgba(255,255,255,.5);}
-.gm-pill.gm-on .gm-pill-label-left{color:rgba(255,255,255,.5);}
-.gm-pill.gm-on .gm-pill-label-right{color:white;}
+  position:absolute;font-family:DM Sans,sans-serif;
+  font-size:11px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.07em;
+  transition:color .3s;z-index:3;pointer-events:none;}
+/* REGULAR label: left half — dark on knob (default), white when knob moves away */
+.gm-pill-label-left{left:0;width:98px;text-align:center;color:var(--inkm);}
+.gm-pill.gm-on .gm-pill-label-left{color:rgba(255,255,255,.7);}
+/* GAME label: right half — white on gold bg (default), dark when knob covers it */
+.gm-pill-label-right{right:0;width:98px;text-align:center;color:rgba(139,105,20,.5);}
+.gm-pill.gm-on .gm-pill-label-right{color:var(--inkm);}
 /* Hide Rewards tab when game mode OFF */
 .tab-btn[data-tab="rewards"].gm-hidden{display:none!important;}
 @media(max-width:600px){
-  .gm-pill{width:160px;}
-  .gm-pill-knob{width:72px;}
-  .gm-pill.gm-on .gm-pill-knob{transform:translateX(80px);}
+  .gm-pill{width:168px;}
+  .gm-pill-knob{width:76px;}
+  .gm-pill-label-left,.gm-pill-label-right{width:84px;}
+  .gm-pill.gm-on .gm-pill-knob{transform:translateX(85px);}
 }
 </style>
 </head>
