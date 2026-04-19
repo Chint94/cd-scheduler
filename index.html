@@ -33,7 +33,7 @@ html,body{height:100%;background:#FDF8EA;color:var(--ink);font-family:DM Sans,sa
 body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(232,184,75,0.15) 0%,transparent 70%),
   repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(196,148,42,0.05) 39px,rgba(196,148,42,0.05) 40px)}
-#app{position:relative;z-index:1;min-height:100vh;height:100%;display:flex;flex-direction:column}
+#app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column}
 
 /* ── Header ── */
 header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 100%);
@@ -69,10 +69,11 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   border-bottom:3px solid transparent;margin-bottom:-2px;display:flex;align-items:center;gap:6px;transition:all .15s}
 .tab-btn:hover{color:var(--gd)}
 .tab-btn.active{color:var(--gd);border-bottom-color:var(--gd)}
-.tab-panel{display:none;flex:1;flex-direction:column;overflow:hidden}
-.tab-panel.active{display:flex;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.tab-panel{display:none;flex:1;flex-direction:column}
+.tab-panel.active{display:flex}
 /* Mobile: allow the whole tab to scroll vertically */
 @media(max-width:700px){
+  .tab-panel.active{overflow-y:auto;-webkit-overflow-scrolling:touch}
   .grid-wrap{overflow-y:visible;overflow-x:visible;padding:10px 12px 30px;position:relative}
   .gcal-wrap{display:none!important}
 }
@@ -839,8 +840,7 @@ footer strong{color:rgba(255,253,245,0.85)}
 .rwd-inp:focus{border-color:var(--gd);box-shadow:0 0 0 3px rgba(196,148,42,.15)}
 .rwd-xp-unit{font-size:12px;font-weight:700;color:var(--inkl)}
 .rwd-save-msg{font-size:12px;font-weight:600;margin-top:9px;min-height:18px;transition:opacity .3s}
-.rwd-levels-table{width:100%;border-collapse:collapse;min-width:360px}
-.rwd-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px}
+.rwd-levels-table{width:100%;border-collapse:collapse}
 .rwd-levels-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--inkl);padding:6px 8px;text-align:left;border-bottom:2px solid var(--gp)}
 .rwd-levels-table td{padding:6px 6px;vertical-align:middle;border-bottom:1px solid var(--gc)}
 .rwd-levels-table tr:last-child td{border-bottom:none}
@@ -872,65 +872,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   .rwd-inp{width:60px}
   .rwd-preview-bar-wrap{display:none}
   .rwd-section{padding:13px}
-  .av-grid{grid-template-columns:repeat(4,1fr)}
-  .av-card-name{display:none}
 }
-
-/* ══ Avatar Gallery ══ */
-.av-gallery{display:flex;flex-direction:column;gap:14px}
-.av-active-wrap{display:flex;align-items:center;gap:16px;padding:14px 16px;
-  background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 100%);
-  border-radius:12px;box-shadow:0 3px 12px rgba(139,105,20,.25)}
-.av-active-char{font-size:52px;line-height:1;filter:drop-shadow(0 3px 8px rgba(0,0,0,.3));
-  transition:all .4s cubic-bezier(.34,1.56,.64,1)}
-.av-active-info{flex:1}
-.av-active-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:white}
-.av-active-sub{font-size:12px;color:rgba(255,253,245,.75);margin-top:2px}
-
-.av-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
-.av-card{display:flex;flex-direction:column;align-items:center;gap:4px;
-  padding:10px 6px;border-radius:10px;border:2px solid var(--gp);
-  background:var(--gc);cursor:pointer;transition:all .18s;position:relative}
-.av-card:hover{border-color:var(--gm);background:rgba(196,148,42,.08);transform:translateY(-2px)}
-.av-card.av-active{border-color:var(--gm);background:rgba(196,148,42,.12);
-  box-shadow:0 0 0 3px rgba(196,148,42,.2)}
-.av-card.av-done{border-color:#5CB85C;background:rgba(92,184,92,.07)}
-.av-card.av-locked{opacity:.4;cursor:default;filter:grayscale(.6)}
-.av-card.av-locked:hover{transform:none;border-color:var(--gp)}
-.av-card-emoji{font-size:28px;line-height:1}
-.av-card-name{font-size:9px;font-weight:700;color:var(--inkl);text-align:center;
-  line-height:1.2;text-transform:uppercase;letter-spacing:.04em;max-width:56px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.av-card-badge{position:absolute;top:4px;right:4px;font-size:9px;font-weight:700;
-  background:var(--gm);color:white;border-radius:999px;padding:1px 5px;line-height:1.4}
-.av-card-badge.done-badge{background:#5CB85C}
-
-/* Picker modal */
-.av-picker-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;
-  display:flex;align-items:center;justify-content:center;padding:16px;
-  animation:fadeIn .15s ease}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.av-picker-box{background:white;border-radius:16px;padding:20px;width:100%;max-width:360px;
-  box-shadow:0 12px 48px rgba(0,0,0,.25);max-height:80vh;display:flex;flex-direction:column;gap:12px}
-.av-picker-head{display:flex;align-items:center;justify-content:space-between}
-.av-picker-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--gd)}
-.av-picker-close{background:none;border:none;font-size:20px;cursor:pointer;
-  color:var(--inkl);padding:4px;border-radius:6px;line-height:1}
-.av-picker-close:hover{background:var(--gc)}
-.av-picker-input-wrap{display:flex;gap:8px;align-items:center}
-.av-picker-input{font-size:22px;width:56px;text-align:center;padding:6px 8px;
-  border:1.5px solid var(--gm);border-radius:8px;outline:none;background:var(--gc)}
-.av-picker-input-lbl{font-size:12px;color:var(--inkm);flex:1;line-height:1.4}
-.av-picker-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;
-  overflow-y:auto;max-height:280px;padding:4px 0}
-.av-picker-opt{font-size:24px;text-align:center;padding:7px 4px;border-radius:8px;
-  cursor:pointer;transition:background .12s;line-height:1;border:2px solid transparent}
-.av-picker-opt:hover{background:var(--gc)}
-.av-picker-opt.selected{border-color:var(--gm);background:rgba(196,148,42,.12)}
-.av-picker-save{width:100%;font-family:DM Sans,sans-serif;font-size:13px;font-weight:700;
-  background:var(--gm);border:none;border-radius:9px;padding:10px;color:white;
-  cursor:pointer;transition:background .15s}
-.av-picker-save:hover{background:var(--gd)}
 </style>
 </head>
 <body>
@@ -958,7 +900,7 @@ footer strong{color:rgba(255,253,245,0.85)}
       Open CD Scheduler Online ↗
     </a>
     <p style="margin-top:14px;font-size:12px;color:#aaa;">Everything still works offline without sign-in — your data saves locally in this browser.</p>
-    <button class="btn-dis" onclick="(function(){try{localStorage.setItem('cds_file_warn_dismissed','1');}catch(e){}document.getElementById('fileProtocolWarning').style.display='none';})()" style="margin-top:12px;">Got it, use offline</button>
+    <button class="btn-dis" onclick="document.getElementById('fileProtocolWarning').style.display='none'" style="margin-top:12px;">Got it, use offline</button>
   </div>
 </div>
 
@@ -1160,18 +1102,6 @@ footer strong{color:rgba(255,253,245,0.85)}
         <button class="rwd-reset-btn" id="rwdResetBtn">↺ Reset XP</button>
       </div>
     </div>
-
-    <!-- Avatar Gallery Section -->
-    <div class="rwd-section">
-      <div class="rwd-section-head">
-        <div>
-          <div class="rwd-section-title">🧑&zwj;🎤 Character Avatars</div>
-          <div class="rwd-section-sub">Each level has its own character. Click any avatar to customise it. Locked levels show as greyed out until you reach them.</div>
-        </div>
-      </div>
-      <div class="av-gallery" id="avGallery"></div>
-    </div>
-
     <div class="rwd-section">
       <div class="rwd-section-head">
         <div><div class="rwd-section-title">⚡ XP Point Values</div><div class="rwd-section-sub">How many XP each completed task earns. Changes apply immediately.</div></div>
@@ -4041,17 +3971,11 @@ function applyPlannerLayout(){
   var mobileWrap=document.getElementById('schedMobileWrap');
   var dayNav=document.getElementById('dayNav');
   var dayDots=document.getElementById('dayDots');
-  var wasHidden = desktop && desktop.style.display === 'none';
   if(desktop)   desktop.style.display   = mobile ? 'none'  : '';
   if(mobileWrap)mobileWrap.style.display= mobile ? 'block' : 'none';
   if(dayNav)    dayNav.style.display    = mobile ? 'flex'  : 'none';
   if(dayDots)   dayDots.style.display   = mobile ? 'flex'  : 'none';
-  if(mobile){
-    buildMobileDay();
-  } else if(wasHidden){
-    // Desktop grid was hidden (e.g. was in mobile mode or first load) — rebuild it
-    buildGrid();
-  }
+  if(mobile) buildMobileDay();
 }
 
 function buildDayDots(){
@@ -4236,23 +4160,12 @@ document.getElementById('dismissWarning').addEventListener('click',function(){
 // Show file:// warning automatically on load if not served via HTTP(S)
 (function(){
   if(window.location.protocol==='file:'){
-    // Only show the warning if user hasn't dismissed it before
-    var dismissed=false;
-    try{dismissed=localStorage.getItem('cds_file_warn_dismissed')==='1';}catch(e){}
-    if(!dismissed){
-      var w=document.getElementById('fileProtocolWarning');
-      if(w) w.style.display='flex';
-    }
+    var w=document.getElementById('fileProtocolWarning');
+    if(w) w.style.display='flex';
   }
 })();
 setWeek(new Date());
-// applyPlannerLayout runs inside setWeek (via the wrapped version below),
-// but also call it explicitly after DOM is confirmed ready.
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',function(){ applyPlannerLayout(); });
-} else {
-  applyPlannerLayout();
-}
+applyPlannerLayout();
 
 // ════════════════════════════════════════════════════
 // GAMIFICATION ENGINE
@@ -4279,14 +4192,14 @@ function gamiGetLevel(xp){for(var i=GAMI_LEVELS.length-1;i>=0;i--){if(xp>=GAMI_L
 function gamiCfgGet(){
   try{var c=JSON.parse(localStorage.getItem(GCK)||'null');if(c&&c.xp&&c.levels)return c;}catch(e){}
   return{xp:{high:30,medium:20,low:10,today:5,early:10},levels:[
-    {lvl:1,min:0,   max:50,   name:'Beginner',  icon:'🌱', avatar:'🐣'},
-    {lvl:2,min:50,  max:150,  name:'Focused',   icon:'⚡', avatar:'🐥'},
-    {lvl:3,min:150, max:300,  name:'Productive',icon:'🚀', avatar:'🦊'},
-    {lvl:4,min:300, max:500,  name:'Achiever',  icon:'🏆', avatar:'🦁'},
-    {lvl:5,min:500, max:800,  name:'Expert',    icon:'🔥', avatar:'🐯'},
-    {lvl:6,min:800, max:1200, name:'Master',    icon:'⭐', avatar:'🦅'},
-    {lvl:7,min:1200,max:1800, name:'Elite',     icon:'💎', avatar:'🐲'},
-    {lvl:8,min:1800,max:9999, name:'Legend',    icon:'👑', avatar:'🌟'}
+    {lvl:1,min:0,   max:50,   name:'Beginner',  icon:'🌱'},
+    {lvl:2,min:50,  max:150,  name:'Focused',   icon:'⚡'},
+    {lvl:3,min:150, max:300,  name:'Productive',icon:'🚀'},
+    {lvl:4,min:300, max:500,  name:'Achiever',  icon:'🏆'},
+    {lvl:5,min:500, max:800,  name:'Expert',    icon:'🔥'},
+    {lvl:6,min:800, max:1200, name:'Master',    icon:'⭐'},
+    {lvl:7,min:1200,max:1800, name:'Elite',     icon:'💎'},
+    {lvl:8,min:1800,max:9999, name:'Legend',    icon:'👑'}
   ]};
 }
 function gamiCfgSet(c){try{localStorage.setItem(GCK,JSON.stringify(c));}catch(e){}}
@@ -4323,10 +4236,9 @@ function gamiTodayProgress(){
 }
 
 function gamiRenderHud(){
-  var g=gamiGet();
-  var lvl=gamiGetLevel(g.xp);
-  var isMax=lvl.max===9999;
-  var pct=isMax?100:Math.round(((g.xp-lvl.min)/(lvl.max-lvl.min))*100);
+  var g=gamiGet();var lvl=gamiGetLevel(g.xp);
+  var nextLvl=GAMI_LEVELS[Math.min(lvl.lvl,GAMI_LEVELS.length-1)];
+  var pct=nextLvl.max===9999?100:Math.round(((g.xp-lvl.min)/(nextLvl.max-lvl.min))*100);
   pct=Math.max(0,Math.min(100,pct));
   var streak=gamiStreak();var tp=gamiTodayProgress();
   var todayPct=tp.total>0?Math.round((tp.done/tp.total)*100):0;
@@ -4334,7 +4246,7 @@ function gamiRenderHud(){
   if(el('gamiLevelIcon'))el('gamiLevelIcon').textContent=lvl.icon;
   if(el('gamiLevelName'))el('gamiLevelName').textContent=lvl.name;
   if(el('gamiLevelNum')) el('gamiLevelNum').textContent='Level '+lvl.lvl;
-  if(el('gamiXpVal'))    el('gamiXpVal').textContent=isMax?g.xp+' XP (max!)':g.xp+' / '+lvl.max+' XP';
+  if(el('gamiXpVal'))    el('gamiXpVal').textContent=nextLvl.max===9999?g.xp+' XP (max!)':g.xp+' / '+nextLvl.max+' XP';
   if(el('gamiXpFill'))   el('gamiXpFill').style.width=pct+'%';
   if(el('gamiStreakNum'))el('gamiStreakNum').textContent=streak;
   if(el('gamiTodayFrac'))el('gamiTodayFrac').textContent=tp.done+'/'+tp.total;
@@ -4365,11 +4277,7 @@ function gamiAwardXp(task,cardEl){
     cardEl.style.position='relative';cardEl.appendChild(pop);
     setTimeout(function(){pop.remove();},950);
   }
-  if(newLvl.lvl>oldLvl){
-    gamiShowToast(newLvl.icon+' Level Up! '+newLvl.name+' (Lv.'+newLvl.lvl+')');
-    // Update avatar gallery to reflect new active level
-    if(typeof avRenderGallery==='function')avRenderGallery();
-  }
+  if(newLvl.lvl>oldLvl)gamiShowToast(newLvl.icon+' Level Up! '+newLvl.name+' (Lv.'+newLvl.lvl+')');
   gamiConfetti();
   gamiRenderHud();
 }
@@ -4434,8 +4342,8 @@ function rwdMsg(elId,text,ok){
 function renderRewards(){
   var g=gamiGet();
   var lvl=gamiGetLevel(g.xp);
-  var isMax=lvl.max===9999;
-  var pct=isMax?100:Math.round(((g.xp-lvl.min)/(lvl.max-lvl.min))*100);
+  var nextLvl=GAMI_LEVELS[Math.min(lvl.lvl,GAMI_LEVELS.length-1)];
+  var pct=nextLvl.max===9999?100:Math.round(((g.xp-lvl.min)/(nextLvl.max-lvl.min))*100);
   pct=Math.max(0,Math.min(100,pct));
   var streak=gamiStreak();
   var done=Object.keys(g.completedIds||{}).length;
@@ -4443,7 +4351,7 @@ function renderRewards(){
   // Status card
   var si=document.getElementById('rwdStatusIcon');   if(si) si.textContent=lvl.icon;
   var sl=document.getElementById('rwdStatusLevel');  if(sl) sl.textContent='Level '+lvl.lvl+' — '+lvl.name;
-  var sx=document.getElementById('rwdStatusXp');     if(sx) sx.textContent=g.xp+' XP total · '+(isMax?'Max level reached! 👑':(g.xp-lvl.min)+' / '+(lvl.max-lvl.min)+' to next level');
+  var sx=document.getElementById('rwdStatusXp');     if(sx) sx.textContent=g.xp+' XP total · '+(nextLvl.max===9999?'Max level reached! 👑':(g.xp-lvl.min)+' / '+(nextLvl.max-lvl.min)+' to next level');
   var sb=document.getElementById('rwdStatusBar');    if(sb) sb.style.width=pct+'%';
   var sv=document.getElementById('rwdStreakVal');    if(sv) sv.textContent=streak;
   var dv=document.getElementById('rwdDoneVal');      if(dv) dv.textContent=done;
@@ -4457,8 +4365,6 @@ function renderRewards(){
   // Table and preview — always read from live GAMI_LEVELS
   rwdRenderLevelsTable(GAMI_LEVELS);
   rwdRenderPreview(g.xp);
-  // Avatar gallery
-  avRenderGallery();
 }
 
 // ── All button handlers wired ONCE at startup ─────────────────────────────────
@@ -4496,14 +4402,15 @@ function rwdInitHandlers(){
       var minVal=i===0 ? 0 : levels[i-1].max;
       levels.push({lvl:i+1, min:minVal, max:maxVal, name:name, icon:icon});
     });
-    // Second pass: validate — each level's max must be strictly greater than its min
+    // Second pass: validate — each level's max must be greater than its min
     var valid=true;
     var badRow=-1;
     for(var vi=0;vi<levels.length-1;vi++){
       if(levels[vi].max<=levels[vi].min){valid=false;badRow=vi+1;break;}
+      if(vi>0 && levels[vi].max<=levels[vi-1].max){valid=false;badRow=vi+1;break;}
     }
     if(!valid){
-      rwdMsg('rwdLevelsMsg','⚠ Level '+(badRow)+': "Ends at XP" must be greater than "Starts at XP".',false);
+      rwdMsg('rwdLevelsMsg','⚠ Level '+(badRow)+': "Ends at XP" must be higher than the previous level\'s end value.',false);
       return;
     }
 
@@ -4526,17 +4433,16 @@ function rwdInitHandlers(){
     // 4. Update status card at top of Rewards tab
     var g2=gamiGet();
     var lvl2=gamiGetLevel(g2.xp);
-    var isMax2=lvl2.max===9999;
-    var pct2=isMax2?100:Math.round(((g2.xp-lvl2.min)/(lvl2.max-lvl2.min))*100);
+    var nextLvl2=GAMI_LEVELS[Math.min(lvl2.lvl,GAMI_LEVELS.length-1)];
+    var pct2=nextLvl2.max===9999?100:Math.round(((g2.xp-lvl2.min)/(nextLvl2.max-lvl2.min))*100);
     pct2=Math.max(0,Math.min(100,pct2));
     var si=document.getElementById('rwdStatusIcon');   if(si) si.textContent=lvl2.icon;
     var sl=document.getElementById('rwdStatusLevel');  if(sl) sl.textContent='Level '+lvl2.lvl+' — '+lvl2.name;
-    var sx=document.getElementById('rwdStatusXp');     if(sx) sx.textContent=g2.xp+' XP total · '+(isMax2?'Max level reached! 👑':(g2.xp-lvl2.min)+' / '+(lvl2.max-lvl2.min)+' to next level');
+    var sx=document.getElementById('rwdStatusXp');     if(sx) sx.textContent=g2.xp+' XP total · '+(nextLvl2.max===9999?'Max level reached! 👑':(g2.xp-lvl2.min)+' / '+(nextLvl2.max-lvl2.min)+' to next level');
     var sb=document.getElementById('rwdStatusBar');    if(sb) sb.style.width=pct2+'%';
 
-    // 5. Re-render the preview and avatar gallery from the new GAMI_LEVELS
+    // 5. Re-render the preview directly from the new GAMI_LEVELS
     rwdRenderPreviewFromLevels(GAMI_LEVELS, g2.xp);
-    avRenderGallery();
 
     // 6. Clear the Refresh Preview message since preview is now in sync with saved data
     var pm=document.getElementById('rwdPreviewMsg');
@@ -4586,13 +4492,13 @@ function rwdInitHandlers(){
       var minVal=i===0 ? 0 : tempLevels[i-1].max;
       tempLevels.push({lvl:i+1, min:minVal, max:maxVal, name:name, icon:icon});
     });
-    // Validate — each level's max must be strictly greater than its min
+    // Validate
     var valid=true;
     for(var vi=0;vi<tempLevels.length-1;vi++){
-      if(tempLevels[vi].max<=tempLevels[vi].min){valid=false;break;}
+      if(tempLevels[vi].max<=tempLevels[vi].min||(vi>0&&tempLevels[vi].max<=tempLevels[vi-1].max)){valid=false;break;}
     }
     if(!valid){
-      rwdMsg('rwdPreviewMsg','⚠ Preview skipped — an "Ends at XP" value is not greater than that level\'s start.',false);
+      rwdMsg('rwdPreviewMsg','⚠ Preview skipped — XP threshold in a row is not higher than the previous.',false);
       return;
     }
     // Also update "Starts at" cells to reflect any max changes
@@ -4606,7 +4512,7 @@ function rwdInitHandlers(){
 
 function rwdRenderLevelsTable(levels){
   var wrap=document.getElementById('rwdLevelsTable');if(!wrap)return;
-  var html='<div class="rwd-table-wrap"><table class="rwd-levels-table"><thead><tr><th>#</th><th>Icon</th><th>Level Name</th><th>Starts at XP</th><th>Ends at XP</th><th></th></tr></thead><tbody>';
+  var html='<table class="rwd-levels-table"><thead><tr><th>#</th><th>Icon</th><th>Level Name</th><th>Starts at XP</th><th>Ends at XP</th><th></th></tr></thead><tbody>';
   levels.forEach(function(l,i){
     var isLast=i===levels.length-1;
     html+='<tr class="rwd-level-row">'+
@@ -4618,7 +4524,7 @@ function rwdRenderLevelsTable(levels){
       '<td>'+(i===0?'':'<button class="rwd-del-btn rwd-del-level" title="Delete">🗑</button>')+'</td>'+
     '</tr>';
   });
-  html+='</tbody></table></div>';
+  html+='</tbody></table>';
   wrap.innerHTML=html;
   wrap.querySelectorAll('.rwd-del-level').forEach(function(btn){
     btn.addEventListener('click',function(){
@@ -4661,125 +4567,11 @@ function rwdRenderPreview(currentXp){
   rwdRenderPreviewFromLevels(GAMI_LEVELS, currentXp);
 }
 
-// ════════════════════════════════════════════════════
-// AVATAR GALLERY
-// ════════════════════════════════════════════════════
-var AV_PALETTE=[
-  '🐣','🐥','🐤','🐦','🦊','🐺','🦁','🐯','🐻','🐼','🐨','🐸',
-  '🐵','🦅','🦉','🦋','🐲','🐉','🦄','🐮','🐷','🐙','🦑','🐬',
-  '🐳','🦈','🦒','🦓','🐘','🦏','🦍','🧙','🧝','🧛','🧜','🧚',
-  '🥷','👨','👩','👷','🕵','🎤','🎨','💻','🏋','🌟','💫','⚡',
-  '🔥','💥','🌊','🌀','🌈','☀','🌙','❄','🍀','🌸','🌺','🌻',
-  '🎭','🏆','🥇','💎','👑','🎯','🗡','🛡','🚀','🛸','🌋','⛰'
-];
-
-function avMigrate(){
-  var c=gamiCfgGet();
-  var defaults=['🐣','🐥','🦊','🦁','🐯','🦅','🐲','🌟'];
-  var changed=false;
-  c.levels.forEach(function(l,i){if(!l.avatar){l.avatar=defaults[i]||'⭐';changed=true;}});
-  if(changed)gamiCfgSet(c);
-  GAMI_LEVELS.forEach(function(l,i){if(!l.avatar)l.avatar=c.levels[i]?c.levels[i].avatar:(defaults[i]||'⭐');});
-}
-
-function avRenderGallery(){
-  var wrap=document.getElementById('avGallery');if(!wrap)return;
-  avMigrate();
-  var g=gamiGet();
-  var curLvl=gamiGetLevel(g.xp);
-  var activeLvl=GAMI_LEVELS[curLvl.lvl-1]||GAMI_LEVELS[0];
-  var html='<div class="av-active-wrap">'+
-    '<div class="av-active-char" id="avActiveChar">'+(activeLvl.avatar||activeLvl.icon)+'</div>'+
-    '<div class="av-active-info">'+
-      '<div class="av-active-title">'+escHtml(activeLvl.name)+'\'s Character</div>'+
-      '<div class="av-active-sub">Level '+curLvl.lvl+' &middot; '+g.xp+' XP &middot; Click a card below to customise</div>'+
-    '</div>'+
-  '</div>';
-  html+='<div class="av-grid">';
-  GAMI_LEVELS.forEach(function(l,i){
-    var isCurrent=l.lvl===curLvl.lvl;
-    var isReached=g.xp>=l.min;
-    var cls='av-card'+(isCurrent?' av-active':isReached?' av-done':' av-locked');
-    html+='<div class="'+cls+'" data-lvl-idx="'+i+'" title="Level '+l.lvl+' — '+escHtml(l.name)+'">';
-    if(isCurrent) html+='<span class="av-card-badge">NOW</span>';
-    else if(isReached) html+='<span class="av-card-badge done-badge">✓</span>';
-    html+='<div class="av-card-emoji">'+(l.avatar||l.icon)+'</div>'+
-          '<div class="av-card-name">'+escHtml(l.name)+'</div>'+
-    '</div>';
-  });
-  html+='</div>';
-  wrap.innerHTML=html;
-  wrap.querySelectorAll('.av-card').forEach(function(card){
-    card.addEventListener('click',function(){
-      avOpenPicker(parseInt(card.getAttribute('data-lvl-idx')));
-    });
-  });
-}
-
-function avOpenPicker(lvlIdx){
-  var lvl=GAMI_LEVELS[lvlIdx];if(!lvl)return;
-  var current=lvl.avatar||lvl.icon||'⭐';
-  var existing=document.getElementById('avPickerOverlay');if(existing)existing.remove();
-  var overlay=document.createElement('div');
-  overlay.className='av-picker-overlay';overlay.id='avPickerOverlay';
-  var grid='';
-  AV_PALETTE.forEach(function(em){
-    grid+='<div class="av-picker-opt'+(em===current?' selected':'')+'" data-em="'+escHtml(em)+'">'+em+'</div>';
-  });
-  overlay.innerHTML=
-    '<div class="av-picker-box">'+
-      '<div class="av-picker-head">'+
-        '<div class="av-picker-title">Level '+lvl.lvl+' — '+escHtml(lvl.name)+'</div>'+
-        '<button class="av-picker-close" id="avPickerClose">✕</button>'+
-      '</div>'+
-      '<div class="av-picker-input-wrap">'+
-        '<input class="av-picker-input" id="avPickerCustom" type="text" maxlength="4" value="'+escHtml(current)+'">'+
-        '<span class="av-picker-input-lbl">Type or paste any emoji above, or pick from the grid below.</span>'+
-      '</div>'+
-      '<div class="av-picker-grid" id="avPickerGrid">'+grid+'</div>'+
-      '<button class="av-picker-save" id="avPickerSave">✓ Save Avatar</button>'+
-    '</div>';
-  document.body.appendChild(overlay);
-  var inp=overlay.querySelector('#avPickerCustom');
-  overlay.querySelector('#avPickerGrid').addEventListener('click',function(e){
-    var opt=e.target.closest('.av-picker-opt');if(!opt)return;
-    var em=opt.getAttribute('data-em');
-    inp.value=em;
-    overlay.querySelectorAll('.av-picker-opt').forEach(function(o){o.classList.remove('selected');});
-    opt.classList.add('selected');
-  });
-  overlay.querySelector('#avPickerClose').addEventListener('click',avClosePicker);
-  overlay.addEventListener('click',function(e){if(e.target===overlay)avClosePicker();});
-  overlay.querySelector('#avPickerSave').addEventListener('click',function(){
-    var chosen=inp.value.trim()||current;
-    avSaveAvatar(lvlIdx,chosen);
-    avClosePicker();
-  });
-  setTimeout(function(){inp.focus();inp.select();},60);
-}
-
-function avClosePicker(){
-  var o=document.getElementById('avPickerOverlay');if(o)o.remove();
-}
-
-function avSaveAvatar(lvlIdx,emoji){
-  if(GAMI_LEVELS[lvlIdx])GAMI_LEVELS[lvlIdx].avatar=emoji;
-  var c=gamiCfgGet();
-  if(c.levels[lvlIdx])c.levels[lvlIdx].avatar=emoji;
-  gamiCfgSet(c);
-  avRenderGallery();
-  var g=gamiGet();var curLvl=gamiGetLevel(g.xp);
-  if(lvlIdx===curLvl.lvl-1){
-    var si=document.getElementById('rwdStatusIcon');if(si)si.textContent=emoji;
-  }
-}
-
 renderTasks();
 renderNotes();
 renderDashboard();
 gamiRenderHud();
 rwdInitHandlers();
-avMigrate();
 // ════════════════════════════════════════════════════════
 // GOOGLE CALENDAR SYNC
 // ════════════════════════════════════════════════════════
@@ -5201,7 +4993,6 @@ setInterval(function(){if(currentTab==='tasks')renderTasks(); if(currentTab==='d
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
 (function() {
   'use strict';
 
@@ -5241,11 +5032,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function isMobileLikeBrowser() {
     var ua = navigator.userAgent || '';
-    // Only match genuine mobile UA strings — NOT (pointer: coarse), because
-    // touchscreen laptops (e.g. Surface, Lenovo Yoga) also report coarse pointer,
-    // which incorrectly triggers signInWithRedirect and causes a silent auth loop
-    // when third-party cookies are restricted on desktop browsers.
-    return /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    // Screen-size check removed — small laptop screens were incorrectly
+    // triggering signInWithRedirect, causing a silent login loop on devices
+    // where third-party cookies are restricted.
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
+           (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   }
 
   function isFileProtocol() {
@@ -5391,32 +5182,6 @@ document.addEventListener('DOMContentLoaded', function() {
           if (ni && document.activeElement !== ni) ni.value = t.notes || '';
         });
         buildGrid();
-        // Keep gamification in sync with Firebase task state
-        (function(){
-          var g=gamiGet();var tasks2=Object.values(lsGet(TK)||{});var changed=false;
-          tasks2.forEach(function(t){
-            if(t.done&&!g.completedIds[t.id]){
-              g.completedIds[t.id]=t.completedAt||Date.now();
-              g.xp+=GAMI_XP[t.priority||'medium']||GAMI_XP.medium;
-              changed=true;
-            }
-          });
-          // Remove XP for tasks that are now un-done
-          Object.keys(g.completedIds).forEach(function(id){
-            var task=tasks2.find(function(t){return t.id===id;});
-            if(task&&!task.done){
-              g.xp=Math.max(0,g.xp-(GAMI_XP[task.priority||'medium']||GAMI_XP.medium));
-              delete g.completedIds[id];
-              changed=true;
-            }
-          });
-          if(changed)gamiSet(g);
-          gamiRenderHud();
-          if(currentTab==='rewards'){renderRewards();}
-          else if(document.getElementById('avGallery')&&document.getElementById('avGallery').children.length>0){
-            avRenderGallery();
-          }
-        })();
       });
 
       // Notes listener
@@ -5446,7 +5211,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
 })();
-}); // DOMContentLoaded
 </script>
 </body>
 </html>
