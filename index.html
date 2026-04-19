@@ -33,7 +33,7 @@ html,body{height:100%;background:#FDF8EA;color:var(--ink);font-family:DM Sans,sa
 body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(232,184,75,0.15) 0%,transparent 70%),
   repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(196,148,42,0.05) 39px,rgba(196,148,42,0.05) 40px)}
-#app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column}
+#app{position:relative;z-index:1;min-height:100vh;height:100%;display:flex;flex-direction:column}
 
 /* ── Header ── */
 header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 100%);
@@ -69,11 +69,10 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   border-bottom:3px solid transparent;margin-bottom:-2px;display:flex;align-items:center;gap:6px;transition:all .15s}
 .tab-btn:hover{color:var(--gd)}
 .tab-btn.active{color:var(--gd);border-bottom-color:var(--gd)}
-.tab-panel{display:none;flex:1;flex-direction:column}
-.tab-panel.active{display:flex}
+.tab-panel{display:none;flex:1;flex-direction:column;overflow:hidden}
+.tab-panel.active{display:flex;overflow-y:auto;-webkit-overflow-scrolling:touch}
 /* Mobile: allow the whole tab to scroll vertically */
 @media(max-width:700px){
-  .tab-panel.active{overflow-y:auto;-webkit-overflow-scrolling:touch}
   .grid-wrap{overflow-y:visible;overflow-x:visible;padding:10px 12px 30px;position:relative}
   .gcal-wrap{display:none!important}
 }
@@ -4042,11 +4041,17 @@ function applyPlannerLayout(){
   var mobileWrap=document.getElementById('schedMobileWrap');
   var dayNav=document.getElementById('dayNav');
   var dayDots=document.getElementById('dayDots');
+  var wasHidden = desktop && desktop.style.display === 'none';
   if(desktop)   desktop.style.display   = mobile ? 'none'  : '';
   if(mobileWrap)mobileWrap.style.display= mobile ? 'block' : 'none';
   if(dayNav)    dayNav.style.display    = mobile ? 'flex'  : 'none';
   if(dayDots)   dayDots.style.display   = mobile ? 'flex'  : 'none';
-  if(mobile) buildMobileDay();
+  if(mobile){
+    buildMobileDay();
+  } else if(wasHidden){
+    // Desktop grid was hidden (e.g. was in mobile mode or first load) — rebuild it
+    buildGrid();
+  }
 }
 
 function buildDayDots(){
@@ -4241,7 +4246,13 @@ document.getElementById('dismissWarning').addEventListener('click',function(){
   }
 })();
 setWeek(new Date());
-applyPlannerLayout();
+// applyPlannerLayout runs inside setWeek (via the wrapped version below),
+// but also call it explicitly after DOM is confirmed ready.
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',function(){ applyPlannerLayout(); });
+} else {
+  applyPlannerLayout();
+}
 
 // ════════════════════════════════════════════════════
 // GAMIFICATION ENGINE
@@ -5230,11 +5241,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function isMobileLikeBrowser() {
     var ua = navigator.userAgent || '';
-    // Screen-size check removed — small laptop screens were incorrectly
-    // triggering signInWithRedirect, causing a silent login loop on devices
-    // where third-party cookies are restricted.
-    return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
-           (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    // Only match genuine mobile UA strings — NOT (pointer: coarse), because
+    // touchscreen laptops (e.g. Surface, Lenovo Yoga) also report coarse pointer,
+    // which incorrectly triggers signInWithRedirect and causes a silent auth loop
+    // when third-party cookies are restricted on desktop browsers.
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
   }
 
   function isFileProtocol() {
