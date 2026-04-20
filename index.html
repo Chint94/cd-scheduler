@@ -1059,6 +1059,16 @@ footer strong{color:rgba(255,253,245,0.85)}
   .mkt-grid,.mkt-purchased-grid{grid-template-columns:1fr;}
   .mkt-card-cost-inp{width:72px;}
 }
+
+/* ── Task XP chip (visible in Game Mode only) ── */
+.task-xp-chip{
+  display:inline-flex;align-items:center;gap:3px;
+  font-size:10px;font-weight:700;
+  background:linear-gradient(90deg,var(--gd),var(--gm));
+  color:white;border-radius:999px;
+  padding:2px 9px;letter-spacing:.03em;
+  vertical-align:middle;flex-shrink:0;
+}
 </style>
 </head>
 <body>
@@ -3688,6 +3698,9 @@ function renderTasks(){
           '</div>'+
           '<div class="task-meta" style="margin-top:4px">'+
             badge+
+            (gmIsOn()
+              ? '<span class="task-xp-chip">⭐ '+(GAMI_XP[t.priority||'medium']||GAMI_XP.medium)+' XP</span>'
+              : '')+
             '<select class="task-sel">'+
               '<option value="high"'+(t.priority==='high'?' selected':'')+'>🔴 High</option>'+
               '<option value="medium"'+(t.priority==='medium'?' selected':'')+'>🟡 Medium</option>'+
@@ -4540,6 +4553,7 @@ function gamiAwardXp(task,cardEl){
   }
   gamiConfetti();
   gamiRenderHud();
+  if(typeof mktRefreshXpBadge==='function') mktRefreshXpBadge();
 }
 
 function gamiRevokeXp(task){
@@ -4547,6 +4561,7 @@ function gamiRevokeXp(task){
   var xp=GAMI_XP[task.priority||'medium']||GAMI_XP.medium;
   delete g.completedIds[task.id];g.xp=Math.max(0,g.xp-xp);
   gamiSet(g);gamiRenderHud();
+  if(typeof mktRefreshXpBadge==='function') mktRefreshXpBadge();
 }
 
 function gamiShowToast(msg){
@@ -4627,6 +4642,8 @@ function renderRewards(){
   rwdRenderPreview(g.xp);
   // Avatar gallery
   avRenderGallery();
+  // Marketplace — refresh XP badge + re-render goals every time Rewards tab opens
+  if(typeof mktInit === 'function') mktInit();
 }
 
 // ── All button handlers wired ONCE at startup ─────────────────────────────────
@@ -4981,6 +4998,8 @@ function gmApply(on){
     if(on){ el.classList.remove('gm-hud-hidden'); }
     else  { el.classList.add('gm-hud-hidden'); }
   });
+  // Re-render tasks so XP chips appear/disappear per task card
+  if(typeof renderTasks === 'function') renderTasks();
 }
 function gmToggle(){
   var on = !gmIsOn();
