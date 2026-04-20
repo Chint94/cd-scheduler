@@ -38,14 +38,14 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 
 /* ── Header ── */
 header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 100%);
-  padding:0 18px;display:flex;align-items:center;justify-content:space-between;
-  flex-wrap:wrap;gap:8px;min-height:62px;box-shadow:0 4px 20px rgba(139,105,20,0.4);
+  padding:0 16px;display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:nowrap;gap:10px;min-height:62px;box-shadow:0 4px 20px rgba(139,105,20,0.4);
   position:sticky;top:0;z-index:200}
 .brand{display:flex;align-items:center;gap:10px}
 .brand-title{font-family:'Playfair Display',serif;font-size:clamp(18px,5vw,26px);font-weight:900;
   color:var(--white);text-shadow:0 2px 8px rgba(0,0,0,0.3);letter-spacing:1px}
 .brand-sub{font-size:10px;font-weight:500;color:rgba(255,253,245,0.65);letter-spacing:2px;text-transform:uppercase}
-.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.header-right{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;flex-shrink:0;}
 .btn-google{display:flex;align-items:center;gap:7px;background:var(--white);border:none;
   border-radius:6px;padding:6px 12px;font-family:DM Sans,sans-serif;font-size:12px;
   font-weight:600;color:var(--inkm);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2);transition:all .15s}
@@ -977,47 +977,56 @@ footer strong{color:rgba(255,253,245,0.85)}
 .av-picker-save:hover{background:var(--gd)}
 
 /* ══ Game Mode Toggle ══ */
-.gm-wrap{display:flex;align-items:center;gap:10px;padding:11px 18px;
-  background:linear-gradient(90deg,var(--gc),var(--white));
-  border-bottom:1.5px solid var(--gp);margin-bottom:0;flex-wrap:wrap;}
-.gm-icon{font-size:18px;line-height:1;}
-.gm-title{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;
-  color:var(--gd);white-space:nowrap;}
-/* The pill toggle */
+/* ══ Mode toggle in header ══ */
+.gm-wrap{display:flex;align-items:center;gap:8px;padding:0;
+  background:transparent;border:none;margin:0;flex-shrink:0;}
+.gm-title{font-family:'Playfair Display',serif;font-size:12px;font-weight:700;
+  color:rgba(255,253,245,.9);white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.2);}
+/* Pill */
 .gm-pill{position:relative;display:flex;align-items:center;
-  width:196px;height:36px;border-radius:999px;cursor:pointer;
-  background:var(--gc);border:2px solid var(--gm);
-  transition:background .3s,border-color .3s;
+  width:168px;height:30px;border-radius:999px;cursor:pointer;
+  background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.55);
+  transition:background .28s,border-color .28s;
   user-select:none;-webkit-user-select:none;flex-shrink:0;overflow:hidden;
-  box-shadow:0 2px 8px var(--sg);}
-/* Game mode ON: pill turns gold */
-.gm-pill.gm-on{background:linear-gradient(90deg,var(--gd) 0%,var(--gm) 100%);
-  border-color:var(--gd);}
-/* Sliding white knob */
+  box-shadow:0 1px 6px rgba(0,0,0,.2);}
+.gm-pill.gm-on{background:rgba(255,255,255,.30);border-color:rgba(255,255,255,.85);}
+/* Knob */
 .gm-pill-knob{position:absolute;top:3px;left:3px;
-  width:90px;height:26px;border-radius:999px;
-  background:white;box-shadow:0 2px 8px rgba(139,105,20,.35);
-  transition:transform .32s cubic-bezier(.4,0,.2,1);z-index:2;}
-.gm-pill.gm-on .gm-pill-knob{transform:translateX(100px);}
-/* Labels sit on opposite halves — always readable */
+  width:76px;height:20px;border-radius:999px;
+  background:white;box-shadow:0 1px 5px rgba(0,0,0,.22);
+  transition:transform .30s cubic-bezier(.4,0,.2,1);z-index:2;}
+.gm-pill.gm-on .gm-pill-knob{transform:translateX(85px);}
+/* Labels */
 .gm-pill-label-left,.gm-pill-label-right{
   position:absolute;font-family:DM Sans,sans-serif;
-  font-size:11px;font-weight:800;
-  text-transform:uppercase;letter-spacing:.07em;
-  transition:color .3s;z-index:3;pointer-events:none;}
-/* REGULAR label: left half — dark on knob (default), white when knob moves away */
-.gm-pill-label-left{left:0;width:98px;text-align:center;color:var(--inkm);}
-.gm-pill.gm-on .gm-pill-label-left{color:rgba(255,255,255,.7);}
-/* GAME label: right half — white on gold bg (default), dark when knob covers it */
-.gm-pill-label-right{right:0;width:98px;text-align:center;color:rgba(139,105,20,.5);}
+  font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+  transition:color .28s;z-index:3;pointer-events:none;line-height:1;}
+.gm-pill-label-left{left:0;width:84px;text-align:center;color:var(--inkm);}
+.gm-pill.gm-on .gm-pill-label-left{color:rgba(255,255,255,.72);}
+.gm-pill-label-right{right:0;width:84px;text-align:center;color:rgba(255,255,255,.55);}
 .gm-pill.gm-on .gm-pill-label-right{color:var(--inkm);}
 /* Hide Rewards tab when game mode OFF */
 .tab-btn[data-tab="rewards"].gm-hidden{display:none!important;}
+/* ── Mode toggle — mobile layout ── */
 @media(max-width:600px){
-  .gm-pill{width:168px;}
-  .gm-pill-knob{width:76px;}
-  .gm-pill-label-left,.gm-pill-label-right{width:84px;}
-  .gm-pill.gm-on .gm-pill-knob{transform:translateX(85px);}
+  header{flex-wrap:wrap;min-height:auto;padding:8px 14px;gap:6px;}
+  .brand{flex:1;min-width:0;}
+  .gm-wrap{flex-shrink:0;}
+  .header-right{width:100%;justify-content:center;padding:4px 0 6px;
+    border-top:1px solid rgba(255,255,255,.15);}
+  .gm-pill{width:152px;height:28px;}
+  .gm-pill-knob{width:68px;height:20px;top:3px;left:3px;}
+  .gm-pill-label-left,.gm-pill-label-right{width:76px;font-size:9px;}
+  .gm-pill.gm-on .gm-pill-knob{transform:translateX(78px);}
+  .gm-title{font-size:11px;}
+  .tab-nav{top:104px;}
+}
+@media(max-width:380px){
+  .gm-title{display:none;}
+  .gm-pill{width:136px;height:26px;}
+  .gm-pill-knob{width:60px;height:18px;}
+  .gm-pill-label-left,.gm-pill-label-right{width:68px;font-size:9px;}
+  .gm-pill.gm-on .gm-pill-knob{transform:translateX(72px);}
 }
 
 /* ── Game Mode: hide HUD when off ── */
@@ -1149,6 +1158,15 @@ footer strong{color:rgba(255,253,245,0.85)}
       <span class="brand-sub">Dashboard · Planner · Tasks · Notes</span>
     </div>
   </div>
+  <!-- Mode toggle — centred in header -->
+  <div class="gm-wrap" id="gameModeWrap">
+    <span class="gm-title">Mode</span>
+    <div class="gm-pill" id="gmPill" onclick="gmToggle()">
+      <div class="gm-pill-knob" id="gmKnob"></div>
+      <span class="gm-pill-label-left" id="gmLabelLeft">Regular</span>
+      <span class="gm-pill-label-right" id="gmLabelRight">Game</span>
+    </div>
+  </div>
   <div class="header-right">
     <div id="syncBadge"><div class="sync-dot"></div>Live Sync</div>
     <div id="loginPanel">
@@ -1177,15 +1195,6 @@ footer strong{color:rgba(255,253,245,0.85)}
 <!-- DASHBOARD TAB -->
 <div id="tab-dashboard" class="tab-panel active">
   <div class="section-card">
-  <div class="gm-wrap" id="gameModeWrap">
-    <span class="gm-icon">🎮</span>
-    <span class="gm-title">Mode</span>
-    <div class="gm-pill" id="gmPill" onclick="gmToggle()">
-      <div class="gm-pill-knob" id="gmKnob"></div>
-      <span class="gm-pill-label-left" id="gmLabelLeft">Regular</span>
-      <span class="gm-pill-label-right" id="gmLabelRight">Game</span>
-    </div>
-  </div>
     <div class="section-head">
       <div>
         <div class="st">Dashboard</div>
@@ -4907,7 +4916,8 @@ function avMigrate(){
   var defaults=['🐣','🐥','🦊','🦁','🐯','🦅','🐲','🌟'];
   var changed=false;
   c.levels.forEach(function(l,i){if(!l.avatar){l.avatar=defaults[i]||'⭐';changed=true;}});
-  if(changed)gamiCfgSet(c);
+  // Only write if something was actually missing — prevents echo loops with Firebase
+  if(changed) gamiCfgSet(c);
   GAMI_LEVELS.forEach(function(l,i){if(!l.avatar)l.avatar=c.levels[i]?c.levels[i].avatar:(defaults[i]||'⭐');});
 }
 
@@ -6011,6 +6021,15 @@ document.addEventListener('DOMContentLoaded', function() {
         try { localStorage.setItem(GCK, JSON.stringify(remote)); } catch(e) {}
         gamiApplyCfg();
         gamiRenderHud();
+        // Re-render avatar gallery so customised emojis appear on all devices
+        if (typeof avRenderGallery === 'function') {
+          // Sync GAMI_LEVELS avatars from the freshly applied config
+          var c2 = gamiCfgGet();
+          GAMI_LEVELS.forEach(function(l, i) {
+            if (c2.levels[i]) l.avatar = c2.levels[i].avatar || l.avatar;
+          });
+          avRenderGallery();
+        }
         if (currentTab === 'rewards') renderRewards();
       });
 
