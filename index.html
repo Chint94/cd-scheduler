@@ -1452,6 +1452,7 @@ var FB={
   saveGami:function(){},
   saveMktGoals:function(){},
   saveMktPurchased:function(){},
+  saveGamiCfg:function(){},
   ignoreNextTaskSync:false,
   ignoreNextNoteSync:false
 };
@@ -4510,7 +4511,7 @@ function gamiCfgGet(){
     {lvl:8,min:1800,max:9999, name:'Legend',    icon:'👑', avatar:'🌟'}
   ]};
 }
-function gamiCfgSet(c){try{localStorage.setItem(GCK,JSON.stringify(c));}catch(e){}}
+function gamiCfgSet(c){try{localStorage.setItem(GCK,JSON.stringify(c));}catch(e){} FB.saveGamiCfg(c);}
 function gamiApplyCfg(){
   var c=gamiCfgGet();
   GAMI_XP.high=c.xp.high;GAMI_XP.medium=c.xp.medium;GAMI_XP.low=c.xp.low;
@@ -5870,6 +5871,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!uid()) return;
     db.ref('users/' + uid() + '/gami').set(g);
   };
+  window.FB.saveGamiCfg = function(c) {
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/gamiCfg').set(c);
+  };
   window.FB.saveMktGoals = function(goals) {
     if (!uid()) return;
     // Firebase can't store plain arrays at the root; store as object keyed by index
@@ -5965,32 +5970,11 @@ document.addEventListener('DOMContentLoaded', function() {
           if (ni && document.activeElement !== ni) ni.value = t.notes || '';
         });
         buildGrid();
-        // Keep gamification in sync with Firebase task state
-        (function(){
-          var g=gamiGet();var tasks2=Object.values(lsGet(TK)||{});var changed=false;
-          tasks2.forEach(function(t){
-            if(t.done&&!g.completedIds[t.id]){
-              g.completedIds[t.id]=t.completedAt||Date.now();
-              g.xp+=GAMI_XP[t.priority||'medium']||GAMI_XP.medium;
-              changed=true;
-            }
-          });
-          // Remove XP for tasks that are now un-done
-          Object.keys(g.completedIds).forEach(function(id){
-            var task=tasks2.find(function(t){return t.id===id;});
-            if(task&&!task.done){
-              g.xp=Math.max(0,g.xp-(GAMI_XP[task.priority||'medium']||GAMI_XP.medium));
-              delete g.completedIds[id];
-              changed=true;
-            }
-          });
-          if(changed)gamiSet(g);
-          gamiRenderHud();
-          if(currentTab==='rewards'){renderRewards();}
-          else if(document.getElementById('avGallery')&&document.getElementById('avGallery').children.length>0){
-            avRenderGallery();
-          }
-        })();
+        // XP is managed exclusively via Firebase /gami — no local recomputation here.
+        // Just refresh the HUD so task completion counts stay current.
+        gamiRenderHud();
+        mktRefreshXpBadge();
+        if (currentTab === 'rewards') renderRewards();
       });
 
       // Notes listener
@@ -6012,38 +5996,88 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       });
 
-      // ── Gami listener ─────────────────────────────────────────────────
-      db.ref('users/' + uid() + '/gami').on('value', function(snap) {
+      // ── GamiCfg listener (XP values + level thresholds) ─────────────────
+      var ignoringGamiCfgEcho = false;
+      var _origGamiCfgSet = window.gamiCfgSet;
+      window.gamiCfgSet = function(c) {
+        ignoringGamiCfgEcho = true;
+        _origGamiCfgSet(c);
+        setTimeout(function() { ignoringGamiCfgEcho = false; }, 600);
+      };
+      db.ref('users/' + uid() + '/gamiCfg').on('value', function(snap) {
+        if (ignoringGamiCfgEcho) return;
         var remote = snap.val();
-        if (!remote) return;                        // nothing saved yet — keep local
-        var local = gamiGet();
-        // Use whichever copy has the higher XP (prevents overwriting a newer local write)
-        if (remote.xp !== local.xp || JSON.stringify(remote.completedIds) !== JSON.stringify(local.completedIds)) {
-          // Always trust Firebase as the source of truth when signed in
-          try { localStorage.setItem(GK, JSON.stringify(remote)); } catch(e) {}
-          gamiRenderHud();
-          mktRefreshXpBadge();
-          if (currentTab === 'rewards') renderRewards();
-          if (currentTab === 'tasks') renderTasks();
+        if (!remote) return;
+        try { localStorage.setItem(GCK, JSON.stringify(remote)); } catch(e) {}
+        gamiApplyCfg();
+        gamiRenderHud();
+        if (currentTab === 'rewards') renderRewards();
+      });
+
+            // ── Gami listener — Firebase is the single source of truth ─────────
+      var ignoringGamiEcho = false;
+      // Patch gamiSet to suppress the echo from our own writes
+      var _origGamiSet = window.gamiSet;
+      window.gamiSet = function(g) {
+        ignoringGamiEcho = true;
+        _origGamiSet(g);
+        // Reset echo flag after Firebase round-trip (~300ms)
+        setTimeout(function() { ignoringGamiEcho = false; }, 600);
+      };
+      db.ref('users/' + uid() + '/gami').on('value', function(snap) {
+        if (ignoringGamiEcho) return;   // skip echo of our own write
+        var remote = snap.val();
+        if (!remote) {
+          // Nothing in Firebase yet — push local state up so all devices get it
+          var local = gamiGet();
+          if (local.xp > 0 || Object.keys(local.completedIds||{}).length > 0) {
+            db.ref('users/' + uid() + '/gami').set(local);
+          }
+          return;
         }
+        // Always apply Firebase data — it is the authoritative value
+        try { localStorage.setItem(GK, JSON.stringify(remote)); } catch(e) {}
+        gamiRenderHud();
+        mktRefreshXpBadge();
+        if (currentTab === 'rewards') renderRewards();
+        if (currentTab === 'tasks') renderTasks();
       });
 
       // ── Marketplace goals listener ─────────────────────────────────────
+      var ignoringMktGoalsEcho = false;
+      var _origMktSet = window.mktSet;
+      window.mktSet = function(d) {
+        ignoringMktGoalsEcho = true;
+        _origMktSet(d);
+        setTimeout(function() { ignoringMktGoalsEcho = false; }, 600);
+      };
       db.ref('users/' + uid() + '/mktGoals').on('value', function(snap) {
+        if (ignoringMktGoalsEcho) return;
         var remote = snap.val();
-        // Convert Firebase object back to array sorted by original order
-        var goals = remote ? Object.values(remote) : [];
+        // Convert Firebase object back to ordered array (sort by id for stable order)
+        var goals = remote
+          ? Object.values(remote).sort(function(a,b){ return (a.id||'').localeCompare(b.id||''); })
+          : [];
         try { localStorage.setItem(MKT_KEY, JSON.stringify(goals)); } catch(e) {}
-        if (currentTab === 'rewards') {
-          mktRefreshXpBadge();
-          mktRenderCatalogue();
-        }
+        // Always re-render — whether user is on rewards tab or not, keep data fresh
+        mktRefreshXpBadge();
+        if (currentTab === 'rewards') mktRenderCatalogue();
       });
 
       // ── Marketplace purchased listener ─────────────────────────────────
+      var ignoringMktPurchEcho = false;
+      var _origMktPurchSet = window.mktPurchSet;
+      window.mktPurchSet = function(d) {
+        ignoringMktPurchEcho = true;
+        _origMktPurchSet(d);
+        setTimeout(function() { ignoringMktPurchEcho = false; }, 600);
+      };
       db.ref('users/' + uid() + '/mktPurchased').on('value', function(snap) {
+        if (ignoringMktPurchEcho) return;
         var remote = snap.val();
-        var items = remote ? Object.values(remote) : [];
+        var items = remote
+          ? Object.values(remote).sort(function(a,b){ return (a.purchasedAt||0)-(b.purchasedAt||0); })
+          : [];
         try { localStorage.setItem(MKT_PURCH_KEY, JSON.stringify(items)); } catch(e) {}
         if (currentTab === 'rewards') mktRenderPurchased();
       });
