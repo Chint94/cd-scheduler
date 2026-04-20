@@ -803,8 +803,8 @@ footer strong{color:rgba(255,253,245,0.85)}
   .gami-xp{min-width:80px}
 }
 
-/* ══ Rewards Tab ══ */
-/* ══ Rewards — Status Card ══ */
+/* ══ Advanced Tab ══ */
+/* ══ Advanced — Status Card ══ */
 .rwd-status-card{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 100%);border-radius:14px;padding:18px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 4px 18px rgba(139,105,20,.3)}
 .rwd-status-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
 .rwd-status-icon{font-size:40px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25));flex-shrink:0}
@@ -819,7 +819,7 @@ footer strong{color:rgba(255,253,245,0.85)}
 .rwd-stat-pill-lbl{font-size:9px;font-weight:600;color:rgba(255,253,245,.7);text-transform:uppercase;letter-spacing:.07em}
 .rwd-reset-btn{font-family:DM Sans,sans-serif;font-size:11px;font-weight:700;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);border-radius:7px;padding:6px 12px;color:white;cursor:pointer;transition:all .15s;white-space:nowrap}
 .rwd-reset-btn:hover{background:rgba(255,82,82,.35);border-color:rgba(255,82,82,.6)}
-/* ══ Rewards — Sections ══ */
+/* ══ Advanced — Sections ══ */
 .rwd-section{background:white;border:1.5px solid var(--gp);border-radius:12px;padding:16px 18px;margin-bottom:16px;box-shadow:0 2px 8px var(--sg)}
 .rwd-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
 .rwd-section-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--gd)}
@@ -869,7 +869,7 @@ footer strong{color:rgba(255,253,245,0.85)}
 .rwd-preview-bar-wrap{width:100px;height:6px;background:rgba(196,148,42,.15);border-radius:999px;overflow:hidden;flex-shrink:0}
 .rwd-preview-bar{height:6px;border-radius:999px;background:var(--gm)}
 .rwd-preview-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--gm);color:white;white-space:nowrap;flex-shrink:0}
-/* ── Rewards responsive — tablet (≤768px) ── */
+/* ── Advanced responsive — tablet (≤768px) ── */
 @media(max-width:768px){
   .rwd-status-card{padding:14px 16px;gap:10px}
   .rwd-status-level{font-size:16px}
@@ -878,7 +878,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   .rwd-preview-bar-wrap{width:80px}
   .av-grid{grid-template-columns:repeat(5,1fr)}
 }
-/* ── Rewards responsive — mobile (≤600px) ── */
+/* ── Advanced responsive — mobile (≤600px) ── */
 @media(max-width:600px){
   .rwd-status-card{flex-direction:column;align-items:flex-start;padding:14px}
   .rwd-status-left{width:100%}
@@ -907,7 +907,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   .mkt-p-card{padding:12px 13px}
   .mkt-add-btn{padding:7px 12px;font-size:11px}
 }
-/* ── Rewards responsive — small phone (≤420px) ── */
+/* ── Advanced responsive — small phone (≤420px) ── */
 @media(max-width:420px){
   .rwd-stat-pill{padding:5px 8px}
   .rwd-stat-pill-val{font-size:13px}
@@ -976,36 +976,52 @@ footer strong{color:rgba(255,253,245,0.85)}
   cursor:pointer;transition:background .15s}
 .av-picker-save:hover{background:var(--gd)}
 
-/* ══ Game Mode Toggle ══ */
+/* ══ Mode Toggle ══ */
 /* ══ Mode toggle in header ══ */
 .gm-wrap{display:flex;align-items:center;gap:8px;padding:0;
   background:transparent;border:none;margin:0;flex-shrink:0;}
 .gm-title{font-family:'Playfair Display',serif;font-size:12px;font-weight:700;
   color:rgba(255,253,245,.9);white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.2);}
-/* Pill */
-.gm-pill{position:relative;display:flex;align-items:center;
-  width:168px;height:30px;border-radius:999px;cursor:pointer;
-  background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.55);
-  transition:background .28s,border-color .28s;
+/* ── Pill container ── */
+.gm-pill{
+  position:relative;display:flex;align-items:center;
+  width:178px;height:32px;border-radius:999px;cursor:pointer;
+  background:rgba(0,0,0,.18);
+  border:1.5px solid rgba(255,255,255,.35);
+  transition:border-color .25s;
   user-select:none;-webkit-user-select:none;flex-shrink:0;overflow:hidden;
-  box-shadow:0 1px 6px rgba(0,0,0,.2);}
-.gm-pill.gm-on{background:rgba(255,255,255,.30);border-color:rgba(255,255,255,.85);}
-/* Knob */
-.gm-pill-knob{position:absolute;top:3px;left:3px;
-  width:76px;height:20px;border-radius:999px;
-  background:white;box-shadow:0 1px 5px rgba(0,0,0,.22);
-  transition:transform .30s cubic-bezier(.4,0,.2,1);z-index:2;}
-.gm-pill.gm-on .gm-pill-knob{transform:translateX(85px);}
-/* Labels */
+  box-shadow:inset 0 1px 4px rgba(0,0,0,.25),0 1px 4px rgba(0,0,0,.15);}
+.gm-pill.gm-on{border-color:rgba(255,255,255,.65);}
+/* ── Background halves — always visible tints ── */
+.gm-pill::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,
+    rgba(255,255,255,.20) 0%,rgba(255,255,255,.20) 50%,
+    rgba(232,184,75,.10) 50%,rgba(232,184,75,.10) 100%);
+  border-radius:inherit;z-index:0;}
+/* ── Sliding knob ── */
+.gm-pill-knob{
+  position:absolute;top:3px;left:3px;
+  width:83px;height:22px;border-radius:999px;
+  background:white;
+  box-shadow:0 1px 6px rgba(0,0,0,.30);
+  transition:transform .28s cubic-bezier(.4,0,.2,1);z-index:2;}
+.gm-pill.gm-on .gm-pill-knob{transform:translateX(87px);}
+/* ── Labels ── */
 .gm-pill-label-left,.gm-pill-label-right{
-  position:absolute;font-family:DM Sans,sans-serif;
-  font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
-  transition:color .28s;z-index:3;pointer-events:none;line-height:1;}
-.gm-pill-label-left{left:0;width:84px;text-align:center;color:var(--inkm);}
-.gm-pill.gm-on .gm-pill-label-left{color:rgba(255,255,255,.72);}
-.gm-pill-label-right{right:0;width:84px;text-align:center;color:rgba(255,255,255,.55);}
-.gm-pill.gm-on .gm-pill-label-right{color:var(--inkm);}
-/* Hide Rewards tab when game mode OFF */
+  position:absolute;top:50%;transform:translateY(-50%);
+  font-family:DM Sans,sans-serif;font-size:10px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.07em;
+  transition:color .25s,opacity .25s;z-index:3;pointer-events:none;}
+/* Regular (left) — dark on knob, white-faded when away */
+.gm-pill-label-left{left:0;width:89px;text-align:center;
+  color:var(--inkm);opacity:1;}
+.gm-pill.gm-on .gm-pill-label-left{color:rgba(255,255,255,.7);opacity:.85;}
+/* Advanced (right) — white-faded when away, dark on knob when active */
+.gm-pill-label-right{right:0;width:89px;text-align:center;
+  color:rgba(255,255,255,.55);opacity:.8;}
+.gm-pill.gm-on .gm-pill-label-right{color:var(--inkm);opacity:1;}
+/* Hide Advanced tab when mode OFF */
 .tab-btn[data-tab="rewards"].gm-hidden{display:none!important;}
 /* ── Mode toggle — mobile layout ── */
 @media(max-width:600px){
@@ -1014,22 +1030,22 @@ footer strong{color:rgba(255,253,245,0.85)}
   .gm-wrap{flex-shrink:0;}
   .header-right{width:100%;justify-content:center;padding:4px 0 6px;
     border-top:1px solid rgba(255,255,255,.15);}
-  .gm-pill{width:152px;height:28px;}
-  .gm-pill-knob{width:68px;height:20px;top:3px;left:3px;}
-  .gm-pill-label-left,.gm-pill-label-right{width:76px;font-size:9px;}
-  .gm-pill.gm-on .gm-pill-knob{transform:translateX(78px);}
+  .gm-pill{width:160px;height:28px;}
+  .gm-pill-knob{width:72px;height:20px;top:3px;left:3px;}
+  .gm-pill-label-left,.gm-pill-label-right{width:80px;font-size:9px;}
+  .gm-pill.gm-on .gm-pill-knob{transform:translateX(82px);}
   .gm-title{font-size:11px;}
   .tab-nav{top:104px;}
 }
 @media(max-width:380px){
   .gm-title{display:none;}
-  .gm-pill{width:136px;height:26px;}
-  .gm-pill-knob{width:60px;height:18px;}
-  .gm-pill-label-left,.gm-pill-label-right{width:68px;font-size:9px;}
+  .gm-pill{width:142px;height:26px;}
+  .gm-pill-knob{width:64px;height:18px;}
+  .gm-pill-label-left,.gm-pill-label-right{width:71px;font-size:9px;}
   .gm-pill.gm-on .gm-pill-knob{transform:translateX(72px);}
 }
 
-/* ── Game Mode: hide HUD when off ── */
+/* ── Advanced Mode: hide HUD when off ── */
 #gamiHud.gm-hud-hidden,
 #gamiToast.gm-hud-hidden,
 #gamiConfetti.gm-hud-hidden{
@@ -1107,9 +1123,9 @@ footer strong{color:rgba(255,253,245,0.85)}
 .mkt-emoji-opt{font-size:20px;cursor:pointer;text-align:center;padding:4px;border-radius:6px;transition:background .12s;}
 .mkt-emoji-opt:hover{background:var(--gc);}
 
-/* mkt mobile handled in rewards breakpoints above */
+/* mkt mobile handled in Advanced breakpoints above */
 
-/* ── Task XP chip (visible in Game Mode only) ── */
+/* ── Task XP chip (visible in Advanced Mode only) ── */
 .task-xp-chip{
   display:inline-flex;align-items:center;gap:3px;
   font-size:10px;font-weight:700;
@@ -1164,7 +1180,7 @@ footer strong{color:rgba(255,253,245,0.85)}
     <div class="gm-pill" id="gmPill" onclick="gmToggle()">
       <div class="gm-pill-knob" id="gmKnob"></div>
       <span class="gm-pill-label-left" id="gmLabelLeft">Regular</span>
-      <span class="gm-pill-label-right" id="gmLabelRight">Game</span>
+      <span class="gm-pill-label-right" id="gmLabelRight">Advanced</span>
     </div>
   </div>
   <div class="header-right">
@@ -1189,7 +1205,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   <button class="tab-btn" data-tab="planner">📅 Planner</button>
   <button class="tab-btn" data-tab="tasks">✅ Tasks</button>
   <button class="tab-btn" data-tab="notes">📓 Notes</button>
-  <button class="tab-btn gm-hidden" data-tab="rewards">🎮 Rewards</button>
+  <button class="tab-btn gm-hidden" data-tab="rewards">⚡ Advanced</button>
 </nav>
 
 <!-- DASHBOARD TAB -->
@@ -1340,7 +1356,7 @@ footer strong{color:rgba(255,253,245,0.85)}
 <!-- REWARDS TAB -->
 <div id="tab-rewards" class="tab-panel">
   <div class="sw">
-    <div class="sh"><div class="st">🎮 Rewards &amp; Customisation</div></div>
+    <div class="sh"><div class="st">⚡ Advanced</div></div>
     <div class="rwd-status-card" id="rwdStatusCard">
       <div class="rwd-status-left">
         <div class="rwd-status-icon" id="rwdStatusIcon">🌱</div>
@@ -1434,7 +1450,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   </div>
 </div>
 
-<footer><strong>CD Scheduler</strong> · Dashboard · Planner · Tasks · Notes · Rewards · Sync across all devices</footer>
+<footer><strong>CD Scheduler</strong> · Dashboard · Planner · Tasks · Notes · Advanced · Sync across all devices</footer>
 
 </div><!-- #app -->
 
