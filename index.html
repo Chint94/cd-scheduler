@@ -1449,6 +1449,9 @@ var FB={
   saveNote:function(){},
   deleteNote:function(){},
   reattachPlanner:function(){},
+  saveGami:function(){},
+  saveMktGoals:function(){},
+  saveMktPurchased:function(){},
   ignoreNextTaskSync:false,
   ignoreNextNoteSync:false
 };
@@ -4491,7 +4494,7 @@ var GAMI_LEVELS=[
 ];
 
 function gamiGet(){try{return JSON.parse(localStorage.getItem(GK)||'null')||{xp:0,completedIds:{}};}catch(e){return{xp:0,completedIds:{}};}}
-function gamiSet(g){try{localStorage.setItem(GK,JSON.stringify(g));}catch(e){}}
+function gamiSet(g){try{localStorage.setItem(GK,JSON.stringify(g));}catch(e){} FB.saveGami(g);}
 function gamiGetLevel(xp){for(var i=GAMI_LEVELS.length-1;i>=0;i--){if(xp>=GAMI_LEVELS[i].min)return GAMI_LEVELS[i];}return GAMI_LEVELS[0];}
 
 function gamiCfgGet(){
@@ -5066,9 +5069,9 @@ var MKT_EMOJIS = [
 ];
 
 function mktGet(){ try{return JSON.parse(localStorage.getItem(MKT_KEY)||'[]');}catch(e){return[];} }
-function mktSet(d){ try{localStorage.setItem(MKT_KEY,JSON.stringify(d));}catch(e){} }
+function mktSet(d){ try{localStorage.setItem(MKT_KEY,JSON.stringify(d));}catch(e){} FB.saveMktGoals(d); }
 function mktPurchGet(){ try{return JSON.parse(localStorage.getItem(MKT_PURCH_KEY)||'[]');}catch(e){return[];} }
-function mktPurchSet(d){ try{localStorage.setItem(MKT_PURCH_KEY,JSON.stringify(d));}catch(e){} }
+function mktPurchSet(d){ try{localStorage.setItem(MKT_PURCH_KEY,JSON.stringify(d));}catch(e){} FB.saveMktPurchased(d); }
 
 function mktGenId(){ return 'mkt_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
 
@@ -5861,6 +5864,26 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!uid()) return;
     db.ref('users/' + uid() + '/notes/' + id).remove();
   };
+
+  // ── Gami / Marketplace write hooks ────────────────────────────────────
+  window.FB.saveGami = function(g) {
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/gami').set(g);
+  };
+  window.FB.saveMktGoals = function(goals) {
+    if (!uid()) return;
+    // Firebase can't store plain arrays at the root; store as object keyed by index
+    var obj = {};
+    goals.forEach(function(g, i) { obj[g.id] = g; });
+    db.ref('users/' + uid() + '/mktGoals').set(obj);
+  };
+  window.FB.saveMktPurchased = function(items) {
+    if (!uid()) return;
+    var obj = {};
+    items.forEach(function(p) { obj[p.pid] = p; });
+    db.ref('users/' + uid() + '/mktPurchased').set(obj);
+  };
+
   window.FB.reattachPlanner = function(wk) {
     if (!uid()) return;
     if (plannerCb && plannerPath) db.ref(plannerPath).off('value', plannerCb);
@@ -5900,6 +5923,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (plannerCb && plannerPath) db.ref(plannerPath).off('value', plannerCb);
     if (tasksCb) db.ref('users/' + uid() + '/tasks').off('value', tasksCb);
     if (notesCb) db.ref('users/' + uid() + '/notes').off('value', notesCb);
+    if (uid()) {
+      db.ref('users/' + uid() + '/gami').off();
+      db.ref('users/' + uid() + '/mktGoals').off();
+      db.ref('users/' + uid() + '/mktPurchased').off();
+    }
     auth.signOut();
   });
 
@@ -5982,6 +6010,42 @@ document.addEventListener('DOMContentLoaded', function() {
           var bi = document.querySelector('[data-note-body="' + n.id + '"]');
           if (bi && document.activeElement !== bi) bi.value = n.body || '';
         });
+      });
+
+      // ── Gami listener ─────────────────────────────────────────────────
+      db.ref('users/' + uid() + '/gami').on('value', function(snap) {
+        var remote = snap.val();
+        if (!remote) return;                        // nothing saved yet — keep local
+        var local = gamiGet();
+        // Use whichever copy has the higher XP (prevents overwriting a newer local write)
+        if (remote.xp !== local.xp || JSON.stringify(remote.completedIds) !== JSON.stringify(local.completedIds)) {
+          // Always trust Firebase as the source of truth when signed in
+          try { localStorage.setItem(GK, JSON.stringify(remote)); } catch(e) {}
+          gamiRenderHud();
+          mktRefreshXpBadge();
+          if (currentTab === 'rewards') renderRewards();
+          if (currentTab === 'tasks') renderTasks();
+        }
+      });
+
+      // ── Marketplace goals listener ─────────────────────────────────────
+      db.ref('users/' + uid() + '/mktGoals').on('value', function(snap) {
+        var remote = snap.val();
+        // Convert Firebase object back to array sorted by original order
+        var goals = remote ? Object.values(remote) : [];
+        try { localStorage.setItem(MKT_KEY, JSON.stringify(goals)); } catch(e) {}
+        if (currentTab === 'rewards') {
+          mktRefreshXpBadge();
+          mktRenderCatalogue();
+        }
+      });
+
+      // ── Marketplace purchased listener ─────────────────────────────────
+      db.ref('users/' + uid() + '/mktPurchased').on('value', function(snap) {
+        var remote = snap.val();
+        var items = remote ? Object.values(remote) : [];
+        try { localStorage.setItem(MKT_PURCH_KEY, JSON.stringify(items)); } catch(e) {}
+        if (currentTab === 'rewards') mktRenderPurchased();
       });
 
     } else {
