@@ -804,82 +804,125 @@ footer strong{color:rgba(255,253,245,0.85)}
 }
 
 /* ══ Rewards Tab ══ */
-.rwd-status-card{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 100%);border-radius:14px;padding:18px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;box-shadow:0 4px 18px rgba(139,105,20,.3)}
-.rwd-status-left{display:flex;align-items:center;gap:14px;flex:1;min-width:200px}
-.rwd-status-icon{font-size:40px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25))}
-.rwd-status-level{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:white;margin-bottom:3px}
-.rwd-status-xp{font-size:12px;color:rgba(255,253,245,.8);margin-bottom:7px}
-.rwd-status-bar-wrap{width:180px;height:8px;background:rgba(255,255,255,.25);border-radius:999px;overflow:hidden}
+/* ══ Rewards — Status Card ══ */
+.rwd-status-card{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 100%);border-radius:14px;padding:18px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 4px 18px rgba(139,105,20,.3)}
+.rwd-status-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
+.rwd-status-icon{font-size:40px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25));flex-shrink:0}
+.rwd-status-level{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:white;margin-bottom:3px}
+.rwd-status-xp{font-size:11px;color:rgba(255,253,245,.8);margin-bottom:7px}
+.rwd-status-bar-wrap{width:min(180px,100%);height:8px;background:rgba(255,255,255,.25);border-radius:999px;overflow:hidden}
 .rwd-status-bar{height:8px;background:white;border-radius:999px;transition:width .6s cubic-bezier(.34,1.56,.64,1)}
 .rwd-status-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.rwd-stat-pill{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.18);border-radius:8px;padding:7px 11px}
+.rwd-stat-pill{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.18);border-radius:8px;padding:6px 10px}
 .rwd-stat-pill-icon{font-size:14px}
-.rwd-stat-pill-val{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:white}
-.rwd-stat-pill-lbl{font-size:10px;font-weight:600;color:rgba(255,253,245,.7);text-transform:uppercase;letter-spacing:.07em}
-.rwd-reset-btn{font-family:DM Sans,sans-serif;font-size:11px;font-weight:700;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);border-radius:7px;padding:7px 13px;color:white;cursor:pointer;transition:all .15s}
+.rwd-stat-pill-val{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:white}
+.rwd-stat-pill-lbl{font-size:9px;font-weight:600;color:rgba(255,253,245,.7);text-transform:uppercase;letter-spacing:.07em}
+.rwd-reset-btn{font-family:DM Sans,sans-serif;font-size:11px;font-weight:700;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);border-radius:7px;padding:6px 12px;color:white;cursor:pointer;transition:all .15s;white-space:nowrap}
 .rwd-reset-btn:hover{background:rgba(255,82,82,.35);border-color:rgba(255,82,82,.6)}
+/* ══ Rewards — Sections ══ */
 .rwd-section{background:white;border:1.5px solid var(--gp);border-radius:12px;padding:16px 18px;margin-bottom:16px;box-shadow:0 2px 8px var(--sg)}
-.rwd-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
-.rwd-section-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--gd)}
+.rwd-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.rwd-section-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--gd)}
 .rwd-section-sub{font-size:12px;color:var(--inkl);margin-top:3px;line-height:1.5}
-.rwd-save-btn{font-family:DM Sans,sans-serif;font-size:12px;font-weight:700;background:var(--gm);border:none;border-radius:8px;padding:8px 16px;color:white;cursor:pointer;transition:background .15s;white-space:nowrap}
+.rwd-save-btn{font-family:DM Sans,sans-serif;font-size:12px;font-weight:700;background:var(--gm);border:none;border-radius:8px;padding:8px 14px;color:white;cursor:pointer;transition:background .15s;white-space:nowrap}
 .rwd-save-btn:hover{background:var(--gd)}
 .rwd-refresh-btn{font-family:DM Sans,sans-serif;font-size:12px;font-weight:700;
-  background:white;border:1.5px solid var(--gm);border-radius:8px;padding:7px 15px;
+  background:white;border:1.5px solid var(--gm);border-radius:8px;padding:7px 13px;
   color:var(--gd);cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px}
 .rwd-refresh-btn:hover{background:var(--gc);border-color:var(--gd)}
-.rwd-add-btn{font-family:DM Sans,sans-serif;font-size:12px;font-weight:700;background:rgba(91,155,213,.12);border:1.5px solid rgba(91,155,213,.4);border-radius:8px;padding:8px 14px;color:#185FA5;cursor:pointer;transition:all .15s}
+.rwd-add-btn{font-family:DM Sans,sans-serif;font-size:12px;font-weight:700;background:rgba(91,155,213,.12);border:1.5px solid rgba(91,155,213,.4);border-radius:8px;padding:8px 12px;color:#185FA5;cursor:pointer;transition:all .15s}
 .rwd-add-btn:hover{background:rgba(91,155,213,.22)}
+/* ══ Rewards — XP grid ══ */
 .rwd-xp-grid{display:flex;flex-direction:column;gap:8px}
-.rwd-xp-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px;background:var(--gc);border-radius:8px;border:1px solid var(--gp)}
+.rwd-xp-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;background:var(--gc);border-radius:8px;border:1px solid var(--gp);flex-wrap:wrap}
 .rwd-bonus-row{background:#F5F0FF;border-color:rgba(155,89,182,.2)}
-.rwd-xp-label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--inkm);flex:1;min-width:0}
+.rwd-xp-label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--inkm);flex:1;min-width:140px}
 .rwd-xp-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
 .rwd-xp-input-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0}
-.rwd-inp{font-family:DM Sans,sans-serif;font-size:14px;font-weight:700;color:var(--gd);background:white;border:1.5px solid var(--gm);border-radius:7px;padding:5px 9px;width:72px;outline:none;text-align:center}
+.rwd-inp{font-family:DM Sans,sans-serif;font-size:14px;font-weight:700;color:var(--gd);background:white;border:1.5px solid var(--gm);border-radius:7px;padding:5px 9px;width:68px;outline:none;text-align:center}
 .rwd-inp:focus{border-color:var(--gd);box-shadow:0 0 0 3px rgba(196,148,42,.15)}
 .rwd-xp-unit{font-size:12px;font-weight:700;color:var(--inkl)}
 .rwd-save-msg{font-size:12px;font-weight:600;margin-top:9px;min-height:18px;transition:opacity .3s}
-.rwd-levels-table{width:100%;border-collapse:collapse;min-width:360px}
+/* ══ Rewards — Levels table ══ */
+.rwd-levels-table{width:100%;border-collapse:collapse;min-width:0}
 .rwd-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px}
 .rwd-levels-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--inkl);padding:6px 8px;text-align:left;border-bottom:2px solid var(--gp)}
 .rwd-levels-table td{padding:6px 6px;vertical-align:middle;border-bottom:1px solid var(--gc)}
 .rwd-levels-table tr:last-child td{border-bottom:none}
-.rwd-level-num{font-size:11px;font-weight:700;color:var(--inkl);text-align:center;min-width:28px}
+.rwd-level-num{font-size:11px;font-weight:700;color:var(--inkl);text-align:center;min-width:24px}
 .rwd-inp-sm{font-family:DM Sans,sans-serif;font-size:13px;font-weight:600;color:var(--ink);background:var(--gc);border:1.5px solid var(--gp);border-radius:6px;padding:5px 8px;outline:none;width:100%}
 .rwd-inp-sm:focus{border-color:var(--gm);background:white}
-.rwd-inp-icon{width:52px;text-align:center;font-size:18px;cursor:pointer}
-.rwd-inp-xp{width:78px;text-align:center;font-weight:700;color:var(--gd)}
+.rwd-inp-icon{width:44px;text-align:center;font-size:18px;cursor:pointer}
+.rwd-inp-xp{width:68px;text-align:center;font-weight:700;color:var(--gd)}
 .rwd-inp-xp:disabled{background:#f0f0f0;color:var(--inkl);cursor:default}
 .rwd-del-btn{background:transparent;border:none;cursor:pointer;font-size:15px;padding:4px 6px;border-radius:5px;color:var(--inkl);transition:all .15s}
 .rwd-del-btn:hover{background:#FFE0E0;color:#E85252}
 .rwd-max-note{font-size:10px;color:var(--inkl);font-style:italic}
+/* ══ Rewards — Preview ══ */
 .rwd-preview-list{display:flex;flex-direction:column;gap:8px}
-.rwd-preview-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:9px;border:1.5px solid var(--gp);background:var(--gc);transition:border-color .15s}
+.rwd-preview-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;border:1.5px solid var(--gp);background:var(--gc);transition:border-color .15s}
 .rwd-preview-row.current-level{border-color:var(--gm);background:linear-gradient(90deg,rgba(196,148,42,.08),rgba(232,184,75,.04))}
-.rwd-preview-icon{font-size:20px;width:28px;text-align:center}
+.rwd-preview-icon{font-size:20px;width:28px;text-align:center;flex-shrink:0}
 .rwd-preview-body{flex:1;min-width:0}
-.rwd-preview-name{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--gd)}
+.rwd-preview-name{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--gd)}
 .rwd-preview-range{font-size:11px;color:var(--inkl);margin-top:1px}
-.rwd-preview-bar-wrap{width:120px;height:6px;background:rgba(196,148,42,.15);border-radius:999px;overflow:hidden}
+.rwd-preview-bar-wrap{width:100px;height:6px;background:rgba(196,148,42,.15);border-radius:999px;overflow:hidden;flex-shrink:0}
 .rwd-preview-bar{height:6px;border-radius:999px;background:var(--gm)}
-.rwd-preview-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--gm);color:white;white-space:nowrap}
-@media(max-width:640px){
-  .rwd-status-card{padding:14px}
-  .rwd-status-icon{font-size:30px}
+.rwd-preview-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--gm);color:white;white-space:nowrap;flex-shrink:0}
+/* ── Rewards responsive — tablet (≤768px) ── */
+@media(max-width:768px){
+  .rwd-status-card{padding:14px 16px;gap:10px}
+  .rwd-status-level{font-size:16px}
+  .rwd-status-bar-wrap{width:min(160px,100%)}
+  .rwd-section{padding:14px 16px}
+  .rwd-preview-bar-wrap{width:80px}
+  .av-grid{grid-template-columns:repeat(5,1fr)}
+}
+/* ── Rewards responsive — mobile (≤600px) ── */
+@media(max-width:600px){
+  .rwd-status-card{flex-direction:column;align-items:flex-start;padding:14px}
+  .rwd-status-left{width:100%}
+  .rwd-status-icon{font-size:32px}
   .rwd-status-level{font-size:15px}
-  .rwd-status-bar-wrap{width:130px}
-  .rwd-xp-label span:last-child{font-size:12px}
-  .rwd-inp{width:60px}
+  .rwd-status-bar-wrap{width:100%}
+  .rwd-status-right{width:100%;justify-content:flex-start}
+  .rwd-section{padding:12px 13px;border-radius:10px}
+  .rwd-section-head{gap:8px}
+  .rwd-section-title{font-size:14px}
+  .rwd-xp-row{padding:8px 10px}
+  .rwd-xp-label{font-size:12px;min-width:0}
+  .rwd-inp{width:60px;font-size:13px}
   .rwd-preview-bar-wrap{display:none}
-  .rwd-section{padding:13px}
-  .av-grid{grid-template-columns:repeat(4,1fr)}
+  .rwd-preview-row{padding:8px 10px;gap:8px}
+  .av-grid{grid-template-columns:repeat(4,1fr);gap:7px}
   .av-card-name{display:none}
+  .av-active-wrap{padding:12px}
+  .av-active-char{font-size:42px}
+  /* Marketplace mobile */
+  .mkt-header{gap:8px}
+  .mkt-xp-badge{padding:5px 11px}
+  .mkt-card{padding:12px 13px}
+  .mkt-card-emoji{font-size:24px}
+  .mkt-card-cost-inp{width:60px}
+  .mkt-p-card{padding:12px 13px}
+  .mkt-add-btn{padding:7px 12px;font-size:11px}
+}
+/* ── Rewards responsive — small phone (≤420px) ── */
+@media(max-width:420px){
+  .rwd-stat-pill{padding:5px 8px}
+  .rwd-stat-pill-val{font-size:13px}
+  .rwd-stat-pill-lbl{display:none}
+  .rwd-reset-btn{padding:5px 10px;font-size:10px}
+  .rwd-save-btn,.rwd-add-btn,.rwd-refresh-btn{padding:7px 10px;font-size:11px}
+  .av-grid{grid-template-columns:repeat(4,1fr);gap:5px}
+  .av-card-emoji{font-size:22px}
+  .mkt-grid,.mkt-purchased-grid{grid-template-columns:1fr}
+  .mkt-card-cost-inp{width:55px}
 }
 
 /* ══ Avatar Gallery ══ */
 .av-gallery{display:flex;flex-direction:column;gap:14px}
-.av-active-wrap{display:flex;align-items:center;gap:16px;padding:14px 16px;
+.av-active-wrap{display:flex;align-items:center;gap:14px;padding:14px 16px;
   background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 100%);
   border-radius:12px;box-shadow:0 3px 12px rgba(139,105,20,.25)}
 .av-active-char{font-size:52px;line-height:1;filter:drop-shadow(0 3px 8px rgba(0,0,0,.3));
@@ -1055,10 +1098,7 @@ footer strong{color:rgba(255,253,245,0.85)}
 .mkt-emoji-opt{font-size:20px;cursor:pointer;text-align:center;padding:4px;border-radius:6px;transition:background .12s;}
 .mkt-emoji-opt:hover{background:var(--gc);}
 
-@media(max-width:600px){
-  .mkt-grid,.mkt-purchased-grid{grid-template-columns:1fr;}
-  .mkt-card-cost-inp{width:72px;}
-}
+/* mkt mobile handled in rewards breakpoints above */
 
 /* ── Task XP chip (visible in Game Mode only) ── */
 .task-xp-chip{
