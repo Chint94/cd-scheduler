@@ -39,7 +39,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 /* ── Header ── */
 header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 100%);
   padding:0 18px;display:flex;align-items:center;justify-content:space-between;
-  flex-wrap:nowrap;gap:12px;min-height:62px;box-shadow:0 4px 20px rgba(139,105,20,0.4);
+  flex-wrap:wrap;gap:8px;min-height:62px;box-shadow:0 4px 20px rgba(139,105,20,0.4);
   position:sticky;top:0;z-index:200}
 .brand{display:flex;align-items:center;gap:10px}
 .brand-title{font-family:'Playfair Display',serif;font-size:clamp(18px,5vw,26px);font-weight:900;
@@ -934,55 +934,47 @@ footer strong{color:rgba(255,253,245,0.85)}
 .av-picker-save:hover{background:var(--gd)}
 
 /* ══ Game Mode Toggle ══ */
-.gm-wrap{display:flex;align-items:center;gap:10px;padding:0;
-  background:transparent;border:none;margin:0;flex-wrap:nowrap;flex-shrink:0;}
-.gm-icon{font-size:18px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.3));}
-.gm-title{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;
-  color:rgba(255,253,245,.9);white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.25);}
-/* The pill toggle — lives in the gold header */
+.gm-wrap{display:flex;align-items:center;gap:10px;padding:11px 18px;
+  background:linear-gradient(90deg,var(--gc),var(--white));
+  border-bottom:1.5px solid var(--gp);margin-bottom:0;flex-wrap:wrap;}
+.gm-icon{font-size:18px;line-height:1;}
+.gm-title{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;
+  color:var(--gd);white-space:nowrap;}
+/* The pill toggle */
 .gm-pill{position:relative;display:flex;align-items:center;
-  width:184px;height:32px;border-radius:999px;cursor:pointer;
-  background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.5);
+  width:196px;height:36px;border-radius:999px;cursor:pointer;
+  background:var(--gc);border:2px solid var(--gm);
   transition:background .3s,border-color .3s;
   user-select:none;-webkit-user-select:none;flex-shrink:0;overflow:hidden;
-  box-shadow:0 2px 8px rgba(0,0,0,.18);}
-/* Game mode ON: pill becomes solid white-tinted gold */
-.gm-pill.gm-on{background:rgba(255,255,255,.32);border-color:rgba(255,255,255,.8);}
+  box-shadow:0 2px 8px var(--sg);}
+/* Game mode ON: pill turns gold */
+.gm-pill.gm-on{background:linear-gradient(90deg,var(--gd) 0%,var(--gm) 100%);
+  border-color:var(--gd);}
 /* Sliding white knob */
 .gm-pill-knob{position:absolute;top:3px;left:3px;
-  width:84px;height:22px;border-radius:999px;
-  background:white;box-shadow:0 2px 6px rgba(0,0,0,.25);
+  width:90px;height:26px;border-radius:999px;
+  background:white;box-shadow:0 2px 8px rgba(139,105,20,.35);
   transition:transform .32s cubic-bezier(.4,0,.2,1);z-index:2;}
-.gm-pill.gm-on .gm-pill-knob{transform:translateX(93px);}
-/* Labels */
+.gm-pill.gm-on .gm-pill-knob{transform:translateX(100px);}
+/* Labels sit on opposite halves — always readable */
 .gm-pill-label-left,.gm-pill-label-right{
   position:absolute;font-family:DM Sans,sans-serif;
-  font-size:10px;font-weight:800;
+  font-size:11px;font-weight:800;
   text-transform:uppercase;letter-spacing:.07em;
   transition:color .3s;z-index:3;pointer-events:none;}
-/* REGULAR — dark on white knob by default, translucent white when knob leaves */
-.gm-pill-label-left{left:0;width:92px;text-align:center;color:var(--inkm);}
-.gm-pill.gm-on .gm-pill-label-left{color:rgba(255,255,255,.75);}
-/* GAME — translucent white when knob is left, dark on white knob when on */
-.gm-pill-label-right{right:0;width:92px;text-align:center;color:rgba(255,255,255,.6);}
+/* REGULAR label: left half — dark on knob (default), white when knob moves away */
+.gm-pill-label-left{left:0;width:98px;text-align:center;color:var(--inkm);}
+.gm-pill.gm-on .gm-pill-label-left{color:rgba(255,255,255,.7);}
+/* GAME label: right half — white on gold bg (default), dark when knob covers it */
+.gm-pill-label-right{right:0;width:98px;text-align:center;color:rgba(139,105,20,.5);}
 .gm-pill.gm-on .gm-pill-label-right{color:var(--inkm);}
 /* Hide Rewards tab when game mode OFF */
 .tab-btn[data-tab="rewards"].gm-hidden{display:none!important;}
 @media(max-width:600px){
-  .gm-wrap{gap:7px;}
-  .gm-title{font-size:11px;}
-  .gm-pill{width:148px;height:28px;}
-  .gm-pill-knob{width:66px;height:20px;top:3px;left:3px;}
-  .gm-pill-label-left,.gm-pill-label-right{width:74px;font-size:9px;}
-  .gm-pill.gm-on .gm-pill-knob{transform:translateX(76px);}
-}
-@media(max-width:380px){
-  .gm-icon{display:none;}
-  .gm-title{display:none;}
-  .gm-pill{width:130px;height:26px;}
-  .gm-pill-knob{width:57px;height:18px;}
-  .gm-pill-label-left,.gm-pill-label-right{width:65px;font-size:9px;}
-  .gm-pill.gm-on .gm-pill-knob{transform:translateX(68px);}
+  .gm-pill{width:168px;}
+  .gm-pill-knob{width:76px;}
+  .gm-pill-label-left,.gm-pill-label-right{width:84px;}
+  .gm-pill.gm-on .gm-pill-knob{transform:translateX(85px);}
 }
 
 /* ── Game Mode: hide HUD when off ── */
@@ -990,6 +982,82 @@ footer strong{color:rgba(255,253,245,0.85)}
 #gamiToast.gm-hud-hidden,
 #gamiConfetti.gm-hud-hidden{
   display:none!important;
+}
+
+/* ══ Marketplace ══ */
+.mkt-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px;}
+.mkt-xp-badge{display:flex;align-items:center;gap:6px;background:linear-gradient(90deg,var(--gd),var(--gm));
+  border-radius:999px;padding:6px 14px;box-shadow:0 2px 8px var(--sg);}
+.mkt-xp-badge-icon{font-size:16px;}
+.mkt-xp-badge-val{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:white;}
+.mkt-xp-badge-lbl{font-size:10px;font-weight:600;color:rgba(255,253,245,.75);text-transform:uppercase;letter-spacing:.07em;}
+.mkt-add-btn{font-family:DM Sans,sans-serif;font-size:12px;font-weight:700;
+  background:var(--gm);border:none;border-radius:8px;padding:8px 16px;color:white;cursor:pointer;transition:background .15s;}
+.mkt-add-btn:hover{background:var(--gd);}
+
+/* Goal cards grid */
+.mkt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:14px;}
+.mkt-card{background:white;border:1.5px solid var(--gp);border-radius:12px;padding:15px 16px;
+  box-shadow:0 2px 8px var(--sg);display:flex;flex-direction:column;gap:10px;position:relative;transition:border-color .2s;}
+.mkt-card:hover{border-color:var(--gm);}
+.mkt-card-top{display:flex;align-items:flex-start;gap:10px;}
+.mkt-card-emoji{font-size:28px;line-height:1;flex-shrink:0;cursor:pointer;border-radius:8px;padding:2px 4px;transition:background .15s;}
+.mkt-card-emoji:hover{background:var(--gc);}
+.mkt-card-body{flex:1;min-width:0;}
+.mkt-card-name{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--ink);
+  border:none;outline:none;background:transparent;width:100%;padding:0;cursor:text;}
+.mkt-card-name:focus{background:var(--gc);border-radius:5px;padding:2px 5px;}
+.mkt-card-cost{display:flex;align-items:center;gap:6px;margin-top:4px;}
+.mkt-card-cost-inp{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--gd);
+  background:var(--gc);border:1.5px solid var(--gp);border-radius:6px;
+  padding:3px 8px;width:82px;outline:none;text-align:center;}
+.mkt-card-cost-inp:focus{border-color:var(--gm);background:white;}
+.mkt-card-cost-lbl{font-size:11px;font-weight:600;color:var(--inkl);}
+.mkt-card-desc{font-size:11px;color:var(--inkl);border:none;outline:none;background:transparent;
+  width:100%;resize:none;font-family:DM Sans,sans-serif;line-height:1.4;min-height:28px;cursor:text;}
+.mkt-card-desc:focus{background:var(--gc);border-radius:5px;padding:3px 5px;}
+.mkt-card-actions{display:flex;gap:7px;flex-wrap:wrap;}
+.mkt-buy-btn{flex:1;font-family:DM Sans,sans-serif;font-size:11px;font-weight:700;
+  background:linear-gradient(90deg,var(--gd),var(--gm));border:none;border-radius:7px;
+  padding:7px 10px;color:white;cursor:pointer;transition:opacity .2s;white-space:nowrap;}
+.mkt-buy-btn:hover{opacity:.85;}
+.mkt-buy-btn:disabled{opacity:.4;cursor:not-allowed;}
+.mkt-del-btn{font-family:DM Sans,sans-serif;font-size:11px;font-weight:700;
+  background:transparent;border:1.5px solid var(--gp);border-radius:7px;
+  padding:7px 10px;color:var(--inkl);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.mkt-del-btn:hover{background:#FFE0E0;border-color:#E85252;color:#E85252;}
+.mkt-save-chip{font-size:10px;color:var(--gd);font-weight:600;opacity:0;transition:opacity .4s;position:absolute;top:10px;right:12px;}
+.mkt-save-chip.show{opacity:1;}
+.mkt-empty{text-align:center;padding:28px 16px;color:var(--inkl);font-size:13px;}
+.mkt-empty-icon{font-size:36px;margin-bottom:8px;}
+
+/* Purchased / redeemable goals */
+.mkt-purchased-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:14px;}
+.mkt-p-card{background:linear-gradient(135deg,rgba(232,184,75,.12),rgba(196,148,42,.06));
+  border:1.5px solid var(--gm);border-radius:11px;padding:14px 15px;
+  display:flex;flex-direction:column;gap:8px;position:relative;}
+.mkt-p-top{display:flex;align-items:center;gap:9px;}
+.mkt-p-emoji{font-size:24px;line-height:1;}
+.mkt-p-name{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--gd);flex:1;min-width:0;}
+.mkt-p-cost{font-size:10px;font-weight:700;color:var(--inkl);background:var(--gc);
+  border-radius:999px;padding:2px 8px;white-space:nowrap;}
+.mkt-p-desc{font-size:11px;color:var(--inkl);line-height:1.4;}
+.mkt-use-btn{font-family:DM Sans,sans-serif;font-size:11px;font-weight:700;
+  background:var(--gm);border:none;border-radius:7px;padding:6px 12px;
+  color:white;cursor:pointer;transition:background .15s;align-self:flex-start;}
+.mkt-use-btn:hover{background:var(--gd);}
+.mkt-p-empty{text-align:center;padding:18px;color:var(--inkl);font-size:12px;font-style:italic;}
+
+/* Emoji picker */
+.mkt-emoji-picker{position:absolute;z-index:500;background:white;border:1.5px solid var(--gp);
+  border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.15);padding:10px;
+  display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-width:260px;max-height:220px;overflow-y:auto;}
+.mkt-emoji-opt{font-size:20px;cursor:pointer;text-align:center;padding:4px;border-radius:6px;transition:background .12s;}
+.mkt-emoji-opt:hover{background:var(--gc);}
+
+@media(max-width:600px){
+  .mkt-grid,.mkt-purchased-grid{grid-template-columns:1fr;}
+  .mkt-card-cost-inp{width:72px;}
 }
 </style>
 </head>
@@ -1031,17 +1099,6 @@ footer strong{color:rgba(255,253,245,0.85)}
       <span class="brand-sub">Dashboard · Planner · Tasks · Notes</span>
     </div>
   </div>
-  <!-- Game Mode Toggle – header centre -->
-  <div class="gm-wrap" id="gameModeWrap">
-    <span class="gm-icon">🎮</span>
-    <span class="gm-title">Mode</span>
-    <div class="gm-pill" id="gmPill" onclick="gmToggle()">
-      <div class="gm-pill-knob" id="gmKnob"></div>
-      <span class="gm-pill-label-left" id="gmLabelLeft">Regular</span>
-      <span class="gm-pill-label-right" id="gmLabelRight">Game</span>
-    </div>
-  </div>
-
   <div class="header-right">
     <div id="syncBadge"><div class="sync-dot"></div>Live Sync</div>
     <div id="loginPanel">
@@ -1070,6 +1127,15 @@ footer strong{color:rgba(255,253,245,0.85)}
 <!-- DASHBOARD TAB -->
 <div id="tab-dashboard" class="tab-panel active">
   <div class="section-card">
+  <div class="gm-wrap" id="gameModeWrap">
+    <span class="gm-icon">🎮</span>
+    <span class="gm-title">Mode</span>
+    <div class="gm-pill" id="gmPill" onclick="gmToggle()">
+      <div class="gm-pill-knob" id="gmKnob"></div>
+      <span class="gm-pill-label-left" id="gmLabelLeft">Regular</span>
+      <span class="gm-pill-label-right" id="gmLabelRight">Game</span>
+    </div>
+  </div>
     <div class="section-head">
       <div>
         <div class="st">Dashboard</div>
@@ -1277,6 +1343,35 @@ footer strong{color:rgba(255,253,245,0.85)}
       <div id="rwdLevelsPreview"></div>
       <div class="rwd-save-msg" id="rwdPreviewMsg"></div>
     </div>
+
+    <!-- ══ Marketplace ══ -->
+    <div class="rwd-section" id="mktSection">
+      <div class="mkt-header">
+        <div>
+          <div class="rwd-section-title">🛒 XP Marketplace</div>
+          <div class="rwd-section-sub">Create personal goals and redeem them with your XP. Once used, a goal disappears from your stash.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div class="mkt-xp-badge">
+            <span class="mkt-xp-badge-icon">⭐</span>
+            <span class="mkt-xp-badge-val" id="mktXpDisplay">0</span>
+            <span class="mkt-xp-badge-lbl">XP available</span>
+          </div>
+          <button class="mkt-add-btn" id="mktAddGoalBtn">＋ New Goal</button>
+        </div>
+      </div>
+
+      <!-- Goal catalogue -->
+      <div class="rwd-section-sub" style="margin-top:10px;font-weight:700;color:var(--inkm);">📋 Your Goals</div>
+      <div class="mkt-grid" id="mktCatalogueGrid"></div>
+
+      <!-- Purchased / ready to use -->
+      <div class="rwd-section-sub" style="margin-top:18px;font-weight:700;color:var(--inkm);">🎁 Purchased — Ready to Use</div>
+      <div class="mkt-purchased-grid" id="mktPurchasedGrid"></div>
+    </div>
+
+    <!-- Emoji picker (shared, appended to body) -->
+    <div class="mkt-emoji-picker" id="mktEmojiPicker" style="display:none;"></div>
   </div>
 </div>
 
@@ -4416,6 +4511,9 @@ function gamiRefreshAll(){
   gamiRenderHud();
   // Re-render dashboard to reflect new level data
   if(typeof renderDashboard==='function') renderDashboard();
+  // Init marketplace inside rewards tab
+  mktInit();
+
   // Do NOT call renderRewards() here — it would re-register handlers
   // and overwrite the just-rendered preview. The save handlers update
   // the Rewards UI directly instead.
@@ -4891,6 +4989,268 @@ function gmToggle(){
 }
 function gmInit(){
   gmApply(gmIsOn());
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// MARKETPLACE
+// ══════════════════════════════════════════════════════════════════
+var MKT_KEY       = 'cds_mkt_goals_v1';      // goal catalogue
+var MKT_PURCH_KEY = 'cds_mkt_purchased_v1';  // purchased / stash
+
+var MKT_EMOJIS = [
+  '🍕','🍔','🍣','🍜','🍷','☕','🎂','🍦','🥂','🍱',
+  '✈️','🌴','🏖️','🗺️','🏕️','🚗','🚀','🛳️','🎡','🎢',
+  '🎬','🎮','🎸','🎯','🎪','🏆','🎁','🎀','🛍️','👟',
+  '💆','🛁','📚','🖼️','🎨','🏋️','🧘','🤸','🎭','🎤',
+  '🌅','🌊','⛰️','🌸','🌟','💎','🦋','🐬','🦁','🐉'
+];
+
+function mktGet(){ try{return JSON.parse(localStorage.getItem(MKT_KEY)||'[]');}catch(e){return[];} }
+function mktSet(d){ try{localStorage.setItem(MKT_KEY,JSON.stringify(d));}catch(e){} }
+function mktPurchGet(){ try{return JSON.parse(localStorage.getItem(MKT_PURCH_KEY)||'[]');}catch(e){return[];} }
+function mktPurchSet(d){ try{localStorage.setItem(MKT_PURCH_KEY,JSON.stringify(d));}catch(e){} }
+
+function mktGenId(){ return 'mkt_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
+
+// ── Emoji picker ───────────────────────────────────────────────────────────────
+var mktEmojiTarget = null; // {cardId, type} where type='goal'|'purchased'
+function mktOpenEmojiPicker(anchorEl, cardId){
+  var picker = document.getElementById('mktEmojiPicker');
+  if(!picker) return;
+  // populate once
+  if(!picker.dataset.built){
+    picker.dataset.built='1';
+    MKT_EMOJIS.forEach(function(em){
+      var s=document.createElement('span');
+      s.className='mkt-emoji-opt';
+      s.textContent=em;
+      s.addEventListener('click',function(){
+        mktSelectEmoji(em, mktEmojiTarget);
+        mktCloseEmojiPicker();
+      });
+      picker.appendChild(s);
+    });
+    document.addEventListener('click',function(e){
+      if(!picker.contains(e.target) && !e.target.classList.contains('mkt-card-emoji')){
+        mktCloseEmojiPicker();
+      }
+    },true);
+  }
+  mktEmojiTarget = cardId;
+  // position near anchor
+  var rect = anchorEl.getBoundingClientRect();
+  picker.style.display='grid';
+  picker.style.top = (rect.bottom + window.scrollY + 4)+'px';
+  picker.style.left = Math.min(rect.left + window.scrollX, window.innerWidth - 280)+'px';
+  picker.style.position='absolute';
+  document.body.appendChild(picker);
+}
+function mktCloseEmojiPicker(){
+  var picker = document.getElementById('mktEmojiPicker');
+  if(picker) picker.style.display='none';
+}
+function mktSelectEmoji(em, cardId){
+  var goals = mktGet();
+  var goal = goals.find(function(g){return g.id===cardId;});
+  if(goal){
+    goal.emoji=em;
+    mktSet(goals);
+    mktRenderCatalogue();
+  }
+}
+
+// ── Render XP badge ────────────────────────────────────────────────────────────
+function mktRefreshXpBadge(){
+  var el = document.getElementById('mktXpDisplay');
+  if(el) el.textContent = gamiGet().xp;
+}
+
+// ── Render Catalogue (goals for purchase) ──────────────────────────────────────
+function mktRenderCatalogue(){
+  var grid = document.getElementById('mktCatalogueGrid');
+  if(!grid) return;
+  var goals = mktGet();
+  var currentXp = gamiGet().xp;
+  grid.innerHTML='';
+  if(!goals.length){
+    grid.innerHTML='<div class="mkt-empty"><div class="mkt-empty-icon">🛒</div>No goals yet. Hit <strong>＋ New Goal</strong> to create one!</div>';
+    return;
+  }
+  goals.forEach(function(goal){
+    var card = document.createElement('div');
+    card.className='mkt-card';
+    card.dataset.id=goal.id;
+    var canAfford = currentXp >= goal.cost;
+    card.innerHTML=
+      '<div class="mkt-card-top">'+
+        '<span class="mkt-card-emoji" title="Click to change emoji">'+goal.emoji+'</span>'+
+        '<div class="mkt-card-body">'+
+          '<input class="mkt-card-name" value="'+mktEsc(goal.name)+'" maxlength="48" placeholder="Goal name…">'+
+          '<div class="mkt-card-cost">'+
+            '<input type="number" class="mkt-card-cost-inp" value="'+goal.cost+'" min="1" max="99999" title="XP cost">'+
+            '<span class="mkt-card-cost-lbl">XP required</span>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      '<textarea class="mkt-card-desc" rows="2" maxlength="140" placeholder="Optional description…">'+mktEsc(goal.desc||'')+'</textarea>'+
+      '<div class="mkt-card-actions">'+
+        '<button class="mkt-buy-btn" '+(canAfford?'':'disabled')+'>'+
+          (canAfford ? '✨ Redeem ('+goal.cost+' XP)' : '🔒 Need '+goal.cost+' XP')+
+        '</button>'+
+        '<button class="mkt-del-btn">✕</button>'+
+      '</div>'+
+      '<span class="mkt-save-chip" id="chip_'+goal.id+'">Saved ✓</span>';
+
+    // Emoji click
+    card.querySelector('.mkt-card-emoji').addEventListener('click', function(e){
+      e.stopPropagation();
+      mktOpenEmojiPicker(this, goal.id);
+    });
+
+    // Auto-save name
+    card.querySelector('.mkt-card-name').addEventListener('input', function(){
+      mktSaveField(goal.id, 'name', this.value);
+    });
+    // Auto-save cost
+    card.querySelector('.mkt-card-cost-inp').addEventListener('input', function(){
+      var v = parseInt(this.value)||1;
+      if(v<1)v=1;
+      mktSaveField(goal.id, 'cost', v);
+    });
+    // Auto-save desc
+    card.querySelector('.mkt-card-desc').addEventListener('input', function(){
+      mktSaveField(goal.id, 'desc', this.value);
+    });
+
+    // Buy / redeem
+    card.querySelector('.mkt-buy-btn').addEventListener('click', function(){
+      mktRedeemGoal(goal.id);
+    });
+
+    // Delete
+    card.querySelector('.mkt-del-btn').addEventListener('click', function(){
+      if(!confirm('Delete goal "'+goal.name+'"?')) return;
+      var goals2=mktGet();
+      mktSet(goals2.filter(function(g){return g.id!==goal.id;}));
+      mktRenderCatalogue();
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+function mktEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function mktSaveField(id, field, val){
+  var goals=mktGet();
+  var goal=goals.find(function(g){return g.id===id;});
+  if(!goal) return;
+  goal[field]=val;
+  mktSet(goals);
+  // flash saved chip
+  var chip=document.getElementById('chip_'+id);
+  if(chip){chip.classList.add('show');setTimeout(function(){chip.classList.remove('show');},1200);}
+  // re-render buy button affordability without full re-render
+  if(field==='cost'){
+    var card=document.querySelector('.mkt-card[data-id="'+id+'"]');
+    if(card){
+      var btn=card.querySelector('.mkt-buy-btn');
+      var currentXp=gamiGet().xp;
+      var canAfford=currentXp>=val;
+      btn.disabled=!canAfford;
+      btn.textContent=canAfford?'✨ Redeem ('+val+' XP)':'🔒 Need '+val+' XP';
+    }
+  }
+}
+
+function mktRedeemGoal(id){
+  var goals=mktGet();
+  var goal=goals.find(function(g){return g.id===id;});
+  if(!goal) return;
+  var g=gamiGet();
+  if(g.xp < goal.cost){ alert('Not enough XP! You need '+goal.cost+' XP but have '+g.xp+'.'); return; }
+  if(!confirm('Spend '+goal.cost+' XP to claim "'+goal.name+'"?')) return;
+  // Deduct XP
+  g.xp = Math.max(0, g.xp - goal.cost);
+  gamiSet(g);
+  // Add to purchased stash (a copy with purchase timestamp)
+  var stash=mktPurchGet();
+  stash.push({pid:mktGenId(), id:goal.id, emoji:goal.emoji, name:goal.name, cost:goal.cost, desc:goal.desc||'', purchasedAt:Date.now()});
+  mktPurchSet(stash);
+  // Refresh UI
+  mktRefreshXpBadge();
+  mktRenderCatalogue();
+  mktRenderPurchased();
+  gamiRenderHud();
+  renderDashboard();
+  mktShowBanner('🎉 "'+goal.name+'" added to your stash! (−'+goal.cost+' XP)');
+}
+
+// ── Render Purchased stash ─────────────────────────────────────────────────────
+function mktRenderPurchased(){
+  var grid=document.getElementById('mktPurchasedGrid');
+  if(!grid) return;
+  var stash=mktPurchGet();
+  grid.innerHTML='';
+  if(!stash.length){
+    grid.innerHTML='<div class="mkt-p-empty">Nothing purchased yet. Redeem a goal from above to build your stash!</div>';
+    return;
+  }
+  stash.forEach(function(item){
+    var card=document.createElement('div');
+    card.className='mkt-p-card';
+    card.innerHTML=
+      '<div class="mkt-p-top">'+
+        '<span class="mkt-p-emoji">'+item.emoji+'</span>'+
+        '<span class="mkt-p-name">'+mktEsc(item.name)+'</span>'+
+        '<span class="mkt-p-cost">'+item.cost+' XP</span>'+
+      '</div>'+
+      (item.desc?'<div class="mkt-p-desc">'+mktEsc(item.desc)+'</div>':'')+
+      '<button class="mkt-use-btn">✅ Use &amp; Remove</button>';
+    card.querySelector('.mkt-use-btn').addEventListener('click',function(){
+      if(!confirm('Mark "'+item.name+'" as used? It will be removed from your stash.')) return;
+      var stash2=mktPurchGet();
+      mktPurchSet(stash2.filter(function(p){return p.pid!==item.pid;}));
+      mktRenderPurchased();
+      mktShowBanner('✅ Enjoyed "'+item.name+'"! Removed from stash.');
+    });
+    grid.appendChild(card);
+  });
+}
+
+// ── Flash banner ───────────────────────────────────────────────────────────────
+function mktShowBanner(msg){
+  var t=document.getElementById('gamiToast');
+  if(!t) return;
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2800);
+}
+
+// ── Add new goal ───────────────────────────────────────────────────────────────
+function mktAddGoal(){
+  var goals=mktGet();
+  goals.push({id:mktGenId(), emoji:'🎯', name:'New Goal', cost:100, desc:''});
+  mktSet(goals);
+  mktRenderCatalogue();
+  // focus name of last card
+  setTimeout(function(){
+    var cards=document.querySelectorAll('.mkt-card');
+    if(cards.length){var inp=cards[cards.length-1].querySelector('.mkt-card-name');if(inp){inp.focus();inp.select();}}
+  },50);
+}
+
+// ── Init (called from renderRewards) ─────────────────────────────────────────
+function mktInit(){
+  var btn=document.getElementById('mktAddGoalBtn');
+  if(btn && !btn.dataset.bound){
+    btn.dataset.bound='1';
+    btn.addEventListener('click', mktAddGoal);
+  }
+  mktRefreshXpBadge();
+  mktRenderCatalogue();
+  mktRenderPurchased();
 }
 
 function appBootstrap(){
