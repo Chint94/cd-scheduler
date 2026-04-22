@@ -924,7 +924,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   .rwd-status-level{font-size:15px}
   .rwd-status-bar-wrap{width:100%}
   .rwd-status-right{width:100%;justify-content:flex-start}
-  .rwd-section{padding:12px 13px;border-radius:10px;overflow:hidden}
+  .rwd-section{padding:12px 13px;border-radius:10px}
   .rwd-section-head{gap:8px}
   .rwd-section-title{font-size:14px}
   .rwd-xp-row{padding:8px 10px}
@@ -932,10 +932,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   .rwd-inp{width:60px;font-size:13px}
   .rwd-preview-bar-wrap{display:none}
   .rwd-preview-row{padding:8px 10px;gap:8px}
-  .av-gallery{width:100%;overflow:hidden}
-  .av-grid{grid-template-columns:repeat(4,1fr);gap:6px;width:100%;box-sizing:border-box}
-  .av-card{min-width:0;box-sizing:border-box;padding:8px 4px}
-  .av-card-emoji{font-size:24px}
+  .av-grid{grid-template-columns:repeat(4,1fr);gap:7px}
   .av-card-name{display:none}
   .av-active-wrap{padding:12px}
   .av-active-char{font-size:42px}
@@ -1066,45 +1063,24 @@ footer strong{color:rgba(255,253,245,0.85)}
 .tab-btn[data-tab="rewards"].gm-hidden{display:none!important;}
 /* ── Mode toggle — mobile layout ── */
 @media(max-width:600px){
-  /* Header wraps to 2 rows:
-     Row 1: brand logo+title (flex:1) | pill toggle (right-aligned, vertically centred)
-     Row 2: sign-in / user info (full width, centred) */
-  header{
-    flex-wrap:wrap;
-    min-height:auto;
-    padding:10px 14px 0;
-    gap:0;
-    align-items:stretch;}
-  /* Row 1 container — brand + pill side by side */
-  .brand{
-    flex:1;min-width:0;
-    display:flex;align-items:center;
-    padding-bottom:10px;}
-  .gm-wrap{
-    flex-shrink:0;
-    display:flex;align-items:center;
-    padding-bottom:10px;}
-  /* Row 2 — sign-in full width */
-  .header-right{
-    width:100%;
-    justify-content:center;
-    padding:8px 0 10px;
-    border-top:1px solid rgba(255,255,255,.18);}
-  /* Pill dimensions on mobile */
-  .gm-pill{width:162px;height:30px;}
-  .gm-pill-knob{width:74px;height:22px;top:3px;left:3px;}
-  .gm-pill-label-left,.gm-pill-label-right{width:81px;font-size:9px;}
+  header{flex-wrap:wrap;min-height:auto;padding:8px 14px;gap:6px;}
+  .brand{flex:1;min-width:0;}
+  .gm-wrap{flex-shrink:0;}
+  .header-right{width:100%;justify-content:center;padding:4px 0 6px;
+    border-top:1px solid rgba(255,255,255,.15);}
+  .gm-pill{width:160px;height:28px;}
+  .gm-pill-knob{width:72px;height:20px;top:3px;left:3px;}
+  .gm-pill-label-left,.gm-pill-label-right{width:80px;font-size:9px;}
   .gm-pill.gm-on .gm-pill-knob{transform:translateX(82px);}
   .gm-title{font-size:11px;}
-  /* Tab nav sticky top: height of 2-row header ~100px */
-  .tab-nav{top:100px;}
+  .tab-nav{top:104px;}
 }
 @media(max-width:380px){
   .gm-title{display:none;}
-  .gm-pill{width:144px;height:28px;}
-  .gm-pill-knob{width:65px;height:20px;top:3px;left:3px;}
-  .gm-pill-label-left,.gm-pill-label-right{width:72px;font-size:9px;}
-  .gm-pill.gm-on .gm-pill-knob{transform:translateX(74px);}
+  .gm-pill{width:142px;height:26px;}
+  .gm-pill-knob{width:64px;height:18px;}
+  .gm-pill-label-left,.gm-pill-label-right{width:71px;font-size:9px;}
+  .gm-pill.gm-on .gm-pill-knob{transform:translateX(72px);}
 }
 
 /* ── Advanced Mode: hide HUD when off ── */
@@ -1293,12 +1269,9 @@ footer strong{color:rgba(255,253,245,0.85)}
 
 <!-- DASHBOARD TAB -->
 <div id="tab-dashboard" class="tab-panel active">
-  <div class="section-card">
-    <div class="section-head">
-      <div>
-        <div class="st">Dashboard</div>
-        <div class="ss">Live view from your Task section — today, this week, and overdue.</div>
-      </div>
+  <div class="sw">
+    <div class="sh">
+      <div class="st">Dashboard</div>
       <div class="dash-mini-actions">
         <button class="dash-btn" id="dashOpenTasksTop">Open Tasks</button>
         <button class="dash-btn" id="dashOpenPlannerTop">Open Planner</button>
