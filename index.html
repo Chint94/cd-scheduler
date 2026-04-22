@@ -405,18 +405,17 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .dash-list{display:flex;flex-direction:column;gap:0}
 .dash-list > *:last-child{margin-bottom:0}
 .dash-task{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:13px 15px;margin-bottom:9px;background:white}
-.dash-task-main{min-width:0;flex:1;overflow:hidden}
-.dash-task-title-row{display:flex;align-items:center;gap:7px;flex-wrap:nowrap;margin-bottom:5px;min-width:0}
-.dash-task-title-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px;font-weight:700;color:var(--ink);line-height:1.4;min-width:0;flex:1}
+.dash-task-main{min-width:0;flex:1}
+.dash-task-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:8px;word-break:break-word;line-height:1.4}
 .dash-task-meta{font-size:12px;color:var(--inkl);display:flex;gap:8px;flex-wrap:wrap;line-height:1.45}
 .dash-task-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start}
 .dash-task.overdue{border-color:var(--ot);background:var(--obg)}
 .dash-empty{padding:13px 15px;border:1.5px dashed var(--gp);border-radius:12px;background:white;box-shadow:0 2px 8px var(--sg);font-size:13px;color:var(--inkl);text-align:center;line-height:1.55}
 .dash-week-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:9px;margin-top:4px}
-.dash-day{padding:12px 8px;min-height:96px;cursor:pointer;display:flex;flex-direction:column;align-items:center;text-align:center}
-.dash-day-head{font-size:10px;font-weight:700;color:var(--inkl);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;white-space:nowrap}
-.dash-day-date{font-size:13px;font-weight:700;color:var(--gd);margin-bottom:8px;white-space:nowrap;line-height:1.2}
-.dash-day-count{font-size:22px;font-family:'Playfair Display',serif;color:var(--ink);line-height:1;margin-bottom:4px}
+.dash-day{padding:14px 10px;min-height:106px;cursor:pointer;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
+.dash-day-head{font-size:10px;font-weight:700;color:var(--inkl);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;white-space:nowrap}
+.dash-day-date{font-size:13px;font-weight:700;color:var(--gd);margin-bottom:10px;white-space:nowrap;line-height:1.3}
+.dash-day-count{font-size:24px;font-family:'Playfair Display',serif;color:var(--ink);line-height:1;margin-bottom:5px}
 .dash-day-label{font-size:10px;color:var(--inkl);line-height:1.4}
 @media (max-width:980px){.dash-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-layout{grid-template-columns:1fr}.dash-week-strip{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (max-width:640px){.dash-grid{grid-template-columns:1fr}.dash-task{flex-direction:column}.dash-task-actions{width:100%;justify-content:flex-start}.dash-day{min-height:auto}}
@@ -709,7 +708,7 @@ footer strong{color:rgba(255,253,245,0.85)}
 
 /* ══ Week strip — today highlight ══ */
 .dash-day.is-today{background:linear-gradient(180deg,var(--gc) 0%,var(--gp) 100%);
-  border-color:var(--gm)!important;border-width:2px}
+  border-color:var(--gm)!important}
 .dash-day.is-today .dash-day-head{color:var(--gm)}
 .dash-day.is-today .dash-day-date{color:var(--gd)}
 
@@ -756,13 +755,13 @@ footer strong{color:rgba(255,253,245,0.85)}
 
   /* ── Week strip ── */
   .dash-week-strip{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-  .dash-day{padding:10px 8px;min-height:auto}
+  .dash-day{padding:11px 8px;min-height:auto}
   .dash-day-count{font-size:20px}
 
   /* ── Task cards ── */
   .dash-task{flex-direction:column;gap:8px}
   .dash-task-actions{width:100%;justify-content:flex-start}
-  .dash-task-title-text{font-size:13px;white-space:normal;overflow:visible;text-overflow:clip}
+  .dash-task-title{font-size:13px}
 
   /* ── Section head ── */
   .section-head{margin-bottom:12px}
@@ -859,7 +858,7 @@ footer strong{color:rgba(255,253,245,0.85)}
 .rwd-reset-btn{font-family:DM Sans,sans-serif;font-size:11px;font-weight:700;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);border-radius:7px;padding:6px 12px;color:white;cursor:pointer;transition:all .15s;white-space:nowrap}
 .rwd-reset-btn:hover{background:rgba(255,82,82,.35);border-color:rgba(255,82,82,.6)}
 /* ══ Advanced — Sections ══ */
-.rwd-section{background:white;border:1.5px solid var(--gp);border-radius:12px;padding:16px 18px;margin-bottom:16px;box-shadow:0 2px 8px var(--sg)}
+.rwd-section{background:white;border:1.5px solid var(--gp);border-radius:12px;padding:16px 18px;margin-bottom:16px;box-shadow:0 2px 8px var(--sg);overflow:hidden}
 .rwd-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
 .rwd-section-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--gd)}
 .rwd-section-sub{font-size:12px;color:var(--inkl);margin-top:3px;line-height:1.5}
@@ -934,6 +933,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   .rwd-preview-bar-wrap{display:none}
   .rwd-preview-row{padding:8px 10px;gap:8px}
   .av-grid{grid-template-columns:repeat(4,1fr);gap:7px}
+  .av-card{padding:8px 4px}
   .av-card-name{display:none}
   .av-active-wrap{padding:12px}
   .av-active-char{font-size:42px}
@@ -954,6 +954,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   .rwd-reset-btn{padding:5px 10px;font-size:10px}
   .rwd-save-btn,.rwd-add-btn,.rwd-refresh-btn{padding:7px 10px;font-size:11px}
   .av-grid{grid-template-columns:repeat(4,1fr);gap:5px}
+  .av-card{padding:7px 3px}
   .av-card-emoji{font-size:22px}
   .mkt-grid,.mkt-purchased-grid{grid-template-columns:1fr}
   .mkt-card-cost-inp{width:55px}
@@ -970,22 +971,24 @@ footer strong{color:rgba(255,253,245,0.85)}
 .av-active-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:white}
 .av-active-sub{font-size:12px;color:rgba(255,253,245,.75);margin-top:2px}
 
-.av-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.av-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;overflow:hidden}
 .av-card{display:flex;flex-direction:column;align-items:center;gap:4px;
   padding:10px 6px;border-radius:10px;border:2px solid var(--gp);
-  background:var(--gc);cursor:pointer;transition:all .18s;position:relative}
+  background:var(--gc);cursor:pointer;transition:all .18s;position:relative;
+  overflow:hidden;min-width:0;box-sizing:border-box}
 .av-card:hover{border-color:var(--gm);background:rgba(196,148,42,.08);transform:translateY(-2px)}
 .av-card.av-active{border-color:var(--gm);background:rgba(196,148,42,.12);
   box-shadow:0 0 0 3px rgba(196,148,42,.2)}
 .av-card.av-done{border-color:#5CB85C;background:rgba(92,184,92,.07)}
 .av-card.av-locked{opacity:.4;cursor:default;filter:grayscale(.6)}
 .av-card.av-locked:hover{transform:none;border-color:var(--gp)}
-.av-card-emoji{font-size:28px;line-height:1}
+.av-card-emoji{font-size:28px;line-height:1;max-width:100%;overflow:hidden}
 .av-card-name{font-size:9px;font-weight:700;color:var(--inkl);text-align:center;
-  line-height:1.2;text-transform:uppercase;letter-spacing:.04em;max-width:56px;
+  line-height:1.2;text-transform:uppercase;letter-spacing:.04em;width:100%;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.av-card-badge{position:absolute;top:4px;right:4px;font-size:9px;font-weight:700;
-  background:var(--gm);color:white;border-radius:999px;padding:1px 5px;line-height:1.4}
+.av-card-badge{position:absolute;top:3px;right:3px;font-size:8px;font-weight:700;
+  background:var(--gm);color:white;border-radius:999px;padding:1px 4px;line-height:1.4;
+  max-width:calc(100% - 6px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .av-card-badge.done-badge{background:#5CB85C}
 
 /* Picker modal */
@@ -3419,9 +3422,9 @@ function dashboardTaskCard(t, isOverdue){
   wrap.className='dash-task'+(isOverdue?' overdue':'');
   wrap.innerHTML=
     '<div class="dash-task-main">'+
-      '<div class="dash-task-title-row">'+
+      '<div class="dash-task-title">'+
         '<span class="dash-task-pri-badge" style="background:'+pc+'22;color:'+pc+'">'+priority+'</span>'+
-        '<span class="dash-task-title-text">'+(t.title||'(no title)')+'</span>'+
+        (t.title||'(no title)')+
       '</div>'+
       '<div class="dash-task-meta">'+
         '<span>'+(isOverdue?'⚠️ Overdue':'📌 Due')+'</span>'+
