@@ -240,7 +240,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   background-repeat:no-repeat;background-position:center}
 .pop-sel{font-family:DM Sans,sans-serif;font-size:11px;background:var(--gc);
   border:1px solid var(--gp);border-radius:6px;padding:4px 6px;color:var(--inkm);cursor:pointer;outline:none}
-.pop-acts{display:flex;gap:7px;justify-content:flex-end}
+.pop-acts{display:flex;gap:7px;justify-content:flex-end;flex-wrap:wrap}
 .pop-btn{font-family:DM Sans,sans-serif;font-size:11px;font-weight:600;border-radius:6px;
   padding:6px 14px;cursor:pointer;border:none}
 .pop-btn.pri{background:var(--gm);color:white}
@@ -3304,6 +3304,82 @@ function openRecurringSetupModal(existingGroupId){
     });
     actRow.appendChild(delAllBtn);
   }
+  // ── Extend Series button (only when editing existing) ─────────────────
+  if(existingGroupId){
+    var extBtn=document.createElement('button');extBtn.className='pop-btn';
+    extBtn.textContent='➕ Extend Series';
+    extBtn.title='Add more occurrences from where the series last ended';
+    extBtn.style.cssText='background:rgba(91,155,213,0.12);color:#185FA5;border:1.5px solid rgba(91,155,213,0.4);margin-bottom:6px;width:100%;';
+    extBtn.addEventListener('click',function(){
+      var tasks2=lsGet(TK);
+      // Find the last existing instance in this group
+      var group=Object.values(tasks2).filter(function(k){return k.recurrenceGroupId===existingGroupId;});
+      if(!group.length){alert('No existing instances found.');return;}
+      group.sort(function(a,b){
+        var da=parseDate(a.date),db=parseDate(b.date);
+        return (da&&db)?(da-db):0;
+      });
+      var lastInst=group[group.length-1];
+      // Determine extend count from the count selector (default 10)
+      var activeEndTypeExt='count';
+      Object.keys(endRadios).forEach(function(k){
+        if(endRadios[k].style.background.indexOf('var(--gm)')>=0||endRadios[k].style.background==='var(--gm)') activeEndTypeExt=k;
+      });
+      var extCount=10;
+      if(activeEndTypeExt==='count'){
+        extCount=parseInt(countSel.value==='custom'?countCustom.value:countSel.value)||10;
+      } else if(activeEndTypeExt==='date'){
+        var extEndDate=fromInputDate(endDateInp.value)||'';
+        if(!extEndDate){endDateInp.focus();endDateInp.style.borderColor='var(--ot)';return;}
+      } else {
+        extCount=30; // extend 30 more for forever
+      }
+      // Figure out next recurrence type and weekdays from the last instance
+      var recTypeExt=lastInst.recurrence||rSel.value;
+      var weekDaysExt=lastInst.recurrenceWeekDays||null;
+      // Find the highest recurrenceIndex so far
+      var maxIdx=group.reduce(function(m,t){return Math.max(m,t.recurrenceIndex||0);},0);
+      // Generate from next occurrence after last instance's date
+      var nextStartDate=nextRecurrenceDate(lastInst.date,recTypeExt);
+      if(!nextStartDate){alert('Could not determine next recurrence date.');return;}
+      // For custom-weekly, need to find the next matching weekday
+      if(recTypeExt==='custom-weekly'&&weekDaysExt&&weekDaysExt.length){
+        var cur=parseDate(nextStartDate);
+        var maxTry=14;
+        while(maxTry-->0&&weekDaysExt.indexOf(cur.getDay())<0){cur=addDays(cur,1);}
+        nextStartDate=fmtDate(cur);
+      }
+      var baseExt={
+        title:lastInst.title,date:nextStartDate,time:lastInst.time||'',
+        notes:lastInst.notes||'',priority:lastInst.priority||'medium',
+        recurrence:recTypeExt,recurrenceGroupId:existingGroupId,
+        endType:activeEndTypeExt==='date'?'date':'count',
+        endCount:activeEndTypeExt!=='date'?extCount:null,
+        endDate:activeEndTypeExt==='date'?(fromInputDate(endDateInp.value)||null):null,
+        weekDays:weekDaysExt,
+        taskEndDate:lastInst.endDate||'',
+        taskEndTime:lastInst.endTime||''
+      };
+      var newInstances=generateRecurringInstances(baseExt);
+      // Re-index so recurrenceIndex continues from where it left off
+      newInstances.forEach(function(inst,i){
+        inst.recurrenceIndex=maxIdx+1+i;
+        inst.recurrenceEndType=lastInst.recurrenceEndType||'count';
+        inst.recurrenceEndCount=lastInst.recurrenceEndCount||null;
+        inst.recurrenceEndDate=lastInst.recurrenceEndDate||null;
+        inst.recurrenceWeekDays=weekDaysExt||null;
+        tasks2[inst.id]=inst;
+        FB.saveTask(inst.id,inst);
+      });
+      lsSet(TK,tasks2);
+      var summary=newInstances.length+' new occurrence'+(newInstances.length!==1?'s':'')+' added';
+      showDropToast(lastInst.title+' — '+summary,'','');
+      closePopover();renderTasks();buildGrid();
+    });
+    // Insert extend button before actRow children
+    actRow.appendChild(extBtn);
+  }
+
   var saveBtn=document.createElement('button');saveBtn.className='pop-btn pri';
   saveBtn.textContent=existingGroupId?'Update series':'Create';
   saveBtn.addEventListener('click',function(){
@@ -3877,7 +3953,8 @@ function renderTasks(){
     +t.recurrenceWeekDays.map(function(d){return['Su','Mo','Tu','We','Th','Fr','Sa'][d];}).join(',')
     +']':'')
   +' · '+t.date+'</span>'+
-              '<button class="bni rec-edit-series" style="font-size:11px;padding:2px 7px;border:1px solid rgba(91,155,213,0.4);border-radius:5px;color:#185FA5;background:rgba(91,155,213,0.1);">Edit series</button>'
+              '<button class="bni rec-edit-series" style="font-size:11px;padding:2px 7px;border:1px solid rgba(91,155,213,0.4);border-radius:5px;color:#185FA5;background:rgba(91,155,213,0.1);">Edit series</button>'+
+              '<button class="bni rec-extend-series" title="Extend recurring series by 10 more occurrences" style="font-size:11px;padding:2px 7px;border:1px solid rgba(91,155,213,0.4);border-radius:5px;color:#185FA5;background:rgba(91,155,213,0.1);margin-left:4px;">➕ Extend</button>'
             :'')+
           '</div>'+
         '</div>'+
@@ -4097,6 +4174,55 @@ function renderTasks(){
     if(editSeriesBtn){
       editSeriesBtn.addEventListener('click',function(){
         openRecurringSetupModal(t.recurrenceGroupId);
+      });
+    }
+
+    // Quick Extend series button (+10 occurrences from last instance)
+    var extendSeriesBtn=card.querySelector('.rec-extend-series');
+    if(extendSeriesBtn){
+      extendSeriesBtn.addEventListener('click',function(){
+        var tasks2=lsGet(TK);
+        var group=Object.values(tasks2).filter(function(k){return k.recurrenceGroupId===t.recurrenceGroupId;});
+        if(!group.length){showDropToast('No existing instances found.','','');return;}
+        group.sort(function(a,b){
+          var da=parseDate(a.date),db=parseDate(b.date);
+          return (da&&db)?(da-db):0;
+        });
+        var lastInst=group[group.length-1];
+        var maxIdx=group.reduce(function(m,x){return Math.max(m,x.recurrenceIndex||0);},0);
+        var recTypeExt=lastInst.recurrence||t.recurrence;
+        var weekDaysExt=lastInst.recurrenceWeekDays||null;
+        var nextStartDate=nextRecurrenceDate(lastInst.date,recTypeExt);
+        if(!nextStartDate){showDropToast('Could not determine next date.','','');return;}
+        if(recTypeExt==='custom-weekly'&&weekDaysExt&&weekDaysExt.length){
+          var cur=parseDate(nextStartDate);
+          var maxTry=14;
+          while(maxTry-->0&&weekDaysExt.indexOf(cur.getDay())<0){cur=addDays(cur,1);}
+          nextStartDate=fmtDate(cur);
+        }
+        var baseExt={
+          title:lastInst.title,date:nextStartDate,time:lastInst.time||'',
+          notes:lastInst.notes||'',priority:lastInst.priority||'medium',
+          recurrence:recTypeExt,recurrenceGroupId:t.recurrenceGroupId,
+          endType:'count',endCount:10,endDate:null,
+          weekDays:weekDaysExt,
+          taskEndDate:lastInst.endDate||'',
+          taskEndTime:lastInst.endTime||''
+        };
+        var newInstances=generateRecurringInstances(baseExt);
+        newInstances.forEach(function(inst,i){
+          inst.recurrenceIndex=maxIdx+1+i;
+          inst.recurrenceEndType=lastInst.recurrenceEndType||'count';
+          inst.recurrenceEndCount=(lastInst.recurrenceEndCount||0)+10;
+          inst.recurrenceEndDate=lastInst.recurrenceEndDate||null;
+          inst.recurrenceWeekDays=weekDaysExt||null;
+          tasks2[inst.id]=inst;
+          FB.saveTask(inst.id,inst);
+        });
+        FB.ignoreNextTaskSync=true;
+        lsSet(TK,tasks2);
+        showDropToast(lastInst.title+' — '+newInstances.length+' more occurrences added 🔁','','');
+        renderTasks();buildGrid();
       });
     }
 
