@@ -510,14 +510,14 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 }
 
 /* ── Custom weekly day pills ── */
-.day-pills{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
+.day-pills{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap;padding-bottom:4px}
 .day-pill{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--gp);
   background:var(--gc);font-family:DM Sans,sans-serif;font-size:11px;font-weight:600;
   color:var(--inkl);cursor:pointer;display:flex;align-items:center;justify-content:center;
   transition:all .15s;-webkit-tap-highlight-color:transparent;flex-shrink:0}
 .day-pill.active{background:var(--gm);border-color:var(--gm);color:white}
 .day-pill:hover:not(.active){border-color:var(--gm);color:var(--gd)}
-.day-pills-wrap{display:none;margin-top:6px}
+.day-pills-wrap{display:none;margin-top:6px;margin-bottom:4px}
 .day-pills-wrap.show{display:block}
 
 .tpill::before{content:none!important;display:none!important}
@@ -2723,7 +2723,7 @@ function openTaskEditModal(taskId, editScope){
 
     // Note about scope
     var freqNote=document.createElement('div');
-    freqNote.style.cssText='font-size:11px;color:var(--inkl);font-style:italic;margin-top:-6px;margin-bottom:10px;';
+    freqNote.style.cssText='font-size:11px;color:var(--inkl);font-style:italic;margin-top:10px;margin-bottom:10px;clear:both;';
     freqNote.textContent='Changing frequency will regenerate future instances in the series.';
     modal.appendChild(freqNote);
   }
