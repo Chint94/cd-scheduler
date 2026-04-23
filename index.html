@@ -216,7 +216,8 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .pop-overlay{position:fixed;inset:0;z-index:8999;background:rgba(0,0,0,0.2)}
 .task-popover{position:fixed;z-index:9000;background:var(--white);border:2px solid var(--gm);
   border-radius:12px;box-shadow:0 8px 32px rgba(139,105,20,0.35);padding:14px 16px;
-  min-width:260px;max-width:310px;width:90vw}
+  min-width:260px;max-width:310px;width:90vw;
+  max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .task-popover h4{font-family:'Playfair Display',serif;font-size:14px;color:var(--gd);
   margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
 .task-popover h4 button{background:transparent;border:none;cursor:pointer;font-size:16px;
@@ -2644,6 +2645,89 @@ function openTaskEditModal(taskId, editScope){
   });
   priF.appendChild(priL);priF.appendChild(inp.priority);modal.appendChild(priF);
 
+  // Frequency (only for recurring tasks)
+  if(isRecurring){
+    var freqF=document.createElement('div');freqF.className='edit-field';
+    var freqL=document.createElement('div');freqL.className='edit-lbl';freqL.textContent='Repeat Frequency';
+    inp.frequency=document.createElement('select');inp.frequency.className='edit-inp';
+    (function(){
+      var freqGroups={};
+      var freqList=[
+        ['daily','Daily','Daily'],['every2days','Every 2 days','Daily'],
+        ['every3days','Every 3 days','Daily'],['weekdays','Weekdays (Mon–Fri)','Daily'],
+        ['weekends','Weekends (Sat–Sun)','Daily'],
+        ['weekly','Weekly (custom days)','Weekly'],['fortnightly','Fortnightly (2 weeks)','Weekly'],
+        ['every3weeks','Every 3 weeks','Weekly'],
+        ['monthly','Monthly','Monthly'],['every2months','Every 2 months','Monthly'],
+        ['quarterly','Quarterly (3 months)','Monthly'],['halfyearly','Every 6 months','Monthly'],
+        ['yearly','Yearly','Yearly']
+      ];
+      freqList.forEach(function(f){
+        if(!freqGroups[f[2]]){
+          var og=document.createElement('optgroup');og.label=f[2];
+          freqGroups[f[2]]=og;inp.frequency.appendChild(og);
+        }
+        var o=document.createElement('option');o.value=f[0];o.textContent=f[1];
+        // Match stored recurrence value (custom-weekly maps to weekly display)
+        var storedRec=t.recurrence==='custom-weekly'?'weekly':t.recurrence;
+        if(storedRec===f[0]) o.selected=true;
+        freqGroups[f[2]].appendChild(o);
+      });
+    })();
+    freqF.appendChild(freqL);freqF.appendChild(inp.frequency);modal.appendChild(freqF);
+
+    // Day picker for weekly frequency
+    var editDayPickWrap=document.createElement('div');editDayPickWrap.className='day-pills-wrap';
+    var editDayPickLbl=document.createElement('div');editDayPickLbl.className='edit-lbl';
+    editDayPickLbl.textContent='On these days';editDayPickLbl.style.marginBottom='5px';
+    editDayPickWrap.appendChild(editDayPickLbl);
+    var editDayPillsRow=document.createElement('div');editDayPillsRow.className='day-pills';
+    var EDIT_DAY_ORDER=[1,2,3,4,5,6,0];
+    var EDIT_DAY_LABELS=['M','T','W','T','F','S','S'];
+    var editSelectedDays=(t.recurrenceWeekDays&&t.recurrenceWeekDays.length)
+      ? t.recurrenceWeekDays.slice()
+      : (t.date?[parseDate(t.date).getDay()]:[1]);
+    EDIT_DAY_ORDER.forEach(function(jsDay,idx){
+      var pill=document.createElement('button');
+      pill.type='button';
+      pill.textContent=EDIT_DAY_LABELS[idx];
+      pill.setAttribute('data-day',jsDay);
+      pill.className='day-pill'+(editSelectedDays.indexOf(jsDay)>=0?' active':'');
+      pill.addEventListener('click',function(){
+        var d=parseInt(pill.getAttribute('data-day'));
+        if(pill.classList.contains('active')){
+          if(editSelectedDays.length>1){
+            pill.classList.remove('active');
+            editSelectedDays=editSelectedDays.filter(function(x){return x!==d;});
+          }
+        } else {
+          pill.classList.add('active');
+          if(editSelectedDays.indexOf(d)<0) editSelectedDays.push(d);
+        }
+      });
+      editDayPillsRow.appendChild(pill);
+    });
+    editDayPickWrap.appendChild(editDayPillsRow);
+    modal.appendChild(editDayPickWrap);
+
+    function updateEditDayPickerVisibility(){
+      var v=inp.frequency.value;
+      editDayPickWrap.classList.toggle('show',v==='weekly'||v==='custom-weekly');
+    }
+    inp.frequency.addEventListener('change',updateEditDayPickerVisibility);
+    // Show day picker if current recurrence is weekly/custom-weekly
+    if(t.recurrence==='weekly'||t.recurrence==='custom-weekly'){
+      inp.frequency.value='weekly';
+    }
+    updateEditDayPickerVisibility();
+
+    // Note about scope
+    var freqNote=document.createElement('div');
+    freqNote.style.cssText='font-size:11px;color:var(--inkl);font-style:italic;margin-top:-6px;margin-bottom:10px;';
+    freqNote.textContent='Changing frequency will regenerate future instances in the series.';
+    modal.appendChild(freqNote);
+  }
+
   // Notes
   var notesF=document.createElement('div');notesF.className='edit-field';
   var notesL=document.createElement('div');notesL.className='edit-lbl';notesL.textContent='Notes';
@@ -2723,6 +2807,86 @@ function openTaskEditModal(taskId, editScope){
     var newDone=doneChk.checked;
 
     var effectiveScope=scope;
+
+    // Handle frequency change for recurring tasks
+    if(isRecurring&&inp.frequency){
+      var newFreqRaw=inp.frequency.value;
+      var newFreq=newFreqRaw;
+      var newWeekDays=null;
+      // Resolve weekly → custom-weekly if day pills are shown
+      if(newFreqRaw==='weekly'){
+        // Check if editDayPickWrap is visible (editSelectedDays in closure)
+        newFreq='custom-weekly';
+        newWeekDays=editSelectedDays.slice().sort(function(a,b){return a-b;});
+      }
+      var oldFreq=t.recurrence;
+      var freqChanged=(newFreq!==oldFreq)||(newFreq==='custom-weekly'&&JSON.stringify(newWeekDays)!==JSON.stringify(t.recurrenceWeekDays||[]));
+      if(freqChanged&&effectiveScope==='all'){
+        // Regenerate all future (non-done) instances with new frequency
+        var groupId2=t.recurrenceGroupId;
+        var group2=Object.values(tasks2).filter(function(k){return k.recurrenceGroupId===groupId2;});
+        group2.sort(function(a,b){var da=parseDate(a.date),db=parseDate(b.date);return(da&&db)?(da-db):0;});
+        // Preserve done instances, delete pending ones
+        var doneInstances=group2.filter(function(k){return !!k.done;});
+        var pendingInstances=group2.filter(function(k){return !k.done;});
+        pendingInstances.forEach(function(k){FB.deleteTask(k.id);delete tasks2[k.id];});
+        // Find new start date: day after last done, or original start if none done
+        var lastDoneDate=doneInstances.length?doneInstances[doneInstances.length-1].date:null;
+        var newStartStr=lastDoneDate?nextRecurrenceDate(lastDoneDate,newFreq):newDate;
+        if(newFreq==='custom-weekly'&&newWeekDays&&newWeekDays.length){
+          var nsd=parseDate(newStartStr);
+          if(nsd){var maxT=14;while(maxT-->0&&newWeekDays.indexOf(nsd.getDay())<0)nsd=addDays(nsd,1);newStartStr=fmtDate(nsd);}
+        }
+        var baseRegen={
+          title:newTitle,date:newStartStr,time:newTime,notes:newNotes,priority:newPriority,
+          recurrence:newFreq,recurrenceGroupId:groupId2,
+          endType:t.recurrenceEndType||'count',
+          endCount:t.recurrenceEndCount||20,
+          endDate:t.recurrenceEndDate||null,
+          weekDays:newWeekDays,
+          taskEndDate:newEndDate,taskEndTime:newEndTime
+        };
+        var maxIdx2=doneInstances.reduce(function(m,k){return Math.max(m,k.recurrenceIndex||0);},-1);
+        var newInstances=generateRecurringInstances(baseRegen);
+        newInstances.forEach(function(inst,i){
+          inst.recurrenceIndex=maxIdx2+1+i;
+          inst.recurrenceWeekDays=newWeekDays;
+          tasks2[inst.id]=inst;FB.saveTask(inst.id,inst);
+        });
+        // Also update done instances' metadata
+        doneInstances.forEach(function(k){
+          k.title=newTitle;k.time=newTime;k.endDate=newEndDate;k.endTime=newEndTime;
+          k.priority=newPriority;k.notes=newNotes;
+          k.recurrence=newFreq;k.recurrenceWeekDays=newWeekDays;
+          FB.saveTask(k.id,k);
+        });
+        tasks2[taskId]=tasks2[taskId]||{};
+        if(tasks2[taskId]){tasks2[taskId].done=newDone;}
+        FB.ignoreNextTaskSync=true;
+        lsSet(TK,tasks2);
+        closePopover();buildGrid();
+        if(currentTab==='tasks')renderTasks();
+        if(currentTab==='dashboard')renderDashboard();
+        return;
+      }
+      // No frequency change, or editing this instance only — just patch recurrence fields
+      if(effectiveScope==='all'){
+        var groupId3=t.recurrenceGroupId;
+        Object.values(tasks2).forEach(function(task){
+          if(task.recurrenceGroupId!==groupId3) return;
+          task.title=newTitle;task.time=newTime;task.endDate=newEndDate;task.endTime=newEndTime;
+          task.priority=newPriority;task.notes=newNotes;
+          task.recurrence=newFreq;task.recurrenceWeekDays=newWeekDays;
+          FB.saveTask(task.id,task);
+        });
+        tasks2[taskId].done=newDone;tasks2[taskId].date=newDate;
+        FB.saveTask(taskId,tasks2[taskId]);
+        FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();buildGrid();
+        if(currentTab==='tasks')renderTasks();if(currentTab==='dashboard')renderDashboard();
+        return;
+      }
+    }
+
     // Determine if editing all series or this instance
     if(isRecurring&&effectiveScope==='all'){
       // Apply to all non-done instances in the series
@@ -3526,6 +3690,9 @@ function openRecurringSetupModal(existingGroupId){
   modal.style.position='fixed';
   modal.style.top='50%';modal.style.left='50%';
   modal.style.transform='translate(-50%,-50%)';
+  modal.style.maxHeight='90vh';
+  modal.style.overflowY='auto';
+  modal.style.webkitOverflowScrolling='touch';
   setTimeout(function(){tInp.focus();},30);
 }
 
