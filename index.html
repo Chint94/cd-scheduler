@@ -4329,6 +4329,7 @@ function renderTasks(){
       if(curFilter==='today')return s==='today';
       if(curFilter==='overdue')return s==='overdue';
       if(curFilter==='week'){
+        if(t.done)return false;
         var dt2=dashboardDateTime(t);
         if(!dt2)return false;
         var ws2=weekStart?new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate(),0,0,0,0):toMon(new Date());
