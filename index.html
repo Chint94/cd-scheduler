@@ -261,52 +261,171 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   display:flex;align-items:center;gap:5px;box-shadow:0 2px 8px var(--sg);transition:background .15s}
 .btn-add:hover{background:var(--gd)}
 
-/* ── Task cards ── */
-.task-card{background:white;border:1.5px solid var(--gp);border-radius:12px;padding:13px 15px;
-  margin-bottom:9px;box-shadow:0 2px 8px var(--sg);transition:border-color .15s}
-.task-card:hover{border-color:var(--gm)}
+/* ── Task cards — simplified ── */
+.task-card{background:white;border:1.5px solid var(--gp);border-radius:12px;
+  margin-bottom:8px;box-shadow:0 2px 8px var(--sg);transition:border-color .15s,box-shadow .15s;
+  overflow:hidden}
+.task-card:hover{border-color:var(--gm);box-shadow:0 4px 14px var(--sg)}
 .task-card.ov-card{border-color:var(--ot);background:var(--obg)}
-.task-top{display:flex;align-items:flex-start;gap:9px}
-.task-chk{width:17px;height:17px;border-radius:4px;border:2px solid var(--gm);cursor:pointer;
-  flex-shrink:0;margin-top:2px;appearance:none;background:white}
+/* Thin priority stripe at top */
+.task-stripe{height:4px;width:100%}
+/* Main row */
+.task-top{display:flex;align-items:center;gap:10px;padding:11px 14px}
+.task-chk{width:18px;height:18px;border-radius:5px;border:2px solid var(--gm);cursor:pointer;
+  flex-shrink:0;appearance:none;background:white;transition:all .15s}
 .task-chk:checked{background:var(--gm);border-color:var(--gm);
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 6l3 3 5-5' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:center}
-.task-bd{flex:1;min-width:0}
-.task-ti{width:100%;font-family:DM Sans,sans-serif;font-size:14px;font-weight:600;color:var(--ink);
-  background:transparent;border:none;outline:none;padding:0;margin-bottom:5px}
-.task-ti::placeholder{color:rgba(139,105,20,0.38);font-weight:400}
-.task-done .task-ti{text-decoration:line-through;color:var(--inkl)}
-.task-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
-.task-time-block{display:flex;flex-direction:column;gap:5px;margin-bottom:5px}
-.task-time-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.task-time-lbl{font-size:10px;font-weight:600;color:var(--inkl);text-transform:uppercase;
-  letter-spacing:.5px;min-width:38px;flex-shrink:0}
-.task-end-toggle{display:flex;align-items:center;gap:5px;margin-top:2px;cursor:pointer;
-  user-select:none;width:fit-content}
-.task-end-toggle input[type=checkbox]{width:13px;height:13px;accent-color:var(--gm);cursor:pointer}
-.task-end-toggle span{font-size:11px;color:var(--inkl);font-weight:500}
-.task-end-row{display:none;flex-wrap:wrap;gap:6px;align-items:center;margin-top:3px;
-  padding:6px 8px;background:rgba(196,148,42,0.06);border-radius:6px;
-  border:1px dashed var(--gp)}
-.task-end-row.show{display:flex}
-.task-duration{font-size:10px;color:var(--inkl);font-style:italic;width:100%;
-  margin-top:2px;padding-left:2px}
-.task-di,.task-tmi{font-family:DM Sans,sans-serif;font-size:12px;color:var(--inkm);
-  background:var(--gc);border:1px solid var(--gp);border-radius:6px;padding:3px 7px;outline:none;cursor:pointer}
-.task-di:focus,.task-tmi:focus{border-color:var(--gm)}
-.task-sel{font-family:DM Sans,sans-serif;font-size:11px;background:var(--gc);
-  border:1px solid var(--gp);border-radius:6px;padding:3px 5px;color:var(--inkm);cursor:pointer;outline:none}
-.task-ni{width:100%;font-family:DM Sans,sans-serif;font-size:12px;color:var(--inkl);
-  background:transparent;border:none;border-top:1px dashed var(--gp);outline:none;
-  padding:5px 0 0;margin-top:5px;resize:none;min-height:28px;overflow:hidden}
-.task-ni::placeholder{color:rgba(139,105,20,0.32)}
-.task-acts{display:flex;align-items:flex-start;gap:4px;flex-shrink:0;padding-top:2px}
-.bni{background:transparent;border:none;cursor:pointer;padding:6px;border-radius:5px;font-size:14px;min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.task-bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.task-ti{font-family:DM Sans,sans-serif;font-size:14px;font-weight:600;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.task-ti-input{width:100%;font-family:DM Sans,sans-serif;font-size:14px;font-weight:600;
+  color:var(--ink);background:transparent;border:none;outline:none;padding:0}
+.task-ti-input::placeholder{color:rgba(139,105,20,0.38);font-weight:400}
+.task-done .task-ti,.task-done .task-ti-input{text-decoration:line-through;color:var(--inkl)}
+/* Meta row: date pill + badges */
+.task-meta-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.task-date-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;
+  color:var(--inkm);background:var(--gc);border:1px solid var(--gp);
+  border-radius:20px;padding:2px 9px;white-space:nowrap}
+.task-date-pill.overdue-pill{background:#FFE0E0;color:var(--ot);border-color:rgba(232,82,82,.3)}
+.task-date-pill.today-pill{background:rgba(232,184,75,.15);color:var(--gd);border-color:rgba(196,148,42,.3)}
+.task-notes-preview{font-size:11px;color:var(--inkl);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:220px;font-style:italic}
+/* Actions */
+.task-acts{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.bni{background:transparent;border:none;cursor:pointer;padding:6px;border-radius:6px;
+  font-size:15px;min-width:34px;min-height:34px;display:inline-flex;align-items:center;
+  justify-content:center;-webkit-tap-highlight-color:transparent;transition:background .12s}
 .bni:hover{background:var(--gc)}
-.bni.edit-btn{color:var(--gm);font-size:13px}
-.bni.edit-btn:hover{background:rgba(196,148,42,0.15)}
-/* Edit modal overlay — full screen centred */
+.bni.edit-btn{color:var(--gm)}
+.bni.edit-btn:hover{background:rgba(196,148,42,0.12)}
+/* Badges */
+.tbadge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap}
+.bov{background:#FFE0E0;color:var(--ot)}
+.btd{background:rgba(232,184,75,0.2);color:var(--gd)}
+.bdn{background:#E8F5E9;color:#2E7D32}
+.brec{background:rgba(91,155,213,0.15);color:#185FA5}
+/* Legacy hidden fields — kept for JS compatibility but not shown in card */
+.task-time-block,.task-ni,.repeat-toggle-wrap,.repeat-freq-wrap,
+.task-end-toggle,.task-end-row,.task-meta,.task-time-row{display:none!important}
+.task-di,.task-tmi,.task-sel,.task-edi,.task-etmi,.task-duration{display:none!important}
+/* Keep rec-bar hidden — all actions via modal */
+.rec-bar{display:none!important}
+.rec-lbl,.rec-freq-display,.rec-inst-note,.rec-edit-series,.rec-extend-series{display:none!important}
+/* Unused legacy styles kept for compat */
+.task-time-lbl{display:none}
+.rec-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(91,155,213,0.15);color:#185FA5}
+.repeat-toggle-lbl,.repeat-chk{display:none}
+
+/* ── Simplified Task Edit Modal ── */
+.stm-overlay{position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,.35);
+  display:flex;align-items:flex-end;justify-content:center}
+@media(min-width:600px){
+  .stm-overlay{align-items:center}
+}
+.stm-sheet{background:white;width:min(480px,100vw);border-radius:16px 16px 0 0;
+  max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  animation:stmSlideUp .22s cubic-bezier(.32,1,.56,1)}
+@media(min-width:600px){
+  .stm-sheet{border-radius:16px;max-height:88vh;width:min(460px,94vw)}
+}
+@keyframes stmSlideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+.stm-handle{width:36px;height:4px;background:var(--gp);border-radius:99px;
+  margin:10px auto 0;display:block}
+@media(min-width:600px){.stm-handle{display:none}}
+.stm-header{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px 10px;border-bottom:1px solid var(--gp)}
+.stm-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--gd)}
+.stm-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--inkl);
+  line-height:1;padding:2px 6px;border-radius:6px;-webkit-tap-highlight-color:transparent}
+.stm-close:hover{background:var(--gc)}
+.stm-body{padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+/* Section blocks inside modal */
+.stm-section{display:flex;flex-direction:column;gap:8px}
+.stm-lbl{font-size:10px;font-weight:700;color:var(--inkl);text-transform:uppercase;
+  letter-spacing:.8px;margin-bottom:2px}
+.stm-inp{font-family:DM Sans,sans-serif;font-size:14px;color:var(--ink);background:var(--gc);
+  border:1.5px solid var(--gp);border-radius:8px;padding:8px 11px;outline:none;width:100%;
+  box-sizing:border-box;transition:border-color .15s}
+.stm-inp:focus{border-color:var(--gm);background:white}
+.stm-row{display:flex;gap:8px}
+.stm-row .stm-inp{flex:1;min-width:0}
+.stm-textarea{resize:vertical;min-height:60px;font-size:13px;line-height:1.5}
+/* Priority pills */
+.stm-pri-row{display:flex;gap:7px}
+.stm-pri-btn{flex:1;font-family:DM Sans,sans-serif;font-size:12px;font-weight:600;
+  border:1.5px solid var(--gp);border-radius:8px;padding:7px 4px;cursor:pointer;
+  background:var(--gc);color:var(--inkm);transition:all .15s;text-align:center}
+.stm-pri-btn.active-high{background:#FFE8E8;border-color:#E85252;color:#B53A3A}
+.stm-pri-btn.active-medium{background:rgba(232,184,75,.18);border-color:var(--gm);color:var(--gd)}
+.stm-pri-btn.active-low{background:#E8F5E9;border-color:#5CB85C;color:#2E7D32}
+/* End time toggle */
+.stm-toggle-row{display:flex;align-items:center;gap:7px;cursor:pointer;
+  user-select:none;font-size:12px;color:var(--inkl);font-weight:500}
+.stm-toggle-chk{width:14px;height:14px;accent-color:var(--gm);cursor:pointer;flex-shrink:0}
+.stm-end-section{display:none}
+.stm-end-section.show{display:flex;flex-direction:column;gap:8px}
+/* Scope row for recurring */
+.stm-scope-row{display:flex;gap:7px}
+.stm-scope-btn{flex:1;font-family:DM Sans,sans-serif;font-size:12px;font-weight:600;
+  border:1.5px solid var(--gp);border-radius:8px;padding:8px 6px;cursor:pointer;
+  background:var(--gc);color:var(--inkm);transition:all .15s;text-align:center}
+.stm-scope-btn.active{background:var(--gm);border-color:var(--gm);color:white}
+/* Divider */
+.stm-divider{height:1px;background:var(--gp);margin:2px 0}
+/* Action buttons */
+.stm-actions{display:flex;gap:8px;flex-wrap:wrap;padding:14px 18px;
+  border-top:1px solid var(--gp);background:white;position:sticky;bottom:0}
+.stm-btn{flex:1;font-family:DM Sans,sans-serif;font-size:13px;font-weight:700;
+  border:none;border-radius:9px;padding:11px 10px;cursor:pointer;
+  min-height:42px;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.stm-btn.save{background:var(--gm);color:white}
+.stm-btn.save:hover{background:var(--gd)}
+.stm-btn.danger{background:#FFE0E0;color:var(--ot);flex:0 0 auto;padding:11px 14px}
+.stm-btn.danger:hover{background:#FFCCCC}
+.stm-btn.secondary{background:var(--gc);color:var(--inkm);border:1.5px solid var(--gp)}
+.stm-btn.secondary:hover{border-color:var(--gm);color:var(--gd)}
+/* Recurring extra sections */
+.stm-rec-info{background:rgba(91,155,213,.07);border:1px solid rgba(91,155,213,.25);
+  border-radius:8px;padding:10px 12px;font-size:12px;color:#185FA5;line-height:1.5}
+.stm-rec-info strong{font-weight:700}
+/* Frequency selector */
+.stm-freq-select{font-family:DM Sans,sans-serif;font-size:13px;background:var(--gc);
+  border:1.5px solid var(--gp);border-radius:8px;padding:8px 11px;outline:none;
+  width:100%;color:var(--ink);cursor:pointer}
+.stm-freq-select:focus{border-color:var(--gm);background:white}
+/* Day pills inside modal */
+.stm-day-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.stm-day-pill{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--gp);
+  background:var(--gc);font-family:DM Sans,sans-serif;font-size:11px;font-weight:700;
+  color:var(--inkl);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;-webkit-tap-highlight-color:transparent;flex-shrink:0}
+.stm-day-pill.active{background:var(--gm);border-color:var(--gm);color:white}
+.stm-day-pill:hover:not(.active){border-color:var(--gm);color:var(--gd)}
+/* End condition */
+.stm-end-type-row{display:flex;gap:6px;flex-wrap:wrap}
+.stm-end-type-btn{font-family:DM Sans,sans-serif;font-size:11px;font-weight:600;
+  padding:5px 12px;border-radius:6px;cursor:pointer;border:1.5px solid var(--gp);
+  background:var(--gc);color:var(--inkm);transition:all .15s}
+.stm-end-type-btn.active{background:var(--gm);border-color:var(--gm);color:white}
+/* Extend panel */
+.stm-extend-panel{background:rgba(91,155,213,.06);border:1px solid rgba(91,155,213,.25);
+  border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+/* Delete sub-options */
+.stm-delete-opts{display:flex;gap:7px;flex-wrap:wrap}
+.stm-del-opt{flex:1;font-family:DM Sans,sans-serif;font-size:12px;font-weight:600;
+  border-radius:8px;padding:9px 8px;cursor:pointer;border:1.5px solid rgba(232,82,82,.35);
+  background:#FFF5F5;color:var(--ot);transition:all .15s;text-align:center}
+.stm-del-opt:hover{background:#FFE0E0}
+@media(max-width:480px){
+  .stm-body{padding:14px 15px;gap:12px}
+  .stm-actions{padding:12px 15px;gap:7px}
+  .stm-btn{font-size:12px;padding:10px 8px}
+  .stm-inp{font-size:13px;padding:7px 10px}
+  .stm-day-pill{width:36px;height:36px;font-size:10px}
+}
+/* Edit modal — legacy class kept for planner popover compatibility */
 .edit-modal{position:fixed;z-index:9200;background:var(--white);
   border:2px solid var(--gm);border-radius:14px;
   box-shadow:0 8px 40px rgba(139,105,20,0.3);
@@ -338,26 +457,6 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .edit-end-section.show{display:block}
 .edit-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:4px;flex-wrap:wrap}
 .edit-acts .pop-btn{min-height:36px;font-size:12px}
-.tbadge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px}
-.bov{background:#FFE0E0;color:var(--ot)}
-.btd{background:rgba(232,184,75,0.2);color:var(--gd)}
-.bdn{background:#E8F5E9;color:#2E7D32}
-.brec{background:rgba(91,155,213,0.18);color:#185FA5}
-/* Recurring controls inside task card */
-.rec-bar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px dashed var(--gp)}
-.rec-sel{font-family:DM Sans,sans-serif;font-size:11px;background:rgba(91,155,213,0.12);border:1px solid rgba(91,155,213,0.35);border-radius:6px;padding:3px 7px;color:#185FA5;cursor:pointer;outline:none;font-weight:600}
-.rec-lbl{font-size:11px;color:var(--inkl);font-weight:500}
-.rec-freq-display{font-size:11px;font-weight:600;color:#185FA5;
-  background:rgba(91,155,213,0.12);border:1px solid rgba(91,155,213,0.3);
-  border-radius:5px;padding:2px 8px;display:inline-block}
-.rec-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(91,155,213,0.15);color:#185FA5}
-.rec-inst-note{font-size:10px;color:var(--inkl);font-style:italic}
-.repeat-toggle-wrap{display:flex;align-items:center;gap:6px;margin-top:7px;padding-top:7px;border-top:1px solid var(--gp)}
-.repeat-toggle-lbl{font-size:12px;font-weight:600;color:var(--inkm);cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px}
-.repeat-chk{width:15px;height:15px;border-radius:3px;border:2px solid var(--gm);appearance:none;background:white;cursor:pointer;flex-shrink:0}
-.repeat-chk:checked{background:var(--gm);border-color:var(--gm);background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 6l3 3 5-5' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center}
-.repeat-freq-wrap{display:none;margin-top:6px}
-.repeat-freq-wrap.visible{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 /* Recurring pill in planner */
 .tpill.high{background:rgba(232,82,82,0.14);color:#B53A3A;border-left:5px solid #E85252;border-right:5px solid #E85252}
 .tpill.medium{background:rgba(196,148,42,0.18);color:#8B6914;border-left:5px solid #C4942A;border-right:5px solid #C4942A}
@@ -3123,11 +3222,11 @@ function taskStatus(t){
 
 document.getElementById('addTaskBtn').addEventListener('click',function(){
   var tasks=lsGet(TK);var id=genId();
-  tasks[id]={id:id,title:'',date:'',time:'',endDate:'',endTime:'',notes:'',done:false,priority:'medium',created:Date.now()};
+  tasks[id]={id:id,title:'',date:fmtDate(new Date()),time:'',endDate:'',endTime:'',notes:'',done:false,priority:'medium',created:Date.now()};
   lsSet(TK,tasks);
   FB.saveTask(id,tasks[id]);
   renderTasks();
-  setTimeout(function(){var el=document.getElementById('tt-'+id);if(el)el.focus();},60);
+  setTimeout(function(){openSimpleTaskModal(id);},60);
 });
 
 document.getElementById('addRecurringBtn').addEventListener('click',function(){
@@ -4129,557 +4228,509 @@ function renderTasks(){
     var s=taskStatus(t);
     var card=document.createElement('div');
     card.className='task-card'+(s==='overdue'?' ov-card':'');
+    card.id='tc-'+t.id;
 
+    // Priority stripe colour
+    var stripeColor=s==='overdue'?'var(--ot)':(pc[t.priority]||pc.medium);
+
+    // Date pill text
+    var datePillText='';
+    var datePillClass='task-date-pill';
+    if(t.date){
+      var dp=parseDate(t.date);
+      if(dp){
+        datePillText='📅 '+pad(dp.getDate())+'/'+pad(dp.getMonth()+1)+'/'+dp.getFullYear();
+        if(t.time) datePillText+=' '+t.time;
+      }
+    }
+    if(s==='overdue') datePillClass+=' overdue-pill';
+    else if(s==='today') datePillClass+=' today-pill';
+
+    // Status badge
     var badge='';
-    if(s==='overdue')badge='<span class="tbadge bov">Overdue</span>';
-    else if(s==='today')badge='<span class="tbadge btd">Today</span>';
-    else if(s==='done')badge='<span class="tbadge bdn">Done</span>';
-    if(t.recurrence)badge+='<span class="tbadge brec">🔁 '+(typeof recurrenceLabel==="function"?recurrenceLabel(t.recurrence):(t.recurrence.charAt(0).toUpperCase()+t.recurrence.slice(1)))+'</span>';
+    if(s==='overdue') badge='<span class="tbadge bov">Overdue</span>';
+    else if(s==='today') badge='<span class="tbadge btd">Today</span>';
+    else if(s==='done') badge='<span class="tbadge bdn">✓ Done</span>';
+    if(t.recurrence) badge+='<span class="tbadge brec">🔁 '+recurrenceLabel(t.recurrence)+'</span>';
 
-    var dateVal=toInputDate(t.date);
+    // Notes preview
+    var notesPreview='';
+    if(t.notes&&t.notes.trim()) notesPreview='<div class="task-notes-preview">'+t.notes.trim().replace(/</g,'&lt;').slice(0,60)+(t.notes.length>60?'…':'')+'</div>';
 
     card.innerHTML=
-      '<div style="height:5px;background:'+(pc[t.priority]||pc.medium)+';border-radius:10px 10px 0 0;margin:-13px -14px 12px;"></div>'+
+      '<div class="task-stripe" style="background:'+stripeColor+'"></div>'+
       '<div class="task-top">'+
-        '<input type="checkbox" class="task-chk"'+(t.done?' checked':'')+'>'+
+        '<input type="checkbox" class="task-chk"'+(t.done?' checked':'')+' id="chk-'+t.id+'">'+
         '<div class="task-bd'+(t.done?' task-done':'')+'">'+
-          '<input id="tt-'+t.id+'" class="task-ti" type="text" value="'+((t.title||'').replace(/"/g,'&quot;'))+'" placeholder="Task title...">'+
-          '<div class="task-time-block">'+
-            '<div class="task-time-row">'+
-              '<span class="task-time-lbl">Start</span>'+
-              '<input type="date" class="task-di" value="'+dateVal+'">'+
-              '<input type="time" class="task-tmi" value="'+(t.time||'')+'">'+
-            '</div>'+
-            '<label class="task-end-toggle">'+
-              '<input type="checkbox" class="task-end-chk"'+(t.endDate||t.endTime?' checked':'')+'>'+
-              '<span>+ End date / time</span>'+
-            '</label>'+
-            '<div class="task-end-row'+(t.endDate||t.endTime?' show':'')+'">'+
-              '<span class="task-time-lbl">End</span>'+
-              '<input type="date" class="task-edi" value="'+(t.endDate?toInputDate(t.endDate):'')+'">'+
-              '<input type="time" class="task-etmi" value="'+(t.endTime||'')+'">'+
-              (t.endDate||t.endTime?'<span class="task-duration" id="dur-'+t.id+'"></span>':'<span class="task-duration" id="dur-'+t.id+'"></span>')+
-            '</div>'+
-          '</div>'+
-          '<div class="task-meta" style="margin-top:4px">'+
+          '<div class="task-ti">'+(t.title||'<span style="color:rgba(139,105,20,.38);font-weight:400">Untitled task</span>')+'</div>'+
+          '<div class="task-meta-row">'+
+            (datePillText?'<span class="'+datePillClass+'">'+datePillText+'</span>':'')+
             badge+
-            (gmIsOn()
-              ? '<span class="task-xp-chip">⭐ '+(GAMI_XP[t.priority||'medium']||GAMI_XP.medium)+' XP</span>'
-              : '')+
-            '<select class="task-sel">'+
-              '<option value="high"'+(t.priority==='high'?' selected':'')+'>🔴 High</option>'+
-              '<option value="medium"'+(t.priority==='medium'?' selected':'')+'>🟡 Medium</option>'+
-              '<option value="low"'+(t.priority==='low'?' selected':'')+'>🟢 Low</option>'+
-            '</select>'+
           '</div>'+
-          '<textarea class="task-ni" data-notes-id="'+t.id+'" placeholder="Add notes... (Enter for new line)">'+(t.notes||'')+'</textarea>'+
-          '<div class="repeat-toggle-wrap">'+
-            '<label class="repeat-toggle-lbl">'+
-              '<input type="checkbox" class="repeat-chk"'+(t.recurrence?' checked':'')+'>'+
-              '🔁 Repeat this task'+
-            '</label>'+
-          '</div>'+
-          '<div class="repeat-freq-wrap'+(t.recurrence?' visible':'')+'">'+
-            '<span class="rec-lbl">Frequency:</span>'+
-            '<span class="rec-freq-display">'+
-              (typeof recurrenceLabel==="function" ? recurrenceLabel(t.recurrence) : t.recurrence)+
-              (t.recurrence==='custom-weekly'&&t.recurrenceWeekDays&&t.recurrenceWeekDays.length
-                ? ' · ['+t.recurrenceWeekDays.map(function(d){return["Su","Mo","Tu","We","Th","Fr","Sa"][d];}).join(",")+']'
-                : '')+
-            '</span>'+
-            (t.recurrence?'<span class="rec-inst-note">Instance '+((t.recurrenceIndex||0)+1)
-  +(t.recurrenceEndType==='forever'?' (forever)'
-    :t.recurrenceEndType==='date'?' until '+t.recurrenceEndDate
-    :t.recurrenceEndCount?' of '+t.recurrenceEndCount
-    :' of 20')
-  +(t.recurrenceWeekDays&&t.recurrenceWeekDays.length?' · ['
-    +t.recurrenceWeekDays.map(function(d){return['Su','Mo','Tu','We','Th','Fr','Sa'][d];}).join(',')
-    +']':'')
-  +' · '+t.date+'</span>'+
-              '<button class="bni rec-edit-series" style="font-size:11px;padding:2px 7px;border:1px solid rgba(91,155,213,0.4);border-radius:5px;color:#185FA5;background:rgba(91,155,213,0.1);">Edit series</button>'+
-              '<button class="bni rec-extend-series" title="Extend recurring series by 10 more occurrences" style="font-size:11px;padding:2px 7px;border:1px solid rgba(91,155,213,0.4);border-radius:5px;color:#185FA5;background:rgba(91,155,213,0.1);margin-left:4px;">➕ Extend</button>'
-            :'')+
-          '</div>'+
+          notesPreview+
+          // Hidden legacy inputs for JS compat
+          '<input type="hidden" id="tt-'+t.id+'" class="task-ti-hidden" value="'+((t.title||'').replace(/"/g,'&quot;'))+'">'+
+          '<input type="date" class="task-di" style="display:none" value="'+toInputDate(t.date)+'">'+
+          '<input type="time" class="task-tmi" style="display:none" value="'+(t.time||'')+'">'+
+          '<input type="date" class="task-edi" style="display:none" value="'+(t.endDate?toInputDate(t.endDate):'')+'">'+
+          '<input type="time" class="task-etmi" style="display:none" value="'+(t.endTime||'')+'">'+
+          '<input type="checkbox" class="task-end-chk" style="display:none"'+(t.endDate||t.endTime?' checked':'')+'>'+
+          '<select class="task-sel" style="display:none">'+
+            '<option value="high"'+(t.priority==='high'?' selected':'')+'>High</option>'+
+            '<option value="medium"'+(t.priority==='medium'?' selected':'')+'>Medium</option>'+
+            '<option value="low"'+(t.priority==='low'?' selected':'')+'>Low</option>'+
+          '</select>'+
+          '<textarea class="task-ni" style="display:none">'+(t.notes||'')+'</textarea>'+
         '</div>'+
         '<div class="task-acts">'+
-        '<button class="bni edit-btn task-edit" title="Edit task">✏️</button>'+
-        '<button class="bni task-del" title="'+(t.recurrence?'Delete this occurrence':'Delete task')+'">🗑️</button>'+
+          '<button class="bni edit-btn task-edit" title="Edit task">✏️</button>'+
+          '<button class="bni task-del" title="Delete">🗑️</button>'+
         '</div>'+
       '</div>';
 
     list.appendChild(card);
 
-    // Bind all events after DOM insertion
-    var ti=card.querySelector('.task-ti');
-    var ni=card.querySelector('.task-ni');
-    var di=card.querySelector('.task-di');
-    var tmi=card.querySelector('.task-tmi');
-    var sel=card.querySelector('.task-sel');
+    // Bind checkbox
     var chk=card.querySelector('.task-chk');
     var del=card.querySelector('.task-del');
-
-    // Save to localStorage immediately; push to Firebase after 800ms idle
-    function saveLocal(field,value){
-      var tasks2=lsGet(TK);if(!tasks2[t.id])return;
-      tasks2[t.id][field]=value;lsSet(TK,tasks2);
-    }
-    var debouncedFbSave=debounce(function(){
-      var tasks2=lsGet(TK);if(!tasks2[t.id])return;
-      FB.ignoreNextTaskSync=true; // tell listener to skip the echo
-      FB.saveTask(t.id,tasks2[t.id]);
-    },800);
-    function saveField(field,value){
-      saveLocal(field,value);
-      if(field==='title'||field==='notes'){
-        debouncedFbSave(); // text: debounced
-      } else {
-        FB.ignoreNextTaskSync=true;
-        var tasks2=lsGet(TK);if(!tasks2[t.id])return;
-        FB.saveTask(t.id,tasks2[t.id]); // non-text: immediate
-      }
-    }
-
-    ti.addEventListener('input',function(){saveLocal('title',ti.value);debouncedFbSave();});
-    ti.addEventListener('keydown',function(e){
-      if(e.key==='Tab'&&!e.shiftKey){e.preventDefault();ni.focus();}
-    });
-
-    ni.addEventListener('input',function(){saveLocal('notes',ni.value);autoResize(ni);debouncedFbSave();});
-    ni.addEventListener('keydown',function(e){
-      if(e.key==='Tab'&&!e.shiftKey){
-        e.preventDefault();
-        var allTi=Array.from(document.querySelectorAll('.task-ti'));
-        var idx=allTi.indexOf(ti);
-        if(idx>=0&&idx<allTi.length-1)allTi[idx+1].focus();
-      }
-    });
-    setTimeout(function(){autoResize(ni);},0);
-
-    function refreshCardOverdueStyle(){
-      var tasks2=lsGet(TK);if(!tasks2[t.id])return;
-      var s=taskStatus(tasks2[t.id]);
-      card.classList.toggle('ov-card',s==='overdue');
-      var badgeEl=card.querySelector('.tbadge.bov');
-      var todayBadgeEl=card.querySelector('.tbadge.btd');
-      // Remove stale status badges before re-inserting
-      if(badgeEl)badgeEl.remove();
-      if(todayBadgeEl)todayBadgeEl.remove();
-      var meta=card.querySelector('.task-meta');
-      if(meta){
-        if(s==='overdue'){
-          var nb=document.createElement('span');nb.className='tbadge bov';nb.textContent='Overdue';
-          meta.insertBefore(nb,meta.firstChild);
-        } else if(s==='today'){
-          var nb=document.createElement('span');nb.className='tbadge btd';nb.textContent='Today';
-          meta.insertBefore(nb,meta.firstChild);
-        }
-      }
-    }
-    di.addEventListener('change',function(){
-      saveField('date',fromInputDate(di.value));
-      refreshCardOverdueStyle();
-      buildGrid();
-    });
-    tmi.addEventListener('change',function(){
-      saveField('time',tmi.value);
-      refreshCardOverdueStyle();
-      buildGrid();
-    });
-    sel.addEventListener('change',function(){saveField('priority',sel.value);});
-
-    // ── End date / time bindings ──────────────────────────────────────────
-    var edi  = card.querySelector('.task-edi');
-    var etmi = card.querySelector('.task-etmi');
-    var endChk  = card.querySelector('.task-end-chk');
-    var endRow  = card.querySelector('.task-end-row');
-    var durSpan = card.querySelector('.task-duration');
-
-    function calcDuration(){
-      if(!durSpan) return;
-      var sd=di.value, st=tmi.value, ed=edi?edi.value:'', et=etmi?etmi.value:'';
-      if(!sd||(sd===ed&&!et&&!st)){durSpan.textContent='';return;}
-      var startMs, endMs;
-      if(sd){
-        var sp=sd.split('-');
-        startMs=new Date(sp[0],sp[1]-1,sp[2],
-          st?parseInt(st.split(':')[0]):0,
-          st?parseInt(st.split(':')[1]):0).getTime();
-      }
-      if(ed){
-        var ep=ed.split('-');
-        endMs=new Date(ep[0],ep[1]-1,ep[2],
-          et?parseInt(et.split(':')[0]):23,
-          et?parseInt(et.split(':')[1]):59).getTime();
-      }
-      if(!startMs||!endMs||endMs<=startMs){durSpan.textContent='';return;}
-      var diff=endMs-startMs;
-      var mins=Math.round(diff/60000);
-      var hrs=Math.floor(mins/60);
-      var days=Math.floor(hrs/24);
-      var remHrs=hrs%24;
-      var remMins=mins%60;
-      var parts=[];
-      if(days>0) parts.push(days+'d');
-      if(remHrs>0) parts.push(remHrs+'h');
-      if(remMins>0&&days===0) parts.push(remMins+'m');
-      durSpan.textContent=parts.length?'Duration: '+parts.join(' '):'';
-    }
-
-    if(endChk){
-      endChk.addEventListener('change',function(){
-        if(endRow) endRow.classList.toggle('show', endChk.checked);
-        if(!endChk.checked){
-          saveField('endDate','');
-          saveField('endTime','');
-          if(edi) edi.value='';
-          if(etmi) etmi.value='';
-          if(durSpan) durSpan.textContent='';
-        }
-      });
-    }
-    if(edi){
-      edi.addEventListener('change',function(){
-        saveField('endDate', fromInputDate(edi.value));
-        calcDuration();
-      });
-    }
-    if(etmi){
-      etmi.addEventListener('change',function(){
-        saveField('endTime', etmi.value);
-        calcDuration();
-      });
-    }
-    // Calculate duration on render
-    setTimeout(calcDuration, 0);
+    var editBtn=card.querySelector('.task-edit');
 
     chk.addEventListener('change',function(){
-      if(chk.checked){saveLocal('completedAt',Date.now());}
-      else{saveLocal('completedAt',null);}
-      saveField('done',chk.checked);
+      var tasks2=lsGet(TK);if(!tasks2[t.id])return;
+      tasks2[t.id].done=chk.checked;
+      if(chk.checked) tasks2[t.id].completedAt=Date.now();
+      else delete tasks2[t.id].completedAt;
+      FB.ignoreNextTaskSync=true;
+      lsSet(TK,tasks2);FB.saveTask(t.id,tasks2[t.id]);
       card.querySelector('.task-bd').className='task-bd'+(chk.checked?' task-done':'');
+      var ti=card.querySelector('.task-ti');if(ti)ti.style.textDecoration=chk.checked?'line-through':'';
       buildGrid();
-      var tasks2=lsGet(TK); var tNow=tasks2[t.id]||t;
+      var tNow=tasks2[t.id]||t;
       if(chk.checked){gamiAwardXp(tNow,card);}
       else{gamiRevokeXp(tNow);}
       if(chk.checked && typeof gcalDeleteEvent==='function'){gcalDeleteEvent(t.id);}
+      if(currentTab==='dashboard')renderDashboard();
     });
 
     del.addEventListener('click',function(){
       var tasks2=lsGet(TK);
       if(t.recurrenceGroupId){
-        // Ask user: this occurrence or entire series?
         var groupIds=Object.keys(tasks2).filter(function(k){return tasks2[k].recurrenceGroupId===t.recurrenceGroupId;});
-        var choice=confirm(
-          'Delete recurring task:\n\n'+
-          'OK  → Delete ALL '+groupIds.length+' occurrences in this series\n'+
-          'Cancel → Delete this occurrence only'
-        );
+        var choice=confirm('Delete recurring task:\n\nOK  → Delete ALL '+groupIds.length+' occurrences\nCancel → Delete this occurrence only');
         if(choice){
-          // Delete all in series
-          groupIds.forEach(function(k){
-            if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(k);
-            FB.deleteTask(k);
-            delete tasks2[k];
-          });
+          groupIds.forEach(function(k){if(typeof gcalDeleteEvent==='function')gcalDeleteEvent(k);FB.deleteTask(k);delete tasks2[k];});
         } else {
-          // Delete this occurrence only
-          if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(t.id);
-          FB.deleteTask(t.id);
-          delete tasks2[t.id];
+          if(typeof gcalDeleteEvent==='function')gcalDeleteEvent(t.id);FB.deleteTask(t.id);delete tasks2[t.id];
         }
       } else {
         if(!confirm('Delete this task?'))return;
-        if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(t.id);
-        FB.deleteTask(t.id);
-        delete tasks2[t.id];
+        if(typeof gcalDeleteEvent==='function')gcalDeleteEvent(t.id);FB.deleteTask(t.id);delete tasks2[t.id];
       }
-      lsSet(TK,tasks2);
-      // Sync in-memory tasks object
-      var allTasks=lsGet(TK);
-      Object.keys(tasks).forEach(function(k){if(!allTasks[k])delete tasks[k];});
-      card.remove();
-      buildGrid();
+      lsSet(TK,tasks2);card.remove();buildGrid();
+      if(currentTab==='dashboard')renderDashboard();
     });
 
-    // ── Edit button ───────────────────────────────────────────────────────
-    var editBtn=card.querySelector('.task-edit');
-    if(editBtn){
-      editBtn.addEventListener('click',function(e){
-        e.stopPropagation();
-        openTaskEditModal(t.id);
-      });
-    }
+    editBtn.addEventListener('click',function(e){
+      e.stopPropagation();
+      openSimpleTaskModal(t.id);
+    });
 
-    // Frequency change handled by repeat-toggle section above
-
-    // Edit entire series button
-    var editSeriesBtn=card.querySelector('.rec-edit-series');
-    if(editSeriesBtn){
-      editSeriesBtn.addEventListener('click',function(){
-        openRecurringSetupModal(t.recurrenceGroupId);
-      });
-    }
-
-    // Quick Extend series button — prompts for count then adds
-    var extendSeriesBtn=card.querySelector('.rec-extend-series');
-    if(extendSeriesBtn){
-      extendSeriesBtn.addEventListener('click',function(){
-        // Small inline popover for count input
-        closePopover();
-        var overlay2=document.createElement('div');overlay2.className='pop-overlay';overlay2.id='pop-overlay';
-        overlay2.addEventListener('click',closePopover);document.body.appendChild(overlay2);
-
-        var mini=document.createElement('div');mini.className='task-popover';
-        mini.style.cssText='width:min(300px,90vw);max-width:300px;';
-
-        var mh2=document.createElement('h4');
-        mh2.innerHTML='Extend "'+t.title+'" ';
-        var xb2=document.createElement('button');xb2.textContent='✕';xb2.addEventListener('click',closePopover);
-        mh2.appendChild(xb2);mini.appendChild(mh2);
-
-        var note2=document.createElement('div');
-        note2.style.cssText='font-size:12px;color:var(--inkl);margin-bottom:10px;';
-        note2.textContent='How many future occurrences would you like to add?';
-        mini.appendChild(note2);
-
-        // Mode row
-        var modeRow2=document.createElement('div');modeRow2.style.cssText='display:flex;gap:6px;margin-bottom:8px;';
-        var mBtnCount=document.createElement('button');mBtnCount.type='button';mBtnCount.textContent='# of occurrences';
-        mBtnCount.style.cssText='font-family:DM Sans,sans-serif;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px;cursor:pointer;border:1.5px solid var(--gm);background:var(--gm);color:white;transition:all .15s;';
-        var mBtnDate=document.createElement('button');mBtnDate.type='button';mBtnDate.textContent='Until date';
-        mBtnDate.style.cssText='font-family:DM Sans,sans-serif;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px;cursor:pointer;border:1.5px solid var(--gp);background:var(--gc);color:var(--inkm);transition:all .15s;';
-        var miniMode='count';
-        function setMiniMode(m){
-          miniMode=m;
-          if(m==='count'){
-            mBtnCount.style.background='var(--gm)';mBtnCount.style.color='white';mBtnCount.style.borderColor='var(--gm)';
-            mBtnDate.style.background='var(--gc)';mBtnDate.style.color='var(--inkm)';mBtnDate.style.borderColor='var(--gp)';
-            cRow2.style.display='flex';dRow2.style.display='none';
-          } else {
-            mBtnDate.style.background='var(--gm)';mBtnDate.style.color='white';mBtnDate.style.borderColor='var(--gm)';
-            mBtnCount.style.background='var(--gc)';mBtnCount.style.color='var(--inkm)';mBtnCount.style.borderColor='var(--gp)';
-            cRow2.style.display='none';dRow2.style.display='flex';
-          }
-        }
-        mBtnCount.addEventListener('click',function(){setMiniMode('count');});
-        mBtnDate.addEventListener('click',function(){setMiniMode('date');});
-        modeRow2.appendChild(mBtnCount);modeRow2.appendChild(mBtnDate);
-        mini.appendChild(modeRow2);
-
-        // Count row
-        var cRow2=document.createElement('div');cRow2.style.cssText='display:flex;align-items:center;gap:7px;margin-bottom:10px;';
-        var cLbl2=document.createElement('span');cLbl2.style.cssText='font-size:12px;color:var(--inkl);white-space:nowrap;';cLbl2.textContent='Add:';
-        var cSel2=document.createElement('select');cSel2.className='pop-sel';cSel2.style.cssText='padding:5px 8px;font-size:12px;flex:1;';
-        [['5','5 occurrences'],['10','10 occurrences'],['15','15 occurrences'],['20','20 occurrences'],['30','30 occurrences'],['50','50 occurrences'],['custom','Custom…']].forEach(function(pair){
-          var o=document.createElement('option');o.value=pair[0];o.textContent=pair[1];
-          if(pair[0]==='10')o.selected=true;
-          cSel2.appendChild(o);
-        });
-        var cCustom2=document.createElement('input');cCustom2.type='number';cCustom2.min='1';cCustom2.max='730';
-        cCustom2.value='10';cCustom2.placeholder='e.g. 25';
-        cCustom2.style.cssText='font-family:DM Sans,sans-serif;font-size:12px;background:var(--gc);border:1px solid var(--gp);border-radius:6px;padding:4px 7px;outline:none;width:70px;display:none;';
-        cSel2.addEventListener('change',function(){
-          cCustom2.style.display=cSel2.value==='custom'?'block':'none';
-          if(cSel2.value!=='custom')cCustom2.value=cSel2.value;
-        });
-        cRow2.appendChild(cLbl2);cRow2.appendChild(cSel2);cRow2.appendChild(cCustom2);
-        mini.appendChild(cRow2);
-
-        // Date row
-        var dRow2=document.createElement('div');dRow2.style.cssText='display:none;align-items:center;gap:7px;margin-bottom:10px;';
-        var dLbl2=document.createElement('span');dLbl2.style.cssText='font-size:12px;color:var(--inkl);white-space:nowrap;';dLbl2.textContent='Continue until:';
-        var dInp2=document.createElement('input');dInp2.type='date';
-        dInp2.style.cssText='font-family:DM Sans,sans-serif;font-size:12px;background:var(--gc);border:1px solid var(--gp);border-radius:6px;padding:4px 7px;outline:none;flex:1;';
-        dRow2.appendChild(dLbl2);dRow2.appendChild(dInp2);
-        mini.appendChild(dRow2);
-
-        // Confirm button
-        var confBtn2=document.createElement('button');confBtn2.className='pop-btn pri';
-        confBtn2.style.cssText='width:100%;';
-        confBtn2.textContent='Add Occurrences';
-        confBtn2.addEventListener('click',function(){
-          var tasks2=lsGet(TK);
-          var group=Object.values(tasks2).filter(function(k){return k.recurrenceGroupId===t.recurrenceGroupId;});
-          if(!group.length){showDropToast('No existing instances found.','','');return;}
-          group.sort(function(a,b){var da=parseDate(a.date),db=parseDate(b.date);return(da&&db)?(da-db):0;});
-          var lastInst=group[group.length-1];
-          var maxIdx=group.reduce(function(m,x){return Math.max(m,x.recurrenceIndex||0);},0);
-          var recTypeExt=lastInst.recurrence||t.recurrence;
-          var weekDaysExt=lastInst.recurrenceWeekDays||null;
-
-          var extCount2=0,extEndDate2='';
-          if(miniMode==='count'){
-            extCount2=parseInt(cSel2.value==='custom'?cCustom2.value:cSel2.value)||10;
-            if(extCount2<1||extCount2>730){cCustom2.style.borderColor='var(--ot)';return;}
-          } else {
-            extEndDate2=fromInputDate(dInp2.value)||'';
-            if(!extEndDate2){dInp2.style.borderColor='var(--ot)';dInp2.focus();return;}
-            var lastDate2=parseDate(lastInst.date),untilDate2=parseDate(extEndDate2);
-            if(untilDate2&&lastDate2&&untilDate2<=lastDate2){dInp2.style.borderColor='var(--ot)';dInp2.focus();return;}
-          }
-
-          var nextStart2=nextRecurrenceDate(lastInst.date,recTypeExt);
-          if(!nextStart2){showDropToast('Could not determine next date.','','');return;}
-          if(recTypeExt==='custom-weekly'&&weekDaysExt&&weekDaysExt.length){
-            var cur3=parseDate(nextStart2);var maxTry3=14;
-            while(maxTry3-->0&&weekDaysExt.indexOf(cur3.getDay())<0){cur3=addDays(cur3,1);}
-            nextStart2=fmtDate(cur3);
-          }
-          var baseExt2={
-            title:lastInst.title,date:nextStart2,time:lastInst.time||'',
-            notes:lastInst.notes||'',priority:lastInst.priority||'medium',
-            recurrence:recTypeExt,recurrenceGroupId:t.recurrenceGroupId,
-            endType:miniMode,endCount:miniMode==='count'?extCount2:null,
-            endDate:miniMode==='date'?extEndDate2:null,
-            weekDays:weekDaysExt,
-            taskEndDate:lastInst.endDate||'',taskEndTime:lastInst.endTime||''
-          };
-          var newInst2=generateRecurringInstances(baseExt2);
-          if(!newInst2.length){showDropToast('No new occurrences to add — check the date range.','','');return;}
-          newInst2.forEach(function(inst,i){
-            inst.recurrenceIndex=maxIdx+1+i;
-            inst.recurrenceEndType=lastInst.recurrenceEndType||'count';
-            inst.recurrenceEndCount=lastInst.recurrenceEndCount||null;
-            inst.recurrenceEndDate=lastInst.recurrenceEndDate||null;
-            inst.recurrenceWeekDays=weekDaysExt||null;
-            tasks2[inst.id]=inst;
-            FB.saveTask(inst.id,inst);
-          });
-          FB.ignoreNextTaskSync=true;
-          lsSet(TK,tasks2);
-          showDropToast(lastInst.title+' — '+newInst2.length+' more occurrence'+(newInst2.length!==1?'s':'')+' added 🔁','','');
-          closePopover();renderTasks();buildGrid();
-        });
-        mini.appendChild(confBtn2);
-
-        document.body.appendChild(mini);
-        activePopover=mini;
-        mini.style.position='fixed';mini.style.top='50%';mini.style.left='50%';
-        mini.style.transform='translate(-50%,-50%)';
-      });
-    }
-
-    // ── Repeat toggle checkbox ──────────────────────────────
-    var repeatChk=card.querySelector('.repeat-chk');
-    var freqWrap=card.querySelector('.repeat-freq-wrap');
-    if(repeatChk){
-      repeatChk.addEventListener('change',function(){
-        if(repeatChk.checked){
-          // Convert this single task into a recurring series of 20
-          freqWrap.classList.add('visible');
-          var freqSel=freqWrap.querySelector('.rec-type-sel');
-          var recType=freqSel?freqSel.value:'daily';
-          var tasks2=lsGet(TK);
-          if(!tasks2[t.id])return;
-          var groupId=genId();
-          // Use the current task's data as the base
-          var base={
-            title:tasks2[t.id].title||'',
-            date:tasks2[t.id].date||fmtDate(new Date()),
-            time:tasks2[t.id].time||'',
-            notes:tasks2[t.id].notes||'',
-            priority:tasks2[t.id].priority||'medium',
-            recurrence:recType,
-            recurrenceGroupId:groupId
-          };
-          // Remove the original single task
-          delete tasks2[t.id];
-          // Generate 20 instances
-          var instances=generateRecurringInstances(base,20);
-          instances.forEach(function(inst){
-            tasks2[inst.id]=inst;
-            FB.saveTask(inst.id,inst);
-          });
-          lsSet(TK,tasks2);
-          renderTasks();buildGrid();
-        } else {
-          // Remove recurrence from this task (detach from series entirely)
-          freqWrap.classList.remove('visible');
-          var tasks2=lsGet(TK);
-          if(tasks2[t.id]){
-            delete tasks2[t.id].recurrence;
-            delete tasks2[t.id].recurrenceGroupId;
-            delete tasks2[t.id].recurrenceIndex;
-            lsSet(TK,tasks2);
-            FB.saveTask(t.id,tasks2[t.id]);
-          }
-        }
-      });
-
-      // Frequency changes are handled via Edit series button only
-    }
-
-    // ── Propagate title/date/time/notes changes to whole series ────────────
-    if(t.recurrenceGroupId){
-      // Wrap the existing saveLocal to also propagate to series when needed
-      var origSaveLocal=saveLocal;
-      var propagateFields=['title','notes']; // propagate text fields to whole series
-
-      ti.addEventListener('blur',function(){
-        // On blur, propagate title to all instances in series
-        var tasks2=lsGet(TK);
-        Object.values(tasks2).forEach(function(task){
-          if(task.recurrenceGroupId===t.recurrenceGroupId)task.title=ti.value;
-        });
-        lsSet(TK,tasks2);
-        FB.ignoreNextTaskSync=true;
-        Object.values(tasks2).filter(function(task){
-          return task.recurrenceGroupId===t.recurrenceGroupId;
-        }).forEach(function(task){FB.saveTask(task.id,task);});
-      });
-
-      ni.addEventListener('blur',function(){
-        // On blur, propagate notes to all instances in series
-        var tasks2=lsGet(TK);
-        Object.values(tasks2).forEach(function(task){
-          if(task.recurrenceGroupId===t.recurrenceGroupId)task.notes=ni.value;
-        });
-        lsSet(TK,tasks2);
-        FB.ignoreNextTaskSync=true;
-        Object.values(tasks2).filter(function(task){
-          return task.recurrenceGroupId===t.recurrenceGroupId;
-        }).forEach(function(task){FB.saveTask(task.id,task);});
-      });
-
-      tmi.addEventListener('blur',function(){
-        var tasks2=lsGet(TK);
-        Object.values(tasks2).forEach(function(task){
-          if(task.recurrenceGroupId===t.recurrenceGroupId)task.time=tmi.value;
-        });
-        lsSet(TK,tasks2);buildGrid();
-        FB.ignoreNextTaskSync=true;
-        Object.values(tasks2).filter(function(task){
-          return task.recurrenceGroupId===t.recurrenceGroupId;
-        }).forEach(function(task){FB.saveTask(task.id,task);});
-      });
-      // Propagate endTime/endDate to series on blur
-      if(etmi) etmi.addEventListener('blur',function(){
-        if(!t.recurrenceGroupId) return;
-        var tasks2=lsGet(TK);
-        Object.values(tasks2).forEach(function(task){
-          if(task.recurrenceGroupId===t.recurrenceGroupId) task.endTime=etmi.value;
-        });
-        lsSet(TK,tasks2);
-        FB.ignoreNextTaskSync=true;
-        Object.values(tasks2).filter(function(task){
-          return task.recurrenceGroupId===t.recurrenceGroupId;
-        }).forEach(function(task){FB.saveTask(task.id,task);});
-      });
-      if(edi) edi.addEventListener('blur',function(){
-        if(!t.recurrenceGroupId) return;
-        var tasks2=lsGet(TK);
-        Object.values(tasks2).forEach(function(task){
-          if(task.recurrenceGroupId===t.recurrenceGroupId) task.endDate=fromInputDate(edi.value);
-        });
-        lsSet(TK,tasks2);
-        FB.ignoreNextTaskSync=true;
-        Object.values(tasks2).filter(function(task){
-          return task.recurrenceGroupId===t.recurrenceGroupId;
-        }).forEach(function(task){FB.saveTask(task.id,task);});
-      });
-    }
+    // Also open modal on card click (not on checkbox/buttons)
+    card.addEventListener('click',function(e){
+      if(e.target.closest('.task-chk,.task-acts,.bni'))return;
+      openSimpleTaskModal(t.id);
+    });
   });
 }
+
+// ════════════════════════════════════════════════════════
+// SIMPLIFIED TASK MODAL
+// ════════════════════════════════════════════════════════
+function openSimpleTaskModal(taskId){
+  closePopover();
+  var tasks=lsGet(TK);
+  var t=tasks[taskId];if(!t)return;
+  var isRec=!!t.recurrenceGroupId;
+
+  // Overlay
+  var overlay=document.createElement('div');
+  overlay.className='stm-overlay';overlay.id='stm-overlay';
+  overlay.addEventListener('click',function(e){if(e.target===overlay)closePopover();});
+  document.body.appendChild(overlay);
+  document.body.style.overflow='hidden';
+
+  var sheet=document.createElement('div');
+  sheet.className='stm-sheet';
+  activePopover=sheet;
+
+  // Handle bar (mobile)
+  var handle=document.createElement('div');handle.className='stm-handle';
+  sheet.appendChild(handle);
+
+  // Header
+  var header=document.createElement('div');header.className='stm-header';
+  var htitle=document.createElement('div');htitle.className='stm-title';
+  htitle.textContent=isRec?'Edit Recurring Task':'Edit Task';
+  var hclose=document.createElement('button');hclose.className='stm-close';hclose.textContent='✕';
+  hclose.addEventListener('click',closePopover);
+  header.appendChild(htitle);header.appendChild(hclose);
+  sheet.appendChild(header);
+
+  // Body
+  var body=document.createElement('div');body.className='stm-body';
+
+  // ── Scope (recurring only) ──
+  var scope='this';
+  if(isRec){
+    var scopeSec=document.createElement('div');scopeSec.className='stm-section';
+    var scopeLbl=document.createElement('div');scopeLbl.className='stm-lbl';scopeLbl.textContent='Apply changes to';
+    scopeSec.appendChild(scopeLbl);
+    var scopeRow=document.createElement('div');scopeRow.className='stm-scope-row';
+    var btnThis=document.createElement('button');btnThis.className='stm-scope-btn active';btnThis.textContent='This occurrence';
+    var btnAll=document.createElement('button');btnAll.className='stm-scope-btn';btnAll.textContent='Entire series';
+    btnThis.addEventListener('click',function(){scope='this';btnThis.classList.add('active');btnAll.classList.remove('active');});
+    btnAll.addEventListener('click',function(){scope='all';btnAll.classList.add('active');btnThis.classList.remove('active');});
+    scopeRow.appendChild(btnThis);scopeRow.appendChild(btnAll);
+    scopeSec.appendChild(scopeRow);
+    body.appendChild(scopeSec);
+  }
+
+  // ── Title ──
+  var titleSec=document.createElement('div');titleSec.className='stm-section';
+  var titleLbl=document.createElement('div');titleLbl.className='stm-lbl';titleLbl.textContent='Title';
+  var titleInp=document.createElement('input');titleInp.className='stm-inp';titleInp.type='text';
+  titleInp.value=t.title||'';titleInp.placeholder='Task title…';
+  titleSec.appendChild(titleLbl);titleSec.appendChild(titleInp);
+  body.appendChild(titleSec);
+
+  // ── Date & Time ──
+  var dtSec=document.createElement('div');dtSec.className='stm-section';
+  var dtLbl=document.createElement('div');dtLbl.className='stm-lbl';dtLbl.textContent='Date & Time';
+  var dtRow=document.createElement('div');dtRow.className='stm-row';
+  var dateInp=document.createElement('input');dateInp.className='stm-inp';dateInp.type='date';
+  dateInp.value=toInputDate(t.date);
+  var timeInp=document.createElement('input');timeInp.className='stm-inp';timeInp.type='time';
+  timeInp.value=t.time||'';
+  dtRow.appendChild(dateInp);dtRow.appendChild(timeInp);
+  dtSec.appendChild(dtLbl);dtSec.appendChild(dtRow);
+  body.appendChild(dtSec);
+
+  // ── End date/time (timeblock) ──
+  var endToggleRow=document.createElement('label');endToggleRow.className='stm-toggle-row';
+  var endChk=document.createElement('input');endChk.type='checkbox';endChk.className='stm-toggle-chk';
+  endChk.checked=!!(t.endDate||t.endTime);
+  var endTxt=document.createElement('span');endTxt.textContent='Add end time (for planner timeblock)';
+  endToggleRow.appendChild(endChk);endToggleRow.appendChild(endTxt);
+  body.appendChild(endToggleRow);
+
+  var endSec=document.createElement('div');endSec.className='stm-end-section'+(endChk.checked?' show':'');
+  var endLbl=document.createElement('div');endLbl.className='stm-lbl';endLbl.textContent='End Date & Time';
+  var endRow2=document.createElement('div');endRow2.className='stm-row';
+  var endDateInp=document.createElement('input');endDateInp.className='stm-inp';endDateInp.type='date';
+  endDateInp.value=t.endDate?toInputDate(t.endDate):'';
+  var endTimeInp=document.createElement('input');endTimeInp.className='stm-inp';endTimeInp.type='time';
+  endTimeInp.value=t.endTime||'';
+  endRow2.appendChild(endDateInp);endRow2.appendChild(endTimeInp);
+  endSec.appendChild(endLbl);endSec.appendChild(endRow2);
+  body.appendChild(endSec);
+  endChk.addEventListener('change',function(){
+    endSec.classList.toggle('show',endChk.checked);
+    if(!endChk.checked){endDateInp.value='';endTimeInp.value='';}
+  });
+
+  // ── Priority ──
+  var priSec=document.createElement('div');priSec.className='stm-section';
+  var priLbl=document.createElement('div');priLbl.className='stm-lbl';priLbl.textContent='Priority';
+  var priRow=document.createElement('div');priRow.className='stm-pri-row';
+  var curPri=t.priority||'medium';
+  [['high','🔴 High'],['medium','🟡 Medium'],['low','🟢 Low']].forEach(function(p){
+    var pb=document.createElement('button');pb.type='button';pb.className='stm-pri-btn';
+    pb.textContent=p[1];pb.setAttribute('data-pri',p[0]);
+    if(p[0]===curPri)pb.classList.add('active-'+p[0]);
+    pb.addEventListener('click',function(){
+      priRow.querySelectorAll('.stm-pri-btn').forEach(function(b){b.className='stm-pri-btn';});
+      pb.classList.add('active-'+p[0]);curPri=p[0];
+    });
+    priRow.appendChild(pb);
+  });
+  priSec.appendChild(priLbl);priSec.appendChild(priRow);
+  body.appendChild(priSec);
+
+  // ── Notes ──
+  var notesSec=document.createElement('div');notesSec.className='stm-section';
+  var notesLbl=document.createElement('div');notesLbl.className='stm-lbl';notesLbl.textContent='Notes';
+  var notesInp=document.createElement('textarea');notesInp.className='stm-inp stm-textarea';
+  notesInp.placeholder='Add notes…';notesInp.value=t.notes||'';
+  notesSec.appendChild(notesLbl);notesSec.appendChild(notesInp);
+  body.appendChild(notesSec);
+
+  // ── Done toggle ──
+  var doneToggleRow=document.createElement('label');doneToggleRow.className='stm-toggle-row';
+  var doneChk=document.createElement('input');doneChk.type='checkbox';doneChk.className='stm-toggle-chk';
+  doneChk.checked=!!t.done;
+  var doneTxt=document.createElement('span');doneTxt.textContent='Mark as done';
+  doneToggleRow.appendChild(doneChk);doneToggleRow.appendChild(doneTxt);
+  body.appendChild(doneToggleRow);
+
+  // ── Divider ──
+  body.appendChild(Object.assign(document.createElement('div'),{className:'stm-divider'}));
+
+  // ── RECURRING SECTION ──
+  if(isRec){
+    // Info chip
+    var recInfoSec=document.createElement('div');recInfoSec.className='stm-section';
+    var recLbl=document.createElement('div');recLbl.className='stm-lbl';recLbl.textContent='Recurring Series';
+    var groupTasks=Object.values(tasks).filter(function(x){return x.recurrenceGroupId===t.recurrenceGroupId;});
+    var totalCount=groupTasks.length;
+    var doneCount=groupTasks.filter(function(x){return x.done;}).length;
+    var recInfo=document.createElement('div');recInfo.className='stm-rec-info';
+    recInfo.innerHTML='<strong>🔁 '+recurrenceLabel(t.recurrence)+'</strong> · Instance '+((t.recurrenceIndex||0)+1)+
+      (t.recurrenceEndType==='forever'?' (forever)':t.recurrenceEndCount?' of '+t.recurrenceEndCount:'')+
+      '<br>'+totalCount+' total occurrences · '+doneCount+' completed';
+    recInfoSec.appendChild(recLbl);recInfoSec.appendChild(recInfo);
+    body.appendChild(recInfoSec);
+
+    // Frequency change
+    var freqSec=document.createElement('div');freqSec.className='stm-section';
+    var freqLbl=document.createElement('div');freqLbl.className='stm-lbl';freqLbl.textContent='Change Frequency (applies to series)';
+    var freqSel=document.createElement('select');freqSel.className='stm-freq-select';
+    (function(){
+      var fg={};
+      [['daily','Daily','Daily'],['every2days','Every 2 days','Daily'],
+       ['every3days','Every 3 days','Daily'],['weekdays','Weekdays (Mon–Fri)','Daily'],
+       ['weekends','Weekends (Sat–Sun)','Daily'],
+       ['weekly','Weekly (custom days)','Weekly'],['fortnightly','Fortnightly (2 weeks)','Weekly'],
+       ['every3weeks','Every 3 weeks','Weekly'],
+       ['monthly','Monthly','Monthly'],['every2months','Every 2 months','Monthly'],
+       ['quarterly','Quarterly (3 months)','Monthly'],['halfyearly','Every 6 months','Monthly'],
+       ['yearly','Yearly','Yearly']
+      ].forEach(function(f){
+        if(!fg[f[2]]){var og=document.createElement('optgroup');og.label=f[2];fg[f[2]]=og;freqSel.appendChild(og);}
+        var o=document.createElement('option');o.value=f[0];o.textContent=f[1];
+        var storedRec=t.recurrence==='custom-weekly'?'weekly':t.recurrence;
+        if(storedRec===f[0])o.selected=true;
+        fg[f[2]].appendChild(o);
+      });
+    })();
+    freqSec.appendChild(freqLbl);freqSec.appendChild(freqSel);
+
+    // Day picker for weekly
+    var dpWrap=document.createElement('div');
+    dpWrap.style.cssText='display:none;margin-top:8px';
+    var dpLbl=document.createElement('div');dpLbl.className='stm-lbl';dpLbl.textContent='On these days';
+    var dpRow=document.createElement('div');dpRow.className='stm-day-pills';
+    var STM_DAY_ORDER=[1,2,3,4,5,6,0];
+    var STM_DAY_LABELS=['Mo','Tu','We','Th','Fr','Sa','Su'];
+    var stmSelDays=(t.recurrenceWeekDays&&t.recurrenceWeekDays.length)?t.recurrenceWeekDays.slice():[t.date?parseDate(t.date).getDay():1];
+    STM_DAY_ORDER.forEach(function(jsDay,idx){
+      var pill=document.createElement('button');pill.type='button';pill.className='stm-day-pill'+(stmSelDays.indexOf(jsDay)>=0?' active':'');
+      pill.textContent=STM_DAY_LABELS[idx];pill.setAttribute('data-day',jsDay);
+      pill.addEventListener('click',function(){
+        var d=parseInt(pill.getAttribute('data-day'));
+        if(pill.classList.contains('active')){if(stmSelDays.length>1){pill.classList.remove('active');stmSelDays=stmSelDays.filter(function(x){return x!==d;});}}
+        else{pill.classList.add('active');if(stmSelDays.indexOf(d)<0)stmSelDays.push(d);}
+      });
+      dpRow.appendChild(pill);
+    });
+    dpWrap.appendChild(dpLbl);dpWrap.appendChild(dpRow);
+    freqSec.appendChild(dpWrap);
+
+    function updateStmDayPicker(){
+      dpWrap.style.display=(freqSel.value==='weekly'||freqSel.value==='custom-weekly')?'block':'none';
+    }
+    freqSel.addEventListener('change',updateStmDayPicker);
+    if(t.recurrence==='weekly'||t.recurrence==='custom-weekly'){freqSel.value='weekly';}
+    updateStmDayPicker();
+    body.appendChild(freqSec);
+
+    // Extend series panel
+    var extSec=document.createElement('div');extSec.className='stm-section';
+    var extLbl=document.createElement('div');extLbl.className='stm-lbl';extLbl.textContent='Add Future Occurrences';
+    var extPanel=document.createElement('div');extPanel.className='stm-extend-panel';
+
+    var extModeRow=document.createElement('div');extModeRow.style.cssText='display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap';
+    var extBtnCount=document.createElement('button');extBtnCount.type='button';extBtnCount.className='stm-end-type-btn active';extBtnCount.textContent='# of occurrences';
+    var extBtnDate=document.createElement('button');extBtnDate.type='button';extBtnDate.className='stm-end-type-btn';extBtnDate.textContent='Until date';
+    var extMode='count';
+    function setExtMode2(m){
+      extMode=m;
+      extBtnCount.classList.toggle('active',m==='count');extBtnDate.classList.toggle('active',m==='date');
+      extCountRow.style.display=m==='count'?'flex':'none';extDateRow2.style.display=m==='date'?'flex':'none';
+    }
+    extBtnCount.addEventListener('click',function(){setExtMode2('count');});
+    extBtnDate.addEventListener('click',function(){setExtMode2('date');});
+    extModeRow.appendChild(extBtnCount);extModeRow.appendChild(extBtnDate);
+
+    var extCountRow=document.createElement('div');extCountRow.style.cssText='display:flex;align-items:center;gap:8px';
+    var extCountLbl=document.createElement('span');extCountLbl.style.cssText='font-size:12px;color:var(--inkl);white-space:nowrap';extCountLbl.textContent='Add:';
+    var extCountSel=document.createElement('select');extCountSel.className='stm-freq-select';extCountSel.style.flex='1';
+    [['5','5 occurrences'],['10','10 occurrences'],['20','20 occurrences'],['30','30 occurrences'],['50','50 occurrences'],['custom','Custom…']].forEach(function(p){
+      var o=document.createElement('option');o.value=p[0];o.textContent=p[1];if(p[0]==='10')o.selected=true;extCountSel.appendChild(o);
+    });
+    var extCountCustom=document.createElement('input');extCountCustom.type='number';extCountCustom.min='1';extCountCustom.max='730';extCountCustom.value='10';
+    extCountCustom.className='stm-inp';extCountCustom.style.cssText='display:none;width:80px;padding:7px 9px;font-size:13px';
+    extCountSel.addEventListener('change',function(){extCountCustom.style.display=extCountSel.value==='custom'?'block':'none';if(extCountSel.value!=='custom')extCountCustom.value=extCountSel.value;});
+    extCountRow.appendChild(extCountLbl);extCountRow.appendChild(extCountSel);extCountRow.appendChild(extCountCustom);
+
+    var extDateRow2=document.createElement('div');extDateRow2.style.cssText='display:none;align-items:center;gap:8px';
+    var extDateLbl2=document.createElement('span');extDateLbl2.style.cssText='font-size:12px;color:var(--inkl);white-space:nowrap';extDateLbl2.textContent='Until:';
+    var extDateInp2=document.createElement('input');extDateInp2.type='date';extDateInp2.className='stm-inp';extDateInp2.style.flex='1';
+    extDateRow2.appendChild(extDateLbl2);extDateRow2.appendChild(extDateInp2);
+
+    var extConfirm=document.createElement('button');extConfirm.type='button';extConfirm.className='stm-btn save';
+    extConfirm.style.cssText='width:100%;margin-top:8px;font-size:12px;padding:9px';
+    extConfirm.textContent='➕ Add Occurrences';
+    extConfirm.addEventListener('click',function(){
+      var tasks2=lsGet(TK);
+      var group=Object.values(tasks2).filter(function(k){return k.recurrenceGroupId===t.recurrenceGroupId;});
+      if(!group.length){alert('No existing instances found.');return;}
+      group.sort(function(a,b){var da=parseDate(a.date),db=parseDate(b.date);return(da&&db)?(da-db):0;});
+      var lastInst=group[group.length-1];
+      var maxIdx=group.reduce(function(m,x){return Math.max(m,x.recurrenceIndex||0);},0);
+      var recTypeExt=lastInst.recurrence||t.recurrence;
+      var weekDaysExt=lastInst.recurrenceWeekDays||null;
+      var extCount3=0,extEndDate3='';
+      if(extMode==='count'){
+        extCount3=parseInt(extCountSel.value==='custom'?extCountCustom.value:extCountSel.value)||10;
+        if(extCount3<1||extCount3>730)return;
+      } else {
+        extEndDate3=fromInputDate(extDateInp2.value)||'';
+        if(!extEndDate3){extDateInp2.focus();return;}
+        var ld3=parseDate(lastInst.date),ud3=parseDate(extEndDate3);
+        if(ud3&&ld3&&ud3<=ld3){extDateInp2.focus();return;}
+      }
+      var nextStart3=nextRecurrenceDate(lastInst.date,recTypeExt);
+      if(!nextStart3){alert('Could not determine next date.');return;}
+      if(recTypeExt==='custom-weekly'&&weekDaysExt&&weekDaysExt.length){
+        var cur4=parseDate(nextStart3);var mt4=14;while(mt4-->0&&weekDaysExt.indexOf(cur4.getDay())<0)cur4=addDays(cur4,1);nextStart3=fmtDate(cur4);
+      }
+      var baseE3={title:lastInst.title,date:nextStart3,time:lastInst.time||'',notes:lastInst.notes||'',priority:lastInst.priority||'medium',recurrence:recTypeExt,recurrenceGroupId:t.recurrenceGroupId,endType:extMode,endCount:extMode==='count'?extCount3:null,endDate:extMode==='date'?extEndDate3:null,weekDays:weekDaysExt,taskEndDate:lastInst.endDate||'',taskEndTime:lastInst.endTime||''};
+      var newI3=generateRecurringInstances(baseE3);
+      if(!newI3.length){showDropToast('No new occurrences — check the date range.','','');return;}
+      newI3.forEach(function(inst,i){inst.recurrenceIndex=maxIdx+1+i;inst.recurrenceEndType=lastInst.recurrenceEndType||'count';inst.recurrenceEndCount=lastInst.recurrenceEndCount||null;inst.recurrenceEndDate=lastInst.recurrenceEndDate||null;inst.recurrenceWeekDays=weekDaysExt||null;tasks2[inst.id]=inst;FB.saveTask(inst.id,inst);});
+      FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);
+      showDropToast(lastInst.title+' — '+newI3.length+' more occurrence'+(newI3.length!==1?'s':'')+' added 🔁','','');
+      closePopover();renderTasks();buildGrid();
+    });
+
+    extPanel.appendChild(extModeRow);extPanel.appendChild(extCountRow);extPanel.appendChild(extDateRow2);extPanel.appendChild(extConfirm);
+    extSec.appendChild(extLbl);extSec.appendChild(extPanel);
+    body.appendChild(extSec);
+
+    // Delete section
+    var delSec=document.createElement('div');delSec.className='stm-section';
+    var delLbl=document.createElement('div');delLbl.className='stm-lbl';delLbl.textContent='Delete';
+    var delOpts=document.createElement('div');delOpts.className='stm-delete-opts';
+    var delThis=document.createElement('button');delThis.type='button';delThis.className='stm-del-opt';delThis.textContent='🗑 This occurrence';
+    var delAll=document.createElement('button');delAll.type='button';delAll.className='stm-del-opt';delAll.textContent='🗑 Entire series';
+    delThis.addEventListener('click',function(){
+      if(!confirm('Delete this occurrence only? Other occurrences remain.'))return;
+      var tasks2=lsGet(TK);
+      if(typeof gcalDeleteEvent==='function')gcalDeleteEvent(t.id);FB.deleteTask(t.id);delete tasks2[t.id];
+      lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();if(currentTab==='dashboard')renderDashboard();
+    });
+    delAll.addEventListener('click',function(){
+      var tasks2=lsGet(TK);
+      var gIds=Object.keys(tasks2).filter(function(k){return tasks2[k].recurrenceGroupId===t.recurrenceGroupId;});
+      if(!confirm('Delete ALL '+gIds.length+' occurrences? This cannot be undone.'))return;
+      gIds.forEach(function(k){if(typeof gcalDeleteEvent==='function')gcalDeleteEvent(k);FB.deleteTask(k);delete tasks2[k];});
+      lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();if(currentTab==='dashboard')renderDashboard();
+    });
+    delOpts.appendChild(delThis);delOpts.appendChild(delAll);
+    delSec.appendChild(delLbl);delSec.appendChild(delOpts);
+    body.appendChild(delSec);
+  }
+
+  sheet.appendChild(body);
+
+  // ── Action buttons ──
+  var actBar=document.createElement('div');actBar.className='stm-actions';
+
+  if(!isRec){
+    // Non-recurring: Delete button
+    var delBtn2=document.createElement('button');delBtn2.className='stm-btn danger';delBtn2.textContent='🗑';
+    delBtn2.title='Delete task';
+    delBtn2.addEventListener('click',function(){
+      if(!confirm('Delete this task?'))return;
+      var tasks2=lsGet(TK);
+      if(typeof gcalDeleteEvent==='function')gcalDeleteEvent(t.id);FB.deleteTask(t.id);delete tasks2[t.id];
+      lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();if(currentTab==='dashboard')renderDashboard();
+    });
+    actBar.appendChild(delBtn2);
+  }
+
+  var saveBtn2=document.createElement('button');saveBtn2.className='stm-btn save';saveBtn2.textContent='Save Changes';
+  saveBtn2.addEventListener('click',function(){
+    var tasks2=lsGet(TK);if(!tasks2[t.id])return;
+    var newTitle=titleInp.value.trim()||t.title||'';
+    var newDate=fromInputDate(dateInp.value)||t.date;
+    var newTime=timeInp.value||'';
+    var newEndDate=endChk.checked?fromInputDate(endDateInp.value)||'':'';
+    var newEndTime=endChk.checked?endTimeInp.value||'':'';
+    var newNotes=notesInp.value||'';
+    var newDone=doneChk.checked;
+
+    if(isRec&&scope==='all'){
+      // Frequency change logic
+      var newFreqRaw=freqSel.value;
+      var newFreq=(newFreqRaw==='weekly')?'custom-weekly':newFreqRaw;
+      var newWeekDays=(newFreq==='custom-weekly')?stmSelDays.slice().sort(function(a,b){return a-b;}):null;
+      var oldFreq=t.recurrence;
+      var freqChanged=(newFreq!==oldFreq)||(newFreq==='custom-weekly'&&JSON.stringify(newWeekDays)!==JSON.stringify(t.recurrenceWeekDays||[]));
+      if(freqChanged){
+        var groupId2=t.recurrenceGroupId;
+        var group2=Object.values(tasks2).filter(function(k){return k.recurrenceGroupId===groupId2;});
+        group2.sort(function(a,b){var da=parseDate(a.date),db=parseDate(b.date);return(da&&db)?(da-db):0;});
+        var doneInsts=group2.filter(function(k){return!!k.done;});
+        var pendInsts=group2.filter(function(k){return!k.done;});
+        pendInsts.forEach(function(k){FB.deleteTask(k.id);delete tasks2[k.id];});
+        var lastDoneDate2=doneInsts.length?doneInsts[doneInsts.length-1].date:null;
+        var newStart2=lastDoneDate2?nextRecurrenceDate(lastDoneDate2,newFreq):newDate;
+        if(newFreq==='custom-weekly'&&newWeekDays&&newWeekDays.length){var nsd2=parseDate(newStart2);if(nsd2){var mt2=14;while(mt2-->0&&newWeekDays.indexOf(nsd2.getDay())<0)nsd2=addDays(nsd2,1);newStart2=fmtDate(nsd2);}}
+        var baseRegen2={title:newTitle,date:newStart2,time:newTime,notes:newNotes,priority:curPri,recurrence:newFreq,recurrenceGroupId:groupId2,endType:t.recurrenceEndType||'count',endCount:t.recurrenceEndCount||20,endDate:t.recurrenceEndDate||null,weekDays:newWeekDays,taskEndDate:newEndDate,taskEndTime:newEndTime};
+        var maxIdx3=doneInsts.reduce(function(m,k){return Math.max(m,k.recurrenceIndex||0);},-1);
+        var newInsts=generateRecurringInstances(baseRegen2);
+        newInsts.forEach(function(inst,i){inst.recurrenceIndex=maxIdx3+1+i;inst.recurrenceWeekDays=newWeekDays;tasks2[inst.id]=inst;FB.saveTask(inst.id,inst);});
+        doneInsts.forEach(function(k){k.title=newTitle;k.time=newTime;k.endDate=newEndDate;k.endTime=newEndTime;k.priority=curPri;k.notes=newNotes;k.recurrence=newFreq;k.recurrenceWeekDays=newWeekDays;FB.saveTask(k.id,k);});
+        if(tasks2[taskId])tasks2[taskId].done=newDone;
+        FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();buildGrid();renderTasks();if(currentTab==='dashboard')renderDashboard();
+        return;
+      }
+      // No freq change — update all
+      var groupId3=t.recurrenceGroupId;
+      Object.values(tasks2).forEach(function(task){
+        if(task.recurrenceGroupId!==groupId3)return;
+        task.title=newTitle;task.time=newTime;task.endDate=newEndDate;task.endTime=newEndTime;task.priority=curPri;task.notes=newNotes;
+        FB.saveTask(task.id,task);
+      });
+      tasks2[taskId].done=newDone;tasks2[taskId].date=newDate;
+      FB.saveTask(taskId,tasks2[taskId]);
+    } else {
+      // Edit this instance only
+      tasks2[taskId].title=newTitle;tasks2[taskId].date=newDate;tasks2[taskId].time=newTime;
+      tasks2[taskId].endDate=newEndDate;tasks2[taskId].endTime=newEndTime;
+      tasks2[taskId].priority=curPri;tasks2[taskId].notes=newNotes;tasks2[taskId].done=newDone;
+      FB.saveTask(taskId,tasks2[taskId]);
+    }
+    FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();
+    if(currentTab==='dashboard')renderDashboard();
+  });
+  actBar.appendChild(saveBtn2);
+  sheet.appendChild(actBar);
+
+  overlay.appendChild(sheet);
+  setTimeout(function(){titleInp.focus();titleInp.select();},80);
+}
+
+// Patch closePopover to also close STM overlay and restore body scroll
+var _origClosePopover=closePopover;
+closePopover=function(){
+  _origClosePopover();
+  var stmOv=document.getElementById('stm-overlay');
+  if(stmOv)stmOv.remove();
+  document.body.style.overflow='';
+};
+
 
 // ════════════════════════════════════════════════════════
 // NOTES
