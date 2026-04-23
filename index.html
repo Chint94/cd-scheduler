@@ -728,6 +728,11 @@ footer strong{color:rgba(255,253,245,0.85)}
   padding:14px 16px;display:flex;align-items:center;gap:12px;
   box-shadow:0 2px 8px var(--sg);cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s}
 .dash-stat-card:hover{border-color:var(--gm);transform:translateY(-2px);box-shadow:0 6px 18px var(--sg)}
+.dash-stat-card::after{content:'↗ View in Tasks';position:absolute;bottom:8px;right:10px;
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--gm);opacity:0;transition:opacity .15s;pointer-events:none}
+.dash-stat-card{position:relative}
+.dash-stat-card:hover::after{opacity:.7}
 .dash-stat-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;
   justify-content:center;font-size:18px;flex-shrink:0}
 .dash-stat-body{min-width:0;flex:1}
@@ -823,6 +828,16 @@ footer strong{color:rgba(255,253,245,0.85)}
   border-color:var(--gm)!important}
 .dash-day.is-today .dash-day-head{color:var(--gm)}
 .dash-day.is-today .dash-day-date{color:var(--gd)}
+
+/* ══ Week strip — selected day highlight ══ */
+.dash-day{cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s;}
+.dash-day:hover{transform:translateY(-2px);box-shadow:0 4px 14px var(--sg);border-color:var(--gm)!important;}
+.dash-day.dash-day-selected{background:linear-gradient(180deg,var(--gm) 0%,var(--gd) 100%)!important;
+  border-color:var(--gd)!important;transform:translateY(-2px);box-shadow:0 6px 18px rgba(139,105,20,.3);}
+.dash-day.dash-day-selected .dash-day-head,
+.dash-day.dash-day-selected .dash-day-date,
+.dash-day.dash-day-selected .dash-day-count,
+.dash-day.dash-day-selected .dash-day-label{color:white!important;}
 
 /* ══ Task card — priority badge ══ */
 .dash-task-pri-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;
@@ -1507,6 +1522,10 @@ footer strong{color:rgba(255,253,245,0.85)}
       <button class="fb" data-filter="overdue">Overdue</button>
       <button class="fb" data-filter="done">Done</button>
       <button class="fb" data-filter="recurring">🔁 Recurring</button>
+    </div>
+    <div id="dashFilterBanner" style="display:none;background:linear-gradient(90deg,rgba(196,148,42,.12),rgba(232,184,75,.08));border:1.5px solid var(--gm);border-radius:9px;padding:8px 14px;margin-bottom:10px;display:none;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <span style="font-size:12px;font-weight:700;color:var(--gd)" id="dashFilterBannerText">📊 Filtered from Dashboard</span>
+      <button onclick="curFilter='all';curFilterDate=null;document.getElementById('dashFilterBanner').style.display='none';document.querySelector('.fb[data-filter=all]').classList.add('active');renderTasks();" style="font-family:DM Sans,sans-serif;font-size:11px;font-weight:700;background:var(--gm);border:none;border-radius:6px;padding:4px 10px;color:white;cursor:pointer">✕ Clear filter</button>
     </div>
     <div id="tasksList"></div>
   </div>
@@ -3080,6 +3099,7 @@ function openTaskEditModal(taskId, editScope){
 // TASKS + RECURRING TASKS
 // ════════════════════════════════════════════════════════
 var curFilter='all';
+var curFilterDate=null; // set to a Date when filtering by a specific date
 var taskSearchQ='';
 var noteSearchQ='';
 
@@ -3268,6 +3288,7 @@ document.getElementById('addRecurringBtn').addEventListener('click',function(){
 document.getElementById('filterBar').addEventListener('click',function(e){
   var btn=e.target.closest('.fb');if(!btn)return;
   curFilter=btn.getAttribute('data-filter');
+  curFilterDate=null;
   document.querySelectorAll('.fb').forEach(function(b){b.classList.remove('active')});
   btn.classList.add('active');
   renderTasks();
@@ -3991,19 +4012,19 @@ function renderDashboard(){
 
   // Stat cards row
   html+='<div class="dash-stat-row">';
-  html+='<div class="dash-stat-card" data-dash-action="today">';
+  html+='<div class="dash-stat-card" data-dash-action="today" title="Tap to filter: Due Today">';
   html+='<div class="dash-stat-icon" style="background:rgba(91,155,213,.12);">📅</div>';
   html+='<div class="dash-stat-body"><div class="dash-stat-kicker">Due today</div><div class="dash-stat-val">'+todayCount+'</div><div class="dash-stat-sub">task'+(todayCount===1?'':'s')+' remaining today</div></div>';
   html+='</div>';
-  html+='<div class="dash-stat-card" data-dash-action="week">';
+  html+='<div class="dash-stat-card" data-dash-action="week" title="Tap to filter: This Week">';
   html+='<div class="dash-stat-icon" style="background:rgba(196,148,42,.12);">📆</div>';
   html+='<div class="dash-stat-body"><div class="dash-stat-kicker">This week</div><div class="dash-stat-val">'+weekCount+'</div><div class="dash-stat-sub">open items this week</div></div>';
   html+='</div>';
-  html+='<div class="dash-stat-card" data-dash-action="overdue">';
+  html+='<div class="dash-stat-card" data-dash-action="overdue" title="Tap to filter: Overdue">';
   html+='<div class="dash-stat-icon" style="background:rgba(232,82,82,.12);">⚠️</div>';
   html+='<div class="dash-stat-body"><div class="dash-stat-kicker">Overdue</div><div class="dash-stat-val" style="color:'+(overdueCount>0?'#E85252':'var(--gd)')+'">'+overdueCount+'</div><div class="dash-stat-sub">'+(overdueCount>0?overdueCount+' past due date':'All on track ✓')+'</div></div>';
   html+='</div>';
-  html+='<div class="dash-stat-card" data-dash-action="tasks">';
+  html+='<div class="dash-stat-card" data-dash-action="tasks" title="Tap to filter: Completed Tasks">';
   html+='<div class="dash-stat-icon" style="background:rgba(92,184,92,.12);">✅</div>';
   html+='<div class="dash-stat-body"><div class="dash-stat-kicker">Completed</div><div class="dash-stat-val">'+completionRate+'%</div><div class="dash-stat-sub">'+completed.length+' of '+tasks.length+' done</div></div>';
   html+='</div>';
@@ -4103,7 +4124,7 @@ function renderDashboard(){
   }
   html+='</div>';
   html+='<div style="height:12px"></div>';
-  html+='<div class="dash-panel-head"><div><div class="dash-panel-title">Due this week</div><div class="dash-panel-sub">Interactive task list</div></div><div class="dash-mini-actions"><button class="dash-btn" id="dashViewAllTasksBtn">All tasks</button></div></div>';
+  html+='<div class="dash-panel-head"><div><div class="dash-panel-title" id="dashWeekPanelTitle">Due this week</div><div class="dash-panel-sub" id="dashWeekPanelSub">Interactive task list</div></div><div class="dash-mini-actions"><button class="dash-btn" id="dashViewAllTasksBtn">All tasks</button></div></div>';
   html+='<div class="dash-list" id="dashWeekList"></div>';
   html+='</div>';
 
@@ -4176,17 +4197,51 @@ function renderDashboard(){
   Array.from(mount.querySelectorAll('[data-dash-action]')).forEach(function(card){
     card.addEventListener('click',function(){
       var action=card.getAttribute('data-dash-action');
-      if(action==='today'){curFilter='today';switchTab('tasks');}
-      else if(action==='week'||action==='tasks'){curFilter='all';switchTab('tasks');}
-      else if(action==='overdue'){curFilter='overdue';switchTab('tasks');}
+      if(action==='today'){curFilter='today';curFilterDate=null;switchTab('tasks');}
+      else if(action==='week'){curFilter='week';curFilterDate=null;switchTab('tasks');}
+      else if(action==='overdue'){curFilter='overdue';curFilterDate=null;switchTab('tasks');}
+      else if(action==='tasks'){curFilter='done';curFilterDate=null;switchTab('tasks');}
     });
   });
 
   Array.from(mount.querySelectorAll('.dash-day')).forEach(function(dayEl){
     dayEl.addEventListener('click',function(){
       var idx=parseInt(dayEl.getAttribute('data-day-index'))||0;
-      currentDayIdx=idx;
-      switchTab('planner');
+      var clickedDate=addDays(weekBase,idx);
+      // Toggle: if already selected, clear the day filter; otherwise set it
+      var weekPanelTitle=mount.querySelector('#dashWeekPanelTitle');
+      var weekPanelSub=mount.querySelector('#dashWeekPanelSub');
+      var prevIdx=parseInt(mount.getAttribute('data-selected-day')||'-1');
+      if(prevIdx===idx){
+        // Deselect — show full week
+        mount.removeAttribute('data-selected-day');
+        Array.from(mount.querySelectorAll('.dash-day')).forEach(function(d){d.classList.remove('dash-day-selected');});
+        if(weekPanelTitle) weekPanelTitle.textContent='Due this week';
+        if(weekPanelSub) weekPanelSub.textContent='Interactive task list';
+        // Refill with all this-week tasks
+        var tasks2=Object.values(lsGet(TK)||{});
+        var incomplete2=tasks2.filter(function(t){return !t.done;});
+        var dueThisWeek2=incomplete2.filter(function(t){return isTaskInCurrentWeek(t)&&taskStatus(t)!=='overdue';}).sort(function(a,b){return((dashboardDateTime(a)&&dashboardDateTime(a).getTime())||0)-((dashboardDateTime(b)&&dashboardDateTime(b).getTime())||0);});
+        fillList('dashWeekList',dueThisWeek2,false);
+      } else {
+        // Select this day
+        mount.setAttribute('data-selected-day',idx);
+        Array.from(mount.querySelectorAll('.dash-day')).forEach(function(d){d.classList.remove('dash-day-selected');});
+        dayEl.classList.add('dash-day-selected');
+        var months2=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var days3=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        var lbl=days3[clickedDate.getDay()]+', '+clickedDate.getDate()+' '+months2[clickedDate.getMonth()];
+        if(weekPanelTitle) weekPanelTitle.textContent='Due on '+lbl;
+        if(weekPanelSub) weekPanelSub.textContent='Tap again to clear filter';
+        // Filter tasks for that specific day
+        var tasks3=Object.values(lsGet(TK)||{});
+        var dayTasks=tasks3.filter(function(t){
+          if(t.done) return false;
+          var dt=dashboardDateTime(t);
+          return dt&&sameDay(dt,clickedDate);
+        }).sort(function(a,b){return((dashboardDateTime(a)&&dashboardDateTime(a).getTime())||0)-((dashboardDateTime(b)&&dashboardDateTime(b).getTime())||0);});
+        fillList('dashWeekList',dayTasks,false);
+      }
     });
   });
 
@@ -4214,6 +4269,30 @@ function renderDashboard(){
 function renderTasks(){
   var tasks=lsGet(TK);
   var list=document.getElementById('tasksList');
+  // Sync filter bar buttons to match curFilter
+  var filterMap={all:'all',pending:'pending',today:'today',overdue:'overdue',done:'done',recurring:'recurring',week:null,date:null};
+  document.querySelectorAll('.fb').forEach(function(b){
+    var f=b.getAttribute('data-filter');
+    b.classList.toggle('active',f===curFilter);
+  });
+  // For week/date filters, clear all active states (no matching button)
+  if(curFilter==='week'||curFilter==='date'){
+    document.querySelectorAll('.fb').forEach(function(b){b.classList.remove('active');});
+  }
+  // Show/hide the dashboard filter banner
+  var banner=document.getElementById('dashFilterBanner');
+  var bannerText=document.getElementById('dashFilterBannerText');
+  if(banner){
+    var isDashFilter=(curFilter==='week'||curFilter==='date');
+    banner.style.display=isDashFilter?'flex':'none';
+    if(isDashFilter&&bannerText){
+      if(curFilter==='week') bannerText.textContent='📊 Showing: Tasks due this week';
+      else if(curFilter==='date'&&curFilterDate){
+        var m3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        bannerText.textContent='📊 Showing: Tasks due on '+curFilterDate.getDate()+' '+m3[curFilterDate.getMonth()];
+      }
+    }
+  }
   var po={high:0,medium:1,low:2};
   // Sort key: undated undone tasks → top (by created desc), dated → chronological, done → bottom
   function taskSortKey(t){
@@ -4249,6 +4328,17 @@ function renderTasks(){
       if(curFilter==='pending')return!t.done&&s==='pending';
       if(curFilter==='today')return s==='today';
       if(curFilter==='overdue')return s==='overdue';
+      if(curFilter==='week'){
+        var dt2=dashboardDateTime(t);
+        if(!dt2)return false;
+        var ws2=weekStart?new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate(),0,0,0,0):toMon(new Date());
+        var we2=new Date(ws2);we2.setDate(we2.getDate()+7);
+        return dt2>=ws2&&dt2<we2;
+      }
+      if(curFilter==='date'&&curFilterDate){
+        var dt3=dashboardDateTime(t);
+        return dt3&&sameDay(dt3,curFilterDate)&&!t.done;
+      }
       return true;
     });
   }
@@ -4260,7 +4350,16 @@ function renderTasks(){
     });
   }
   if(items.length===0){
-    list.innerHTML='<div class="empty-st"><div class="ei">✅</div><p>No tasks here. Click <b>＋ Add Task</b> to get started.</p></div>';
+    var emptyMsg='No tasks here. Click <b>＋ Add Task</b> to get started.';
+    if(curFilter==='today') emptyMsg='No tasks due today. Enjoy your day! 🎉';
+    else if(curFilter==='week') emptyMsg='No tasks due this week. All clear! ✨';
+    else if(curFilter==='overdue') emptyMsg='No overdue tasks. Great work! ✓';
+    else if(curFilter==='done') emptyMsg='No completed tasks yet. Keep going! 💪';
+    else if(curFilter==='date'&&curFilterDate){
+      var m2=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      emptyMsg='No tasks due on '+curFilterDate.getDate()+' '+m2[curFilterDate.getMonth()]+'.';
+    }
+    list.innerHTML='<div class="empty-st"><div class="ei">✅</div><p>'+emptyMsg+'</p></div>';
     return;
   }
   list.innerHTML='';
