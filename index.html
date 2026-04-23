@@ -3304,15 +3304,89 @@ function openRecurringSetupModal(existingGroupId){
     });
     actRow.appendChild(delAllBtn);
   }
-  // ── Extend Series button (only when editing existing) ─────────────────
+  // ── Extend Series panel (only when editing existing) ──────────────────
   if(existingGroupId){
-    var extBtn=document.createElement('button');extBtn.className='pop-btn';
-    extBtn.textContent='➕ Extend Series';
-    extBtn.title='Add more occurrences from where the series last ended';
-    extBtn.style.cssText='background:rgba(91,155,213,0.12);color:#185FA5;border:1.5px solid rgba(91,155,213,0.4);margin-bottom:6px;width:100%;';
-    extBtn.addEventListener('click',function(){
+    var extPanel=document.createElement('div');
+    extPanel.style.cssText='margin-bottom:10px;background:rgba(91,155,213,0.07);border:1px solid rgba(91,155,213,0.3);border-radius:8px;padding:10px 12px;';
+
+    var extLbl=document.createElement('div');
+    extLbl.className='pop-lbl';
+    extLbl.style.marginBottom='7px';
+    extLbl.textContent='➕ Extend Series';
+    extPanel.appendChild(extLbl);
+
+    var extNote=document.createElement('div');
+    extNote.style.cssText='font-size:11px;color:var(--inkl);margin-bottom:8px;';
+    extNote.textContent='Add future occurrences after the last existing one.';
+    extPanel.appendChild(extNote);
+
+    // Mode toggle: by count or by date
+    var extModeRow=document.createElement('div');
+    extModeRow.style.cssText='display:flex;gap:6px;margin-bottom:8px;';
+    var extModeCount=document.createElement('button');extModeCount.type='button';
+    extModeCount.textContent='# of occurrences';
+    extModeCount.style.cssText='font-family:DM Sans,sans-serif;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px;cursor:pointer;border:1.5px solid var(--gp);background:var(--gm);color:white;transition:all .15s;';
+    var extModeDate=document.createElement('button');extModeDate.type='button';
+    extModeDate.textContent='Until date';
+    extModeDate.style.cssText='font-family:DM Sans,sans-serif;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px;cursor:pointer;border:1.5px solid var(--gp);background:var(--gc);color:var(--inkm);transition:all .15s;';
+    var extMode='count'; // current mode
+    function setExtMode(m){
+      extMode=m;
+      if(m==='count'){
+        extModeCount.style.background='var(--gm)';extModeCount.style.color='white';extModeCount.style.borderColor='var(--gm)';
+        extModeDate.style.background='var(--gc)';extModeDate.style.color='var(--inkm)';extModeDate.style.borderColor='var(--gp)';
+        extCountRow.style.display='flex';extDateRow.style.display='none';
+      } else {
+        extModeDate.style.background='var(--gm)';extModeDate.style.color='white';extModeDate.style.borderColor='var(--gm)';
+        extModeCount.style.background='var(--gc)';extModeCount.style.color='var(--inkm)';extModeCount.style.borderColor='var(--gp)';
+        extCountRow.style.display='none';extDateRow.style.display='flex';
+      }
+    }
+    extModeCount.addEventListener('click',function(){setExtMode('count');});
+    extModeDate.addEventListener('click',function(){setExtMode('date');});
+    extModeRow.appendChild(extModeCount);extModeRow.appendChild(extModeDate);
+    extPanel.appendChild(extModeRow);
+
+    // Count row
+    var extCountRow=document.createElement('div');
+    extCountRow.style.cssText='display:flex;align-items:center;gap:7px;margin-bottom:6px;';
+    var extCountLbl=document.createElement('span');extCountLbl.style.cssText='font-size:12px;color:var(--inkl);white-space:nowrap;';
+    extCountLbl.textContent='Add:';
+    var extCountSel=document.createElement('select');extCountSel.className='pop-sel';
+    extCountSel.style.cssText='padding:5px 8px;font-size:12px;flex:1;';
+    [['5','5 occurrences'],['10','10 occurrences'],['15','15 occurrences'],['20','20 occurrences'],['30','30 occurrences'],['50','50 occurrences'],['custom','Custom…']].forEach(function(pair){
+      var o=document.createElement('option');o.value=pair[0];o.textContent=pair[1];
+      if(pair[0]==='10')o.selected=true;
+      extCountSel.appendChild(o);
+    });
+    var extCountCustom=document.createElement('input');extCountCustom.type='number';
+    extCountCustom.min='1';extCountCustom.max='730';extCountCustom.value='10';
+    extCountCustom.placeholder='e.g. 25';
+    extCountCustom.style.cssText='font-family:DM Sans,sans-serif;font-size:12px;background:var(--gc);border:1px solid var(--gp);border-radius:6px;padding:4px 7px;outline:none;width:70px;display:none;';
+    extCountSel.addEventListener('change',function(){
+      extCountCustom.style.display=extCountSel.value==='custom'?'block':'none';
+      if(extCountSel.value!=='custom') extCountCustom.value=extCountSel.value;
+    });
+    extCountRow.appendChild(extCountLbl);extCountRow.appendChild(extCountSel);extCountRow.appendChild(extCountCustom);
+    extPanel.appendChild(extCountRow);
+
+    // Date row
+    var extDateRow=document.createElement('div');
+    extDateRow.style.cssText='display:none;align-items:center;gap:7px;margin-bottom:6px;';
+    var extDateLbl=document.createElement('span');extDateLbl.style.cssText='font-size:12px;color:var(--inkl);white-space:nowrap;';
+    extDateLbl.textContent='Continue until:';
+    var extDateInp=document.createElement('input');extDateInp.type='date';
+    extDateInp.style.cssText='font-family:DM Sans,sans-serif;font-size:12px;background:var(--gc);border:1px solid var(--gp);border-radius:6px;padding:4px 7px;outline:none;flex:1;';
+    extDateRow.appendChild(extDateLbl);extDateRow.appendChild(extDateInp);
+    extPanel.appendChild(extDateRow);
+
+    // Confirm extend button
+    var extConfirmBtn=document.createElement('button');extConfirmBtn.className='pop-btn pri';
+    extConfirmBtn.type='button';
+    extConfirmBtn.textContent='Extend Series';
+    extConfirmBtn.style.cssText='width:100%;margin-top:2px;font-size:12px;padding:7px;';
+    extConfirmBtn.addEventListener('click',function(){
       var tasks2=lsGet(TK);
-      // Find the last existing instance in this group
       var group=Object.values(tasks2).filter(function(k){return k.recurrenceGroupId===existingGroupId;});
       if(!group.length){alert('No existing instances found.');return;}
       group.sort(function(a,b){
@@ -3320,48 +3394,49 @@ function openRecurringSetupModal(existingGroupId){
         return (da&&db)?(da-db):0;
       });
       var lastInst=group[group.length-1];
-      // Determine extend count from the count selector (default 10)
-      var activeEndTypeExt='count';
-      Object.keys(endRadios).forEach(function(k){
-        if(endRadios[k].style.background.indexOf('var(--gm)')>=0||endRadios[k].style.background==='var(--gm)') activeEndTypeExt=k;
-      });
-      var extCount=10;
-      if(activeEndTypeExt==='count'){
-        extCount=parseInt(countSel.value==='custom'?countCustom.value:countSel.value)||10;
-      } else if(activeEndTypeExt==='date'){
-        var extEndDate=fromInputDate(endDateInp.value)||'';
-        if(!extEndDate){endDateInp.focus();endDateInp.style.borderColor='var(--ot)';return;}
-      } else {
-        extCount=30; // extend 30 more for forever
-      }
-      // Figure out next recurrence type and weekdays from the last instance
+      var maxIdx=group.reduce(function(m,tt){return Math.max(m,tt.recurrenceIndex||0);},0);
       var recTypeExt=lastInst.recurrence||rSel.value;
       var weekDaysExt=lastInst.recurrenceWeekDays||null;
-      // Find the highest recurrenceIndex so far
-      var maxIdx=group.reduce(function(m,t){return Math.max(m,t.recurrenceIndex||0);},0);
-      // Generate from next occurrence after last instance's date
+
+      // Validate inputs
+      var extCount2=0, extEndDate2='';
+      if(extMode==='count'){
+        extCount2=parseInt(extCountSel.value==='custom'?extCountCustom.value:extCountSel.value)||10;
+        if(extCount2<1||extCount2>730){extCountCustom.style.borderColor='var(--ot)';return;}
+      } else {
+        extEndDate2=fromInputDate(extDateInp.value)||'';
+        if(!extEndDate2){extDateInp.style.borderColor='var(--ot)';extDateInp.focus();return;}
+        // Must be after last instance date
+        var lastDate=parseDate(lastInst.date);
+        var untilDate=parseDate(extEndDate2);
+        if(untilDate&&lastDate&&untilDate<=lastDate){
+          extDateInp.style.borderColor='var(--ot)';
+          extDateInp.title='Must be after '+lastInst.date;
+          extDateInp.focus();return;
+        }
+      }
+
       var nextStartDate=nextRecurrenceDate(lastInst.date,recTypeExt);
       if(!nextStartDate){alert('Could not determine next recurrence date.');return;}
-      // For custom-weekly, need to find the next matching weekday
       if(recTypeExt==='custom-weekly'&&weekDaysExt&&weekDaysExt.length){
-        var cur=parseDate(nextStartDate);
+        var cur2=parseDate(nextStartDate);
         var maxTry=14;
-        while(maxTry-->0&&weekDaysExt.indexOf(cur.getDay())<0){cur=addDays(cur,1);}
-        nextStartDate=fmtDate(cur);
+        while(maxTry-->0&&weekDaysExt.indexOf(cur2.getDay())<0){cur2=addDays(cur2,1);}
+        nextStartDate=fmtDate(cur2);
       }
       var baseExt={
         title:lastInst.title,date:nextStartDate,time:lastInst.time||'',
         notes:lastInst.notes||'',priority:lastInst.priority||'medium',
         recurrence:recTypeExt,recurrenceGroupId:existingGroupId,
-        endType:activeEndTypeExt==='date'?'date':'count',
-        endCount:activeEndTypeExt!=='date'?extCount:null,
-        endDate:activeEndTypeExt==='date'?(fromInputDate(endDateInp.value)||null):null,
+        endType:extMode,
+        endCount:extMode==='count'?extCount2:null,
+        endDate:extMode==='date'?extEndDate2:null,
         weekDays:weekDaysExt,
         taskEndDate:lastInst.endDate||'',
         taskEndTime:lastInst.endTime||''
       };
       var newInstances=generateRecurringInstances(baseExt);
-      // Re-index so recurrenceIndex continues from where it left off
+      if(!newInstances.length){showDropToast('No new occurrences to add — check the date range.','','');return;}
       newInstances.forEach(function(inst,i){
         inst.recurrenceIndex=maxIdx+1+i;
         inst.recurrenceEndType=lastInst.recurrenceEndType||'count';
@@ -3371,13 +3446,14 @@ function openRecurringSetupModal(existingGroupId){
         tasks2[inst.id]=inst;
         FB.saveTask(inst.id,inst);
       });
+      FB.ignoreNextTaskSync=true;
       lsSet(TK,tasks2);
       var summary=newInstances.length+' new occurrence'+(newInstances.length!==1?'s':'')+' added';
       showDropToast(lastInst.title+' — '+summary,'','');
       closePopover();renderTasks();buildGrid();
     });
-    // Insert extend button before actRow children
-    actRow.appendChild(extBtn);
+    extPanel.appendChild(extConfirmBtn);
+    modal.appendChild(extPanel);
   }
 
   var saveBtn=document.createElement('button');saveBtn.className='pop-btn pri';
@@ -4177,52 +4253,142 @@ function renderTasks(){
       });
     }
 
-    // Quick Extend series button (+10 occurrences from last instance)
+    // Quick Extend series button — prompts for count then adds
     var extendSeriesBtn=card.querySelector('.rec-extend-series');
     if(extendSeriesBtn){
       extendSeriesBtn.addEventListener('click',function(){
-        var tasks2=lsGet(TK);
-        var group=Object.values(tasks2).filter(function(k){return k.recurrenceGroupId===t.recurrenceGroupId;});
-        if(!group.length){showDropToast('No existing instances found.','','');return;}
-        group.sort(function(a,b){
-          var da=parseDate(a.date),db=parseDate(b.date);
-          return (da&&db)?(da-db):0;
-        });
-        var lastInst=group[group.length-1];
-        var maxIdx=group.reduce(function(m,x){return Math.max(m,x.recurrenceIndex||0);},0);
-        var recTypeExt=lastInst.recurrence||t.recurrence;
-        var weekDaysExt=lastInst.recurrenceWeekDays||null;
-        var nextStartDate=nextRecurrenceDate(lastInst.date,recTypeExt);
-        if(!nextStartDate){showDropToast('Could not determine next date.','','');return;}
-        if(recTypeExt==='custom-weekly'&&weekDaysExt&&weekDaysExt.length){
-          var cur=parseDate(nextStartDate);
-          var maxTry=14;
-          while(maxTry-->0&&weekDaysExt.indexOf(cur.getDay())<0){cur=addDays(cur,1);}
-          nextStartDate=fmtDate(cur);
+        // Small inline popover for count input
+        closePopover();
+        var overlay2=document.createElement('div');overlay2.className='pop-overlay';overlay2.id='pop-overlay';
+        overlay2.addEventListener('click',closePopover);document.body.appendChild(overlay2);
+
+        var mini=document.createElement('div');mini.className='task-popover';
+        mini.style.cssText='width:min(300px,90vw);max-width:300px;';
+
+        var mh2=document.createElement('h4');
+        mh2.innerHTML='Extend "'+t.title+'" ';
+        var xb2=document.createElement('button');xb2.textContent='✕';xb2.addEventListener('click',closePopover);
+        mh2.appendChild(xb2);mini.appendChild(mh2);
+
+        var note2=document.createElement('div');
+        note2.style.cssText='font-size:12px;color:var(--inkl);margin-bottom:10px;';
+        note2.textContent='How many future occurrences would you like to add?';
+        mini.appendChild(note2);
+
+        // Mode row
+        var modeRow2=document.createElement('div');modeRow2.style.cssText='display:flex;gap:6px;margin-bottom:8px;';
+        var mBtnCount=document.createElement('button');mBtnCount.type='button';mBtnCount.textContent='# of occurrences';
+        mBtnCount.style.cssText='font-family:DM Sans,sans-serif;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px;cursor:pointer;border:1.5px solid var(--gm);background:var(--gm);color:white;transition:all .15s;';
+        var mBtnDate=document.createElement('button');mBtnDate.type='button';mBtnDate.textContent='Until date';
+        mBtnDate.style.cssText='font-family:DM Sans,sans-serif;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px;cursor:pointer;border:1.5px solid var(--gp);background:var(--gc);color:var(--inkm);transition:all .15s;';
+        var miniMode='count';
+        function setMiniMode(m){
+          miniMode=m;
+          if(m==='count'){
+            mBtnCount.style.background='var(--gm)';mBtnCount.style.color='white';mBtnCount.style.borderColor='var(--gm)';
+            mBtnDate.style.background='var(--gc)';mBtnDate.style.color='var(--inkm)';mBtnDate.style.borderColor='var(--gp)';
+            cRow2.style.display='flex';dRow2.style.display='none';
+          } else {
+            mBtnDate.style.background='var(--gm)';mBtnDate.style.color='white';mBtnDate.style.borderColor='var(--gm)';
+            mBtnCount.style.background='var(--gc)';mBtnCount.style.color='var(--inkm)';mBtnCount.style.borderColor='var(--gp)';
+            cRow2.style.display='none';dRow2.style.display='flex';
+          }
         }
-        var baseExt={
-          title:lastInst.title,date:nextStartDate,time:lastInst.time||'',
-          notes:lastInst.notes||'',priority:lastInst.priority||'medium',
-          recurrence:recTypeExt,recurrenceGroupId:t.recurrenceGroupId,
-          endType:'count',endCount:10,endDate:null,
-          weekDays:weekDaysExt,
-          taskEndDate:lastInst.endDate||'',
-          taskEndTime:lastInst.endTime||''
-        };
-        var newInstances=generateRecurringInstances(baseExt);
-        newInstances.forEach(function(inst,i){
-          inst.recurrenceIndex=maxIdx+1+i;
-          inst.recurrenceEndType=lastInst.recurrenceEndType||'count';
-          inst.recurrenceEndCount=(lastInst.recurrenceEndCount||0)+10;
-          inst.recurrenceEndDate=lastInst.recurrenceEndDate||null;
-          inst.recurrenceWeekDays=weekDaysExt||null;
-          tasks2[inst.id]=inst;
-          FB.saveTask(inst.id,inst);
+        mBtnCount.addEventListener('click',function(){setMiniMode('count');});
+        mBtnDate.addEventListener('click',function(){setMiniMode('date');});
+        modeRow2.appendChild(mBtnCount);modeRow2.appendChild(mBtnDate);
+        mini.appendChild(modeRow2);
+
+        // Count row
+        var cRow2=document.createElement('div');cRow2.style.cssText='display:flex;align-items:center;gap:7px;margin-bottom:10px;';
+        var cLbl2=document.createElement('span');cLbl2.style.cssText='font-size:12px;color:var(--inkl);white-space:nowrap;';cLbl2.textContent='Add:';
+        var cSel2=document.createElement('select');cSel2.className='pop-sel';cSel2.style.cssText='padding:5px 8px;font-size:12px;flex:1;';
+        [['5','5 occurrences'],['10','10 occurrences'],['15','15 occurrences'],['20','20 occurrences'],['30','30 occurrences'],['50','50 occurrences'],['custom','Custom…']].forEach(function(pair){
+          var o=document.createElement('option');o.value=pair[0];o.textContent=pair[1];
+          if(pair[0]==='10')o.selected=true;
+          cSel2.appendChild(o);
         });
-        FB.ignoreNextTaskSync=true;
-        lsSet(TK,tasks2);
-        showDropToast(lastInst.title+' — '+newInstances.length+' more occurrences added 🔁','','');
-        renderTasks();buildGrid();
+        var cCustom2=document.createElement('input');cCustom2.type='number';cCustom2.min='1';cCustom2.max='730';
+        cCustom2.value='10';cCustom2.placeholder='e.g. 25';
+        cCustom2.style.cssText='font-family:DM Sans,sans-serif;font-size:12px;background:var(--gc);border:1px solid var(--gp);border-radius:6px;padding:4px 7px;outline:none;width:70px;display:none;';
+        cSel2.addEventListener('change',function(){
+          cCustom2.style.display=cSel2.value==='custom'?'block':'none';
+          if(cSel2.value!=='custom')cCustom2.value=cSel2.value;
+        });
+        cRow2.appendChild(cLbl2);cRow2.appendChild(cSel2);cRow2.appendChild(cCustom2);
+        mini.appendChild(cRow2);
+
+        // Date row
+        var dRow2=document.createElement('div');dRow2.style.cssText='display:none;align-items:center;gap:7px;margin-bottom:10px;';
+        var dLbl2=document.createElement('span');dLbl2.style.cssText='font-size:12px;color:var(--inkl);white-space:nowrap;';dLbl2.textContent='Continue until:';
+        var dInp2=document.createElement('input');dInp2.type='date';
+        dInp2.style.cssText='font-family:DM Sans,sans-serif;font-size:12px;background:var(--gc);border:1px solid var(--gp);border-radius:6px;padding:4px 7px;outline:none;flex:1;';
+        dRow2.appendChild(dLbl2);dRow2.appendChild(dInp2);
+        mini.appendChild(dRow2);
+
+        // Confirm button
+        var confBtn2=document.createElement('button');confBtn2.className='pop-btn pri';
+        confBtn2.style.cssText='width:100%;';
+        confBtn2.textContent='Add Occurrences';
+        confBtn2.addEventListener('click',function(){
+          var tasks2=lsGet(TK);
+          var group=Object.values(tasks2).filter(function(k){return k.recurrenceGroupId===t.recurrenceGroupId;});
+          if(!group.length){showDropToast('No existing instances found.','','');return;}
+          group.sort(function(a,b){var da=parseDate(a.date),db=parseDate(b.date);return(da&&db)?(da-db):0;});
+          var lastInst=group[group.length-1];
+          var maxIdx=group.reduce(function(m,x){return Math.max(m,x.recurrenceIndex||0);},0);
+          var recTypeExt=lastInst.recurrence||t.recurrence;
+          var weekDaysExt=lastInst.recurrenceWeekDays||null;
+
+          var extCount2=0,extEndDate2='';
+          if(miniMode==='count'){
+            extCount2=parseInt(cSel2.value==='custom'?cCustom2.value:cSel2.value)||10;
+            if(extCount2<1||extCount2>730){cCustom2.style.borderColor='var(--ot)';return;}
+          } else {
+            extEndDate2=fromInputDate(dInp2.value)||'';
+            if(!extEndDate2){dInp2.style.borderColor='var(--ot)';dInp2.focus();return;}
+            var lastDate2=parseDate(lastInst.date),untilDate2=parseDate(extEndDate2);
+            if(untilDate2&&lastDate2&&untilDate2<=lastDate2){dInp2.style.borderColor='var(--ot)';dInp2.focus();return;}
+          }
+
+          var nextStart2=nextRecurrenceDate(lastInst.date,recTypeExt);
+          if(!nextStart2){showDropToast('Could not determine next date.','','');return;}
+          if(recTypeExt==='custom-weekly'&&weekDaysExt&&weekDaysExt.length){
+            var cur3=parseDate(nextStart2);var maxTry3=14;
+            while(maxTry3-->0&&weekDaysExt.indexOf(cur3.getDay())<0){cur3=addDays(cur3,1);}
+            nextStart2=fmtDate(cur3);
+          }
+          var baseExt2={
+            title:lastInst.title,date:nextStart2,time:lastInst.time||'',
+            notes:lastInst.notes||'',priority:lastInst.priority||'medium',
+            recurrence:recTypeExt,recurrenceGroupId:t.recurrenceGroupId,
+            endType:miniMode,endCount:miniMode==='count'?extCount2:null,
+            endDate:miniMode==='date'?extEndDate2:null,
+            weekDays:weekDaysExt,
+            taskEndDate:lastInst.endDate||'',taskEndTime:lastInst.endTime||''
+          };
+          var newInst2=generateRecurringInstances(baseExt2);
+          if(!newInst2.length){showDropToast('No new occurrences to add — check the date range.','','');return;}
+          newInst2.forEach(function(inst,i){
+            inst.recurrenceIndex=maxIdx+1+i;
+            inst.recurrenceEndType=lastInst.recurrenceEndType||'count';
+            inst.recurrenceEndCount=lastInst.recurrenceEndCount||null;
+            inst.recurrenceEndDate=lastInst.recurrenceEndDate||null;
+            inst.recurrenceWeekDays=weekDaysExt||null;
+            tasks2[inst.id]=inst;
+            FB.saveTask(inst.id,inst);
+          });
+          FB.ignoreNextTaskSync=true;
+          lsSet(TK,tasks2);
+          showDropToast(lastInst.title+' — '+newInst2.length+' more occurrence'+(newInst2.length!==1?'s':'')+' added 🔁','','');
+          closePopover();renderTasks();buildGrid();
+        });
+        mini.appendChild(confBtn2);
+
+        document.body.appendChild(mini);
+        activePopover=mini;
+        mini.style.position='fixed';mini.style.top='50%';mini.style.left='50%';
+        mini.style.transform='translate(-50%,-50%)';
       });
     }
 
