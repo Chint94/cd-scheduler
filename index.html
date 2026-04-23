@@ -2623,9 +2623,23 @@ function closePopover(){
   if(ov)ov.remove();
 }
 
-// Planner pill click → quick popover (lightweight)
+// Planner pill click → switch to Tasks tab, scroll to task, open edit modal
 function openTaskPopover(taskId,anchor){
-  openTaskEditModal(taskId);
+  curFilter='all';
+  switchTab('tasks');
+  setTimeout(function(){
+    // Scroll the task card into view
+    var card=document.getElementById('tc-'+taskId);
+    if(card){
+      card.scrollIntoView({behavior:'smooth',block:'center'});
+      // Brief highlight flash
+      card.style.transition='box-shadow .15s';
+      card.style.boxShadow='0 0 0 3px var(--gm)';
+      setTimeout(function(){card.style.boxShadow='';},900);
+    }
+    // Open the edit modal
+    openSimpleTaskModal(taskId);
+  },120);
 }
 
 // ── Full task edit modal ───────────────────────────────────────────────────────
@@ -3043,11 +3057,17 @@ function openTaskEditModal(taskId, editScope){
     var gotoBtn=document.createElement('button');gotoBtn.className='pop-goto';
     gotoBtn.textContent='Open in Tasks tab →';
     gotoBtn.addEventListener('click',function(){
+      closePopover();
+      curFilter='all';
       switchTab('tasks');
       setTimeout(function(){
-        var el=document.getElementById('tt-'+taskId);
-        if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus();}
-      },100);
+        var card=document.getElementById('tc-'+taskId);
+        if(card){card.scrollIntoView({behavior:'smooth',block:'center'});
+          card.style.transition='box-shadow .15s';
+          card.style.boxShadow='0 0 0 3px var(--gm)';
+          setTimeout(function(){card.style.boxShadow='';},900);
+        }
+      },120);
     });
     modal.appendChild(gotoBtn);
   }
@@ -3234,7 +3254,7 @@ function taskStatus(t){
 
 document.getElementById('addTaskBtn').addEventListener('click',function(){
   var tasks=lsGet(TK);var id=genId();
-  tasks[id]={id:id,title:'',date:fmtDate(new Date()),time:'',endDate:'',endTime:'',notes:'',done:false,priority:'medium',created:Date.now()};
+  tasks[id]={id:id,title:'',date:'',time:'',endDate:'',endTime:'',notes:'',done:false,priority:'medium',created:Date.now()};
   lsSet(TK,tasks);
   FB.saveTask(id,tasks[id]);
   renderTasks();
@@ -3833,11 +3853,18 @@ function sameDay(a,b){
 }
 
 function openTaskFromDashboard(taskId){
+  curFilter='all';
   switchTab('tasks');
   setTimeout(function(){
-    var el=document.getElementById('tt-'+taskId);
-    if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus();}
-  },90);
+    var card=document.getElementById('tc-'+taskId);
+    if(card){
+      card.scrollIntoView({behavior:'smooth',block:'center'});
+      card.style.transition='box-shadow .15s';
+      card.style.boxShadow='0 0 0 3px var(--gm)';
+      setTimeout(function(){card.style.boxShadow='';},900);
+    }
+    openSimpleTaskModal(taskId);
+  },120);
 }
 
 function dashboardTaskCard(t, isOverdue){
@@ -4188,28 +4215,30 @@ function renderTasks(){
   var tasks=lsGet(TK);
   var list=document.getElementById('tasksList');
   var po={high:0,medium:1,low:2};
-  // Build a numeric sort key: milliseconds of the task's datetime.
-  // Tasks with no date go to the very end.
-  // Done tasks always sink below undone tasks.
+  // Sort key: undated undone tasks → top (by created desc), dated → chronological, done → bottom
   function taskSortKey(t){
-    if(!t.date)return 9999999999999; // no date → end
+    if(!t.date || !parseDate(t.date)) return -1; // no date → float to top
     var d=parseDate(t.date);
-    if(!d)return 9999999999999;
     var h=0,m=0;
     if(t.time){var tp=t.time.split(':');h=parseInt(tp[0])||0;m=parseInt(tp[1])||0;}
     return new Date(d.getFullYear(),d.getMonth(),d.getDate(),h,m).getTime();
   }
 
   var items=Object.values(tasks).sort(function(a,b){
-    // 1. Done tasks always go below undone tasks
-    if(a.done!==b.done)return a.done?1:-1;
-    // 2. Sort chronologically by date + time
+    // 1. Done tasks always sink to the bottom
+    if(a.done!==b.done) return a.done?1:-1;
     var ka=taskSortKey(a), kb=taskSortKey(b);
-    if(ka!==kb)return ka-kb;
-    // 3. Within same datetime: recurring instances in order
+    // 2. Both undated → newest created first
+    if(ka===-1 && kb===-1) return (b.created||0)-(a.created||0);
+    // 3. Undated floats above dated
+    if(ka===-1) return -1;
+    if(kb===-1) return 1;
+    // 4. Both dated → chronological
+    if(ka!==kb) return ka-kb;
+    // 5. Same datetime: recurring instances in order
     if(a.recurrenceGroupId&&b.recurrenceGroupId&&a.recurrenceGroupId===b.recurrenceGroupId)
       return (a.recurrenceIndex||0)-(b.recurrenceIndex||0);
-    // 4. Tiebreak by priority
+    // 6. Tiebreak by priority
     return (po[a.priority]||1)-(po[b.priority]||1);
   });
   if(curFilter!=='all'){
@@ -4292,7 +4321,8 @@ function renderTasks(){
         freqVal+=' · '+t.recurrenceWeekDays.map(function(d){return['Su','Mo','Tu','We','Th','Fr','Sa'][d];}).join(', ');
       }
       var instInfo='Instance '+((t.recurrenceIndex||0)+1);
-      if(t.recurrenceEndType==='forever') instInfo+=' (forever)';
+      if(t.isSpecificDate) instInfo+=' · one-off date';
+      else if(t.recurrenceEndType==='forever') instInfo+=' (forever)';
       else if(t.recurrenceEndType==='date'&&t.recurrenceEndDate) instInfo+=' until '+t.recurrenceEndDate;
       else if(t.recurrenceEndCount) instInfo+=' of '+t.recurrenceEndCount;
       detailRows+='<div class="task-detail-row">'+
@@ -4604,19 +4634,28 @@ function openSimpleTaskModal(taskId){
     var extLbl=document.createElement('div');extLbl.className='stm-lbl';extLbl.textContent='Add Future Occurrences';
     var extPanel=document.createElement('div');extPanel.className='stm-extend-panel';
 
-    var extModeRow=document.createElement('div');extModeRow.style.cssText='display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap';
+    // 3 mode buttons
+    var extModeRow=document.createElement('div');extModeRow.style.cssText='display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap';
     var extBtnCount=document.createElement('button');extBtnCount.type='button';extBtnCount.className='stm-end-type-btn active';extBtnCount.textContent='# of occurrences';
     var extBtnDate=document.createElement('button');extBtnDate.type='button';extBtnDate.className='stm-end-type-btn';extBtnDate.textContent='Until date';
+    var extBtnSpecific=document.createElement('button');extBtnSpecific.type='button';extBtnSpecific.className='stm-end-type-btn';extBtnSpecific.textContent='Specific date';
     var extMode='count';
     function setExtMode2(m){
       extMode=m;
-      extBtnCount.classList.toggle('active',m==='count');extBtnDate.classList.toggle('active',m==='date');
-      extCountRow.style.display=m==='count'?'flex':'none';extDateRow2.style.display=m==='date'?'flex':'none';
+      extBtnCount.classList.toggle('active',m==='count');
+      extBtnDate.classList.toggle('active',m==='date');
+      extBtnSpecific.classList.toggle('active',m==='specific');
+      extCountRow.style.display=m==='count'?'flex':'none';
+      extDateRow2.style.display=m==='date'?'flex':'none';
+      extSpecificRow.style.display=m==='specific'?'block':'none';
+      extConfirm.textContent=m==='specific'?'➕ Add This Date':'➕ Add Occurrences';
     }
     extBtnCount.addEventListener('click',function(){setExtMode2('count');});
     extBtnDate.addEventListener('click',function(){setExtMode2('date');});
-    extModeRow.appendChild(extBtnCount);extModeRow.appendChild(extBtnDate);
+    extBtnSpecific.addEventListener('click',function(){setExtMode2('specific');});
+    extModeRow.appendChild(extBtnCount);extModeRow.appendChild(extBtnDate);extModeRow.appendChild(extBtnSpecific);
 
+    // Count row
     var extCountRow=document.createElement('div');extCountRow.style.cssText='display:flex;align-items:center;gap:8px';
     var extCountLbl=document.createElement('span');extCountLbl.style.cssText='font-size:12px;color:var(--inkl);white-space:nowrap';extCountLbl.textContent='Add:';
     var extCountSel=document.createElement('select');extCountSel.className='stm-freq-select';extCountSel.style.flex='1';
@@ -4628,13 +4667,34 @@ function openSimpleTaskModal(taskId){
     extCountSel.addEventListener('change',function(){extCountCustom.style.display=extCountSel.value==='custom'?'block':'none';if(extCountSel.value!=='custom')extCountCustom.value=extCountSel.value;});
     extCountRow.appendChild(extCountLbl);extCountRow.appendChild(extCountSel);extCountRow.appendChild(extCountCustom);
 
+    // Until-date row
     var extDateRow2=document.createElement('div');extDateRow2.style.cssText='display:none;align-items:center;gap:8px';
     var extDateLbl2=document.createElement('span');extDateLbl2.style.cssText='font-size:12px;color:var(--inkl);white-space:nowrap';extDateLbl2.textContent='Until:';
     var extDateInp2=document.createElement('input');extDateInp2.type='date';extDateInp2.className='stm-inp';extDateInp2.style.flex='1';
     extDateRow2.appendChild(extDateLbl2);extDateRow2.appendChild(extDateInp2);
 
+    // Specific date row
+    var extSpecificRow=document.createElement('div');extSpecificRow.style.display='none';
+    var extSpecificDesc=document.createElement('div');extSpecificDesc.style.cssText='font-size:12px;color:var(--inkl);margin-bottom:7px;line-height:1.5';
+    extSpecificDesc.textContent='Add a one-off occurrence on an exact date (inherits this task\'s time and details):';
+    // Date picker
+    var extSpecificDateRow=document.createElement('div');extSpecificDateRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px';
+    var extSpecificDateLbl=document.createElement('span');extSpecificDateLbl.style.cssText='font-size:12px;color:var(--inkl);white-space:nowrap;min-width:40px';extSpecificDateLbl.textContent='Date:';
+    var extSpecificDateInp=document.createElement('input');extSpecificDateInp.type='date';extSpecificDateInp.className='stm-inp';extSpecificDateInp.style.flex='1';
+    extSpecificDateRow.appendChild(extSpecificDateLbl);extSpecificDateRow.appendChild(extSpecificDateInp);
+    // Time picker (optional override)
+    var extSpecificTimeRow=document.createElement('div');extSpecificTimeRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:6px';
+    var extSpecificTimeLbl=document.createElement('span');extSpecificTimeLbl.style.cssText='font-size:12px;color:var(--inkl);white-space:nowrap;min-width:40px';extSpecificTimeLbl.textContent='Time:';
+    var extSpecificTimeInp=document.createElement('input');extSpecificTimeInp.type='time';extSpecificTimeInp.className='stm-inp';extSpecificTimeInp.style.flex='1';
+    extSpecificTimeInp.value=t.time||'';
+    extSpecificTimeRow.appendChild(extSpecificTimeLbl);extSpecificTimeRow.appendChild(extSpecificTimeInp);
+    // Note
+    var extSpecificNote=document.createElement('div');extSpecificNote.style.cssText='font-size:11px;color:var(--inkl);font-style:italic';
+    extSpecificNote.textContent='This adds a single extra occurrence outside the regular recurrence pattern.';
+    extSpecificRow.appendChild(extSpecificDesc);extSpecificRow.appendChild(extSpecificDateRow);extSpecificRow.appendChild(extSpecificTimeRow);extSpecificRow.appendChild(extSpecificNote);
+
     var extConfirm=document.createElement('button');extConfirm.type='button';extConfirm.className='stm-btn save';
-    extConfirm.style.cssText='width:100%;margin-top:8px;font-size:12px;padding:9px';
+    extConfirm.style.cssText='width:100%;margin-top:10px;font-size:12px;padding:9px';
     extConfirm.textContent='➕ Add Occurrences';
     extConfirm.addEventListener('click',function(){
       var tasks2=lsGet(TK);
@@ -4643,6 +4703,46 @@ function openSimpleTaskModal(taskId){
       group.sort(function(a,b){var da=parseDate(a.date),db=parseDate(b.date);return(da&&db)?(da-db):0;});
       var lastInst=group[group.length-1];
       var maxIdx=group.reduce(function(m,x){return Math.max(m,x.recurrenceIndex||0);},0);
+
+      // ── Specific date mode ──────────────────────────────────────────────
+      if(extMode==='specific'){
+        var specDateStr=fromInputDate(extSpecificDateInp.value)||'';
+        if(!specDateStr){
+          extSpecificDateInp.style.borderColor='var(--ot)';
+          extSpecificDateInp.focus();return;
+        }
+        extSpecificDateInp.style.borderColor='';
+        var specTimeStr=extSpecificTimeInp.value||t.time||'';
+        var newSpecId=genId();
+        var specInst={
+          id:newSpecId,
+          title:lastInst.title,
+          date:specDateStr,
+          time:specTimeStr,
+          endDate:lastInst.endDate||'',
+          endTime:lastInst.endTime||'',
+          notes:lastInst.notes||'',
+          done:false,
+          priority:lastInst.priority||'medium',
+          recurrence:lastInst.recurrence,
+          recurrenceGroupId:t.recurrenceGroupId,
+          recurrenceIndex:maxIdx+1,
+          recurrenceEndType:lastInst.recurrenceEndType||'count',
+          recurrenceEndCount:lastInst.recurrenceEndCount||null,
+          recurrenceEndDate:lastInst.recurrenceEndDate||null,
+          recurrenceWeekDays:lastInst.recurrenceWeekDays||null,
+          isSpecificDate:true,
+          created:Date.now()
+        };
+        tasks2[newSpecId]=specInst;
+        FB.saveTask(newSpecId,specInst);
+        FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);
+        showDropToast(lastInst.title+' — 1 specific occurrence added on '+specDateStr+' 📅','','');
+        closePopover();renderTasks();buildGrid();
+        return;
+      }
+
+      // ── Count / Until-date modes ────────────────────────────────────────
       var recTypeExt=lastInst.recurrence||t.recurrence;
       var weekDaysExt=lastInst.recurrenceWeekDays||null;
       var extCount3=0,extEndDate3='';
@@ -4651,9 +4751,10 @@ function openSimpleTaskModal(taskId){
         if(extCount3<1||extCount3>730)return;
       } else {
         extEndDate3=fromInputDate(extDateInp2.value)||'';
-        if(!extEndDate3){extDateInp2.focus();return;}
+        if(!extEndDate3){extDateInp2.style.borderColor='var(--ot)';extDateInp2.focus();return;}
+        extDateInp2.style.borderColor='';
         var ld3=parseDate(lastInst.date),ud3=parseDate(extEndDate3);
-        if(ud3&&ld3&&ud3<=ld3){extDateInp2.focus();return;}
+        if(ud3&&ld3&&ud3<=ld3){extDateInp2.style.borderColor='var(--ot)';extDateInp2.focus();return;}
       }
       var nextStart3=nextRecurrenceDate(lastInst.date,recTypeExt);
       if(!nextStart3){alert('Could not determine next date.');return;}
@@ -4669,7 +4770,7 @@ function openSimpleTaskModal(taskId){
       closePopover();renderTasks();buildGrid();
     });
 
-    extPanel.appendChild(extModeRow);extPanel.appendChild(extCountRow);extPanel.appendChild(extDateRow2);extPanel.appendChild(extConfirm);
+    extPanel.appendChild(extModeRow);extPanel.appendChild(extCountRow);extPanel.appendChild(extDateRow2);extPanel.appendChild(extSpecificRow);extPanel.appendChild(extConfirm);
     extSec.appendChild(extLbl);extSec.appendChild(extPanel);
     body.appendChild(extSec);
 
