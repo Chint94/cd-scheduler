@@ -511,7 +511,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 
 /* ── Custom weekly day pills ── */
 .day-pills{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
-.day-pill{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--gp);
+.day-pill{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--gp);
   background:var(--gc);font-family:DM Sans,sans-serif;font-size:11px;font-weight:600;
   color:var(--inkl);cursor:pointer;display:flex;align-items:center;justify-content:center;
   transition:all .15s;-webkit-tap-highlight-color:transparent;flex-shrink:0}
@@ -2683,7 +2683,7 @@ function openTaskEditModal(taskId, editScope){
     editDayPickWrap.appendChild(editDayPickLbl);
     var editDayPillsRow=document.createElement('div');editDayPillsRow.className='day-pills';
     var EDIT_DAY_ORDER=[1,2,3,4,5,6,0];
-    var EDIT_DAY_LABELS=['M','T','W','T','F','S','S'];
+    var EDIT_DAY_LABELS=['Mo','Tu','We','Th','Fr','Sa','Su'];
     var editSelectedDays=(t.recurrenceWeekDays&&t.recurrenceWeekDays.length)
       ? t.recurrenceWeekDays.slice()
       : (t.date?[parseDate(t.date).getDay()]:[1]);
@@ -3291,7 +3291,7 @@ function openRecurringSetupModal(existingGroupId){
   var DAY_NAMES=['Su','Mo','Tu','We','Th','Fr','Sa'];
   // JS getDay(): 0=Sun,1=Mon,...6=Sat
   var DAY_ORDER=[1,2,3,4,5,6,0]; // Mon first
-  var DAY_LABELS=['M','T','W','T','F','S','S'];
+  var DAY_LABELS=['Mo','Tu','We','Th','Fr','Sa','Su'];
   var selectedDays=(baseTask&&baseTask.recurrenceWeekDays)
     ? baseTask.recurrenceWeekDays.slice()
     : [];
