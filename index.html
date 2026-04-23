@@ -270,7 +270,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 /* Thin priority stripe at top */
 .task-stripe{height:4px;width:100%}
 /* Main row */
-.task-top{display:flex;align-items:center;gap:10px;padding:11px 14px}
+.task-top{display:flex;align-items:flex-start;gap:10px;padding:12px 14px}
 .task-chk{width:18px;height:18px;border-radius:5px;border:2px solid var(--gm);cursor:pointer;
   flex-shrink:0;appearance:none;background:white;transition:all .15s}
 .task-chk:checked{background:var(--gm);border-color:var(--gm);
@@ -283,15 +283,27 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   color:var(--ink);background:transparent;border:none;outline:none;padding:0}
 .task-ti-input::placeholder{color:rgba(139,105,20,0.38);font-weight:400}
 .task-done .task-ti,.task-done .task-ti-input{text-decoration:line-through;color:var(--inkl)}
-/* Meta row: date pill + badges */
-.task-meta-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+/* Meta row: badges */
+.task-meta-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px}
 .task-date-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;
   color:var(--inkm);background:var(--gc);border:1px solid var(--gp);
   border-radius:20px;padding:2px 9px;white-space:nowrap}
 .task-date-pill.overdue-pill{background:#FFE0E0;color:var(--ot);border-color:rgba(232,82,82,.3)}
 .task-date-pill.today-pill{background:rgba(232,184,75,.15);color:var(--gd);border-color:rgba(196,148,42,.3)}
-.task-notes-preview{font-size:11px;color:var(--inkl);white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis;max-width:220px;font-style:italic}
+/* Detail rows grid */
+.task-details{display:flex;flex-direction:column;gap:4px;margin-top:4px}
+.task-detail-row{display:flex;align-items:flex-start;gap:6px;font-size:12px;color:var(--inkm);line-height:1.45;flex-wrap:wrap}
+.task-detail-lbl{font-size:10px;font-weight:700;color:var(--inkl);text-transform:uppercase;
+  letter-spacing:.5px;min-width:52px;flex-shrink:0;padding-top:1px}
+.task-detail-val{flex:1;min-width:0;font-size:12px;color:var(--ink);font-weight:500;word-break:break-word}
+.task-detail-val.muted{color:var(--inkl);font-style:italic}
+.task-notes-full{font-size:12px;color:var(--inkl);line-height:1.55;white-space:pre-wrap;word-break:break-word;
+  margin-top:2px;padding-top:6px;border-top:1px dashed var(--gp)}
+@media(max-width:480px){
+  .task-detail-lbl{min-width:44px;font-size:9px}
+  .task-detail-val{font-size:11px}
+  .task-notes-full{font-size:11px}
+}
 /* Actions */
 .task-acts{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .bni{background:transparent;border:none;cursor:pointer;padding:6px;border-radius:6px;
@@ -4233,29 +4245,75 @@ function renderTasks(){
     // Priority stripe colour
     var stripeColor=s==='overdue'?'var(--ot)':(pc[t.priority]||pc.medium);
 
-    // Date pill text
-    var datePillText='';
-    var datePillClass='task-date-pill';
-    if(t.date){
-      var dp=parseDate(t.date);
-      if(dp){
-        datePillText='📅 '+pad(dp.getDate())+'/'+pad(dp.getMonth()+1)+'/'+dp.getFullYear();
-        if(t.time) datePillText+=' '+t.time;
-      }
-    }
-    if(s==='overdue') datePillClass+=' overdue-pill';
-    else if(s==='today') datePillClass+=' today-pill';
-
-    // Status badge
+    // Status badges
     var badge='';
     if(s==='overdue') badge='<span class="tbadge bov">Overdue</span>';
     else if(s==='today') badge='<span class="tbadge btd">Today</span>';
     else if(s==='done') badge='<span class="tbadge bdn">✓ Done</span>';
     if(t.recurrence) badge+='<span class="tbadge brec">🔁 '+recurrenceLabel(t.recurrence)+'</span>';
 
-    // Notes preview
-    var notesPreview='';
-    if(t.notes&&t.notes.trim()) notesPreview='<div class="task-notes-preview">'+t.notes.trim().replace(/</g,'&lt;').slice(0,60)+(t.notes.length>60?'…':'')+'</div>';
+    // Build detail rows
+    var detailRows='';
+
+    // Start date + time
+    if(t.date){
+      var dp=parseDate(t.date);
+      if(dp){
+        var startVal=pad(dp.getDate())+'/'+pad(dp.getMonth()+1)+'/'+dp.getFullYear();
+        if(t.time) startVal+=' at '+t.time;
+        var startClass=(s==='overdue')?'task-date-pill overdue-pill':(s==='today')?'task-date-pill today-pill':'task-date-pill';
+        detailRows+='<div class="task-detail-row">'+
+          '<span class="task-detail-lbl">Start</span>'+
+          '<span class="'+startClass+'">📅 '+startVal+'</span>'+
+        '</div>';
+      }
+    }
+
+    // End date + time
+    if(t.endDate||t.endTime){
+      var endVal='';
+      if(t.endDate){
+        var edp=parseDate(t.endDate);
+        if(edp) endVal=pad(edp.getDate())+'/'+pad(edp.getMonth()+1)+'/'+edp.getFullYear();
+      }
+      if(t.endTime) endVal+=(endVal?' at ':'')+t.endTime;
+      if(endVal){
+        detailRows+='<div class="task-detail-row">'+
+          '<span class="task-detail-lbl">End</span>'+
+          '<span class="task-detail-val">🏁 '+endVal+'</span>'+
+        '</div>';
+      }
+    }
+
+    // Frequency (recurring)
+    if(t.recurrence){
+      var freqVal=recurrenceLabel(t.recurrence);
+      if(t.recurrenceWeekDays&&t.recurrenceWeekDays.length){
+        freqVal+=' · '+t.recurrenceWeekDays.map(function(d){return['Su','Mo','Tu','We','Th','Fr','Sa'][d];}).join(', ');
+      }
+      var instInfo='Instance '+((t.recurrenceIndex||0)+1);
+      if(t.recurrenceEndType==='forever') instInfo+=' (forever)';
+      else if(t.recurrenceEndType==='date'&&t.recurrenceEndDate) instInfo+=' until '+t.recurrenceEndDate;
+      else if(t.recurrenceEndCount) instInfo+=' of '+t.recurrenceEndCount;
+      detailRows+='<div class="task-detail-row">'+
+        '<span class="task-detail-lbl">Repeat</span>'+
+        '<span class="task-detail-val">🔁 '+freqVal+' <span style="font-size:10px;color:var(--inkl)">('+instInfo+')</span></span>'+
+      '</div>';
+    }
+
+    // Priority
+    var priEmoji=t.priority==='high'?'🔴':t.priority==='low'?'🟢':'🟡';
+    var priLabel=(t.priority||'medium').charAt(0).toUpperCase()+(t.priority||'medium').slice(1);
+    detailRows+='<div class="task-detail-row">'+
+      '<span class="task-detail-lbl">Priority</span>'+
+      '<span class="task-detail-val">'+priEmoji+' '+priLabel+'</span>'+
+    '</div>';
+
+    // Notes — shown fully
+    var notesSection='';
+    if(t.notes&&t.notes.trim()){
+      notesSection='<div class="task-notes-full">'+t.notes.trim().replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>';
+    }
 
     card.innerHTML=
       '<div class="task-stripe" style="background:'+stripeColor+'"></div>'+
@@ -4263,11 +4321,9 @@ function renderTasks(){
         '<input type="checkbox" class="task-chk"'+(t.done?' checked':'')+' id="chk-'+t.id+'">'+
         '<div class="task-bd'+(t.done?' task-done':'')+'">'+
           '<div class="task-ti">'+(t.title||'<span style="color:rgba(139,105,20,.38);font-weight:400">Untitled task</span>')+'</div>'+
-          '<div class="task-meta-row">'+
-            (datePillText?'<span class="'+datePillClass+'">'+datePillText+'</span>':'')+
-            badge+
-          '</div>'+
-          notesPreview+
+          '<div class="task-meta-row">'+badge+'</div>'+
+          '<div class="task-details">'+detailRows+'</div>'+
+          notesSection+
           // Hidden legacy inputs for JS compat
           '<input type="hidden" id="tt-'+t.id+'" class="task-ti-hidden" value="'+((t.title||'').replace(/"/g,'&quot;'))+'">'+
           '<input type="date" class="task-di" style="display:none" value="'+toInputDate(t.date)+'">'+
