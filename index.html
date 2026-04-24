@@ -1319,6 +1319,7 @@ footer strong{color:rgba(255,253,245,0.85)}
   color:white;border-radius:999px;
   padding:2px 9px;letter-spacing:.03em;
   vertical-align:middle;flex-shrink:0;
+  margin-left:4px;
 }
 </style>
 </head>
@@ -4381,6 +4382,13 @@ function renderTasks(){
     else if(s==='done') badge='<span class="tbadge bdn">✓ Done</span>';
     if(t.recurrence) badge+='<span class="tbadge brec">🔁 '+recurrenceLabel(t.recurrence)+'</span>';
 
+    // XP chip — only in Advanced mode
+    var xpChip='';
+    if(gmIsOn()){
+      var xpVal=(GAMI_XP&&GAMI_XP[t.priority||'medium'])||0;
+      xpChip='<span class="task-xp-chip">⚡ '+xpVal+' XP</span>';
+    }
+
     // Build detail rows
     var detailRows='';
 
@@ -4451,7 +4459,7 @@ function renderTasks(){
         '<input type="checkbox" class="task-chk"'+(t.done?' checked':'')+' id="chk-'+t.id+'">'+
         '<div class="task-bd'+(t.done?' task-done':'')+'">'+
           '<div class="task-ti">'+(t.title||'<span style="color:rgba(139,105,20,.38);font-weight:400">Untitled task</span>')+'</div>'+
-          '<div class="task-meta-row">'+badge+'</div>'+
+          '<div class="task-meta-row">'+badge+xpChip+'</div>'+
           '<div class="task-details">'+detailRows+'</div>'+
           notesSection+
           // Hidden legacy inputs for JS compat
