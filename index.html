@@ -4386,6 +4386,7 @@ function renderTasks(){
     var xpChip='';
     if(gmIsOn()){
       var xpVal=(GAMI_XP&&GAMI_XP[t.priority||'medium'])||0;
+      if(t.date){var _due=parseDate(t.date);if(_due){var _now=new Date();if(sameDay(_due,_now))xpVal+=GAMI_XP.today||0;else if(_due>_now)xpVal+=GAMI_XP.early||0;}}
       xpChip='<span class="task-xp-chip">⚡ '+xpVal+' XP</span>';
     }
 
