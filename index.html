@@ -1321,6 +1321,178 @@ footer strong{color:rgba(255,253,245,0.85)}
   vertical-align:middle;flex-shrink:0;
   margin-left:4px;
 }
+
+/* ═══════════════════════════════════════════════
+   HOW-TO GUIDE — Advanced tab
+═══════════════════════════════════════════════ */
+.htg-wrap{margin-bottom:18px}
+
+/* ── Master toggle bar ── */
+.htg-master{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:10px;padding:13px 16px;
+  background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 100%);
+  border-radius:12px;cursor:pointer;
+  box-shadow:0 4px 16px rgba(139,105,20,.30);
+  user-select:none;
+  transition:box-shadow .2s;
+}
+.htg-master:hover{box-shadow:0 6px 22px rgba(139,105,20,.40)}
+.htg-master-left{display:flex;align-items:center;gap:10px}
+.htg-master-icon{font-size:22px;line-height:1}
+.htg-master-text{display:flex;flex-direction:column;gap:1px}
+.htg-master-title{
+  font-family:'Playfair Display',serif;
+  font-size:16px;font-weight:700;color:white;line-height:1.2
+}
+.htg-master-sub{font-size:11px;color:rgba(255,253,245,.78);line-height:1.3}
+.htg-master-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.htg-expand-all{
+  font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;
+  background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.30);
+  border-radius:6px;padding:4px 10px;color:white;cursor:pointer;
+  transition:background .15s;white-space:nowrap;
+}
+.htg-expand-all:hover{background:rgba(255,255,255,.28)}
+.htg-master-chevron{
+  font-size:16px;color:white;transition:transform .3s ease;
+  display:inline-block;line-height:1;
+}
+.htg-master-chevron.open{transform:rotate(180deg)}
+
+/* ── Guide cards container ── */
+.htg-cards{
+  display:flex;flex-direction:column;gap:0;
+  overflow:hidden;
+  max-height:0;
+  transition:max-height .4s cubic-bezier(0.4,0,0.2,1),
+             opacity .3s ease,
+             margin-top .3s ease;
+  opacity:0;
+  margin-top:0;
+}
+.htg-cards.open{
+  max-height:9000px;
+  opacity:1;
+  margin-top:10px;
+}
+
+/* ── Individual guide card ── */
+.htg-card{
+  background:white;
+  border:1.5px solid var(--gp);
+  border-radius:12px;
+  margin-bottom:8px;
+  box-shadow:0 2px 8px var(--sg);
+  overflow:hidden;
+  transition:border-color .2s,box-shadow .2s;
+}
+.htg-card:hover{border-color:var(--gm)}
+.htg-card:last-child{margin-bottom:0}
+
+/* ── Card header (clickable) ── */
+.htg-card-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 16px;cursor:pointer;gap:10px;
+  user-select:none;
+}
+.htg-card-head-left{display:flex;align-items:center;gap:10px}
+.htg-card-badge{
+  width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--gc) 0%,var(--gp) 100%);
+  border:1.5px solid var(--gp);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+}
+.htg-card-title{
+  font-family:'Playfair Display',serif;
+  font-size:14px;font-weight:700;color:var(--gd);line-height:1.2;
+}
+.htg-card-tagline{font-size:11px;color:var(--inkl);margin-top:1px;line-height:1.3}
+.htg-card-chev{
+  font-size:13px;color:var(--inkl);
+  transition:transform .3s ease;flex-shrink:0;
+}
+.htg-card-chev.open{transform:rotate(180deg)}
+
+/* ── Card body ── */
+.htg-card-body{
+  max-height:0;overflow:hidden;
+  transition:max-height .35s cubic-bezier(0.4,0,0.2,1),
+             padding .25s ease;
+  padding:0 16px;
+}
+.htg-card-body.open{
+  max-height:1200px;
+  padding:0 16px 16px;
+}
+
+/* ── Content inside each card ── */
+.htg-section-lbl{
+  font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--gm);
+  margin:12px 0 6px;
+}
+.htg-section-lbl:first-child{margin-top:4px}
+.htg-divider{height:1px;background:var(--gp);margin:10px 0}
+.htg-steps{display:flex;flex-direction:column;gap:6px}
+.htg-step{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:8px 10px;
+  background:var(--gc);border-radius:8px;
+  border-left:3px solid var(--gm);
+  font-size:12px;color:var(--inkm);line-height:1.5;
+}
+.htg-step-num{
+  min-width:20px;height:20px;border-radius:50%;
+  background:var(--gm);color:white;
+  font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;margin-top:1px;
+}
+.htg-step strong{color:var(--gd)}
+.htg-tips{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.htg-tip{
+  display:flex;align-items:flex-start;gap:8px;
+  font-size:12px;color:var(--inkm);line-height:1.5;
+  padding:6px 10px;
+  background:rgba(232,184,75,.08);
+  border-radius:7px;border:1px solid rgba(232,184,75,.20);
+}
+.htg-tip-icon{font-size:13px;flex-shrink:0;margin-top:1px}
+.htg-pill-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.htg-pill{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:11px;font-weight:600;
+  padding:3px 10px;border-radius:999px;
+  background:var(--gc);border:1.5px solid var(--gp);color:var(--gd);
+}
+
+/* ── Dark mode overrides ── */
+body.adv-mode .htg-card{background:#1A1A1A;border-color:rgba(196,148,42,.20)}
+body.adv-mode .htg-card:hover{border-color:rgba(196,148,42,.50)}
+body.adv-mode .htg-card-badge{background:#141414;border-color:rgba(196,148,42,.25)}
+body.adv-mode .htg-card-title{color:var(--gb)}
+body.adv-mode .htg-card-tagline{color:var(--inkl)}
+body.adv-mode .htg-card-chev{color:var(--inkl)}
+body.adv-mode .htg-section-lbl{color:var(--gm)}
+body.adv-mode .htg-divider{background:rgba(196,148,42,.18)}
+body.adv-mode .htg-step{background:#141414;border-left-color:var(--gm);color:var(--inkm)}
+body.adv-mode .htg-step strong{color:var(--gb)}
+body.adv-mode .htg-tip{background:rgba(196,148,42,.07);border-color:rgba(196,148,42,.18);color:var(--inkm)}
+body.adv-mode .htg-pill{background:#141414;border-color:rgba(196,148,42,.25);color:var(--gb)}
+body.adv-mode .htg-expand-all{background:rgba(255,255,255,.15)}
+
+/* ── Mobile tweaks ── */
+@media(max-width:600px){
+  .htg-master{padding:11px 13px}
+  .htg-master-title{font-size:14px}
+  .htg-card-head{padding:11px 13px}
+  .htg-card-body.open{padding:0 13px 13px}
+  .htg-card-badge{width:32px;height:32px;font-size:16px;border-radius:8px}
+  .htg-step{padding:7px 9px;font-size:11.5px}
+  .htg-tip{padding:5px 9px;font-size:11.5px}
+}
 </style>
 </head>
 <body>
@@ -1552,6 +1724,258 @@ footer strong{color:rgba(255,253,245,0.85)}
 <div id="tab-rewards" class="tab-panel">
   <div class="sw">
     <div class="sh"><div class="st">⚡ Advanced</div></div>
+
+    <!-- ══ HOW-TO GUIDE ══ -->
+    <div class="htg-wrap" id="htgWrap">
+
+      <!-- Master toggle bar -->
+      <div class="htg-master" id="htgMaster" onclick="htgToggleMaster()">
+        <div class="htg-master-left">
+          <div class="htg-master-icon">📖</div>
+          <div class="htg-master-text">
+            <div class="htg-master-title">How-To Guide</div>
+            <div class="htg-master-sub">New here? Learn how every section works — tap to expand</div>
+          </div>
+        </div>
+        <div class="htg-master-right">
+          <button class="htg-expand-all" id="htgExpandAllBtn" onclick="event.stopPropagation();htgToggleAll()">Expand all</button>
+          <span class="htg-master-chevron" id="htgMasterChev">▼</span>
+        </div>
+      </div>
+
+      <!-- Guide cards (hidden until master is opened) -->
+      <div class="htg-cards" id="htgCards">
+
+        <!-- 1. Dashboard -->
+        <div class="htg-card">
+          <div class="htg-card-head" onclick="htgToggleCard(this)">
+            <div class="htg-card-head-left">
+              <div class="htg-card-badge">📊</div>
+              <div>
+                <div class="htg-card-title">Dashboard</div>
+                <div class="htg-card-tagline">Your daily overview — stats, week strip &amp; task panels</div>
+              </div>
+            </div>
+            <span class="htg-card-chev">▼</span>
+          </div>
+          <div class="htg-card-body">
+            <div class="htg-section-lbl">Stat Cards (top row)</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">1</div><div>The four cards — <strong>Due Today</strong>, <strong>This Week</strong>, <strong>Overdue</strong> and <strong>Completed</strong> — are live counters that update whenever you add or finish a task.</div></div>
+              <div class="htg-step"><div class="htg-step-num">2</div><div><strong>Tap any stat card</strong> to jump straight to the Tasks tab with that filter already applied. For example, tapping "Overdue" shows only your overdue tasks.</div></div>
+              <div class="htg-step"><div class="htg-step-num">3</div><div>A gold banner appears at the top of Tasks when you arrive via a stat card. Hit <strong>✕ Clear filter</strong> to return to the full list.</div></div>
+            </div>
+            <div class="htg-divider"></div>
+            <div class="htg-section-lbl">This Week Strip</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">4</div><div><strong>Tap any day card</strong> (Mon–Sun) to filter the "Due this week" panel below it — only tasks due on that specific day are shown. The card highlights in gold.</div></div>
+              <div class="htg-step"><div class="htg-step-num">5</div><div>The panel title renames to <strong>"Due on Thu, 24 Apr"</strong>. Tap the same day card again to clear the filter and restore the full week view.</div></div>
+              <div class="htg-step"><div class="htg-step-num">6</div><div>Today's card is always highlighted with a gold gradient so you can find it at a glance.</div></div>
+            </div>
+            <div class="htg-divider"></div>
+            <div class="htg-section-lbl">Score Ring &amp; Charts</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">7</div><div>The <strong>score ring</strong> shows your overall completion rate as a percentage. The bar charts show how many tasks fall on each day of the current week.</div></div>
+            </div>
+            <div class="htg-tips">
+              <div class="htg-tip"><div class="htg-tip-icon">💡</div><div>The Dashboard updates in real time — every task you tick off is reflected immediately without needing a page refresh.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Planner -->
+        <div class="htg-card">
+          <div class="htg-card-head" onclick="htgToggleCard(this)">
+            <div class="htg-card-head-left">
+              <div class="htg-card-badge">📅</div>
+              <div>
+                <div class="htg-card-title">Planner</div>
+                <div class="htg-card-tagline">Hour-by-hour schedule across the full week</div>
+              </div>
+            </div>
+            <span class="htg-card-chev">▼</span>
+          </div>
+          <div class="htg-card-body">
+            <div class="htg-section-lbl">Navigating weeks</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">1</div><div>Use the <strong>◀ ▶ arrows</strong> in the control bar to move backward or forward one week at a time. The date label in the centre shows the active week range.</div></div>
+              <div class="htg-step"><div class="htg-step-num">2</div><div>Type directly into the <strong>date input</strong> field to jump to any specific week instantly.</div></div>
+            </div>
+            <div class="htg-divider"></div>
+            <div class="htg-section-lbl">Adding &amp; editing entries</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">3</div><div><strong>Click or tap any time slot</strong> in the grid to type directly into it. The cell activates and accepts free text. Press Tab to move to the next slot.</div></div>
+              <div class="htg-step"><div class="htg-step-num">4</div><div>Coloured <strong>task pills</strong> appear automatically in the correct time slot when a task has a due date and time assigned in the Tasks tab.</div></div>
+              <div class="htg-step"><div class="htg-step-num">5</div><div>Overdue task pills are highlighted in <strong>red</strong> so they stand out immediately.</div></div>
+            </div>
+            <div class="htg-divider"></div>
+            <div class="htg-section-lbl">Mobile day view</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">6</div><div>On mobile, the Planner switches to a <strong>single-day view</strong>. Tap the day dots at the top to move between days of the week.</div></div>
+            </div>
+            <div class="htg-tips">
+              <div class="htg-tip"><div class="htg-tip-icon">💡</div><div>Planner entries are saved to your browser automatically. If you have Firebase sync enabled, changes appear on all your devices within seconds.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Tasks -->
+        <div class="htg-card">
+          <div class="htg-card-head" onclick="htgToggleCard(this)">
+            <div class="htg-card-head-left">
+              <div class="htg-card-badge">✅</div>
+              <div>
+                <div class="htg-card-title">Tasks</div>
+                <div class="htg-card-tagline">Create, filter and manage every task in one place</div>
+              </div>
+            </div>
+            <span class="htg-card-chev">▼</span>
+          </div>
+          <div class="htg-card-body">
+            <div class="htg-section-lbl">Adding a task</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">1</div><div>Tap <strong>＋ Add Task</strong> to open the task sheet. Fill in the title (required), then optionally set a date, time, priority and notes.</div></div>
+              <div class="htg-step"><div class="htg-step-num">2</div><div>Choose a <strong>priority</strong> — 🔴 High, 🟡 Medium or 🟢 Low. This affects the colour stripe on the card and, in Advanced mode, the XP you earn.</div></div>
+              <div class="htg-step"><div class="htg-step-num">3</div><div>Tap <strong>🔁 Add Recurring</strong> to create a task that repeats daily, weekly or monthly. Each instance appears as its own card.</div></div>
+            </div>
+            <div class="htg-divider"></div>
+            <div class="htg-section-lbl">Managing tasks</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">4</div><div>Tick the <strong>checkbox</strong> on any task card to mark it done. In Advanced mode a gold <strong>+XP</strong> burst appears and your XP updates immediately.</div></div>
+              <div class="htg-step"><div class="htg-step-num">5</div><div>Tap the <strong>✏️ edit icon</strong> on a card to change any detail. Tap <strong>🗑️</strong> to delete it (you'll be asked to confirm).</div></div>
+              <div class="htg-step"><div class="htg-step-num">6</div><div>Tasks with a past due date automatically show an <strong>Overdue</strong> badge in red.</div></div>
+            </div>
+            <div class="htg-divider"></div>
+            <div class="htg-section-lbl">Filtering &amp; searching</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">7</div><div>Use the <strong>filter bar</strong> to show only All / Pending / Today / Overdue / Done / Recurring tasks.</div></div>
+              <div class="htg-step"><div class="htg-step-num">8</div><div>The <strong>🔍 search bar</strong> filters by title or notes text in real time as you type.</div></div>
+            </div>
+            <div class="htg-divider"></div>
+            <div class="htg-section-lbl">Google Calendar sync</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">9</div><div>Tap the <strong>Google Calendar</strong> bar to expand it. Sign in, then tap <strong>Sync to Google Calendar</strong> to push all dated tasks as calendar events. Use <strong>⬇ Export .ics</strong> for other calendar apps.</div></div>
+            </div>
+            <div class="htg-tips">
+              <div class="htg-tip"><div class="htg-tip-icon">💡</div><div>Tasks without a date float to the top of the list so they're never buried.</div></div>
+              <div class="htg-tip"><div class="htg-tip-icon">💡</div><div>In Advanced mode, each task card shows an <strong>⚡ XP chip</strong> with the exact points you'll earn for completing it.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Notes -->
+        <div class="htg-card">
+          <div class="htg-card-head" onclick="htgToggleCard(this)">
+            <div class="htg-card-head-left">
+              <div class="htg-card-badge">📓</div>
+              <div>
+                <div class="htg-card-title">Notes &amp; Journal</div>
+                <div class="htg-card-tagline">Capture ideas, meeting notes and journal entries</div>
+              </div>
+            </div>
+            <span class="htg-card-chev">▼</span>
+          </div>
+          <div class="htg-card-body">
+            <div class="htg-section-lbl">Creating a note</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">1</div><div>Tap <strong>＋ New Note</strong> to create a blank note. Give it a title and type your content in the body area. Notes save automatically as you type.</div></div>
+              <div class="htg-step"><div class="htg-step-num">2</div><div>Pick a <strong>colour tag</strong> from the dot row on the note card — gold, green, blue, red, purple or orange — to visually categorise your notes.</div></div>
+            </div>
+            <div class="htg-divider"></div>
+            <div class="htg-section-lbl">Organising notes</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">3</div><div>Tap the <strong>📌 pin icon</strong> on a note to pin it — pinned notes always appear at the top of the grid regardless of creation date.</div></div>
+              <div class="htg-step"><div class="htg-step-num">4</div><div>Use the <strong>🔍 search bar</strong> at the top of the Notes tab to filter cards by title or content in real time.</div></div>
+              <div class="htg-step"><div class="htg-step-num">5</div><div>Tap the <strong>🗑️ delete icon</strong> on any note to remove it. This action is permanent, so double-check before confirming.</div></div>
+            </div>
+            <div class="htg-tips">
+              <div class="htg-tip"><div class="htg-tip-icon">💡</div><div>Notes are great for meeting minutes, grocery lists, journal entries, or anything that doesn't need a due date.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Advanced mode -->
+        <div class="htg-card">
+          <div class="htg-card-head" onclick="htgToggleCard(this)">
+            <div class="htg-card-head-left">
+              <div class="htg-card-badge">⚡</div>
+              <div>
+                <div class="htg-card-title">Advanced Mode</div>
+                <div class="htg-card-tagline">Gamification layer — XP, levels, streaks &amp; dark theme</div>
+              </div>
+            </div>
+            <span class="htg-card-chev">▼</span>
+          </div>
+          <div class="htg-card-body">
+            <div class="htg-section-lbl">Turning it on</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">1</div><div>Find the <strong>Regular / Advanced toggle</strong> in the top-right corner of the header (on mobile it sits just below the app name). Slide it to the right to activate Advanced mode.</div></div>
+              <div class="htg-step"><div class="htg-step-num">2</div><div>The entire app switches to a <strong>premium obsidian dark theme</strong> — deep black backgrounds, warm cream text, gold accents. Slide back left to return to the classic gold theme.</div></div>
+              <div class="htg-step"><div class="htg-step-num">3</div><div>An <strong>⚡ Advanced</strong> tab appears in the navigation bar — this is where all gamification settings live.</div></div>
+            </div>
+            <div class="htg-divider"></div>
+            <div class="htg-section-lbl">What unlocks</div>
+            <div class="htg-pill-row">
+              <span class="htg-pill">⚡ XP on every task</span>
+              <span class="htg-pill">🏆 Level system</span>
+              <span class="htg-pill">🔥 Day streak</span>
+              <span class="htg-pill">🎉 Level-up confetti</span>
+              <span class="htg-pill">🛒 XP Marketplace</span>
+              <span class="htg-pill">🧑‍🎤 Character avatars</span>
+              <span class="htg-pill">🌑 Dark theme</span>
+            </div>
+            <div class="htg-tips" style="margin-top:10px">
+              <div class="htg-tip"><div class="htg-tip-icon">💡</div><div>Your XP and level progress are saved separately from the toggle state, so switching modes back and forth won't reset your score.</div></div>
+              <div class="htg-tip"><div class="htg-tip-icon">💡</div><div>The gamification HUD (level icon, XP bar and streak counter) appears at the top of the Tasks tab whenever Advanced mode is on.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. XP & Rewards -->
+        <div class="htg-card">
+          <div class="htg-card-head" onclick="htgToggleCard(this)">
+            <div class="htg-card-head-left">
+              <div class="htg-card-badge">🏆</div>
+              <div>
+                <div class="htg-card-title">XP &amp; Rewards</div>
+                <div class="htg-card-tagline">Customise your XP values, levels, avatars &amp; marketplace goals</div>
+              </div>
+            </div>
+            <span class="htg-card-chev">▼</span>
+          </div>
+          <div class="htg-card-body">
+            <div class="htg-section-lbl">XP Point Values</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">1</div><div>Set how many XP each completed task earns based on its <strong>priority</strong> — High (default 30), Medium (20) and Low (10). Adjust the numbers and tap <strong>Save XP Settings</strong>.</div></div>
+              <div class="htg-step"><div class="htg-step-num">2</div><div>Two <strong>bonus XP</strong> rules: earn extra points for completing a task <em>on</em> its due date (default +5) or <em>before</em> its due date (default +10).</div></div>
+            </div>
+            <div class="htg-divider"></div>
+            <div class="htg-section-lbl">Level Thresholds</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">3</div><div>The levels table shows each level's <strong>icon, name and XP range</strong>. Edit any row and tap <strong>Save Levels</strong>. Use <strong>＋ Add Level</strong> to create new tiers beyond the defaults.</div></div>
+              <div class="htg-step"><div class="htg-step-num">4</div><div>After editing, tap <strong>↻ Refresh Preview</strong> in the Level Progression Preview section to see a visual chart of how your levels stack up before committing.</div></div>
+            </div>
+            <div class="htg-divider"></div>
+            <div class="htg-section-lbl">Character Avatars</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">5</div><div>Each level has its own <strong>avatar emoji</strong>. Tap any unlocked avatar to change its icon. Levels you haven't reached yet appear greyed out.</div></div>
+            </div>
+            <div class="htg-divider"></div>
+            <div class="htg-section-lbl">XP Marketplace</div>
+            <div class="htg-steps">
+              <div class="htg-step"><div class="htg-step-num">6</div><div>Tap <strong>＋ New Goal</strong> to create a personal reward (e.g. "Movie night 🎬") and assign it an XP cost. Goals appear in your catalogue once saved.</div></div>
+              <div class="htg-step"><div class="htg-step-num">7</div><div>When you have enough XP, tap a goal card to <strong>purchase</strong> it. It moves to the "Purchased — Ready to Use" tray where you can redeem or delete it.</div></div>
+              <div class="htg-step"><div class="htg-step-num">8</div><div>Your current <strong>XP balance</strong> is shown in the gold badge next to the ＋ New Goal button so you always know what you can afford.</div></div>
+            </div>
+            <div class="htg-tips">
+              <div class="htg-tip"><div class="htg-tip-icon">💡</div><div>Use the <strong>↺ Reset XP</strong> button on the status card at the top to start fresh — useful if you want to recalibrate after changing XP values.</div></div>
+              <div class="htg-tip"><div class="htg-tip-icon">💡</div><div>The streak counter increments each day you complete at least one task. Missing a day resets it to zero — so keep the habit going!</div></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.htg-cards -->
+    </div><!-- /.htg-wrap -->
     <div class="rwd-status-card" id="rwdStatusCard">
       <div class="rwd-status-left">
         <div class="rwd-status-icon" id="rwdStatusIcon">🌱</div>
@@ -6984,6 +7408,60 @@ document.addEventListener('DOMContentLoaded', function() {
 
 })();
 }); // DOMContentLoaded
+
+/* ═══════════════════════════════════════════════════════════
+   HOW-TO GUIDE — accordion logic
+   All functions are global so onclick attributes work.
+═══════════════════════════════════════════════════════════ */
+function htgToggleMaster(){
+  var cards  = document.getElementById('htgCards');
+  var chev   = document.getElementById('htgMasterChev');
+  if(!cards || !chev) return;
+  var isOpen = cards.classList.contains('open');
+  cards.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+  // Update expand-all button label based on current card states
+  htgSyncExpandAllBtn();
+}
+
+function htgToggleCard(headEl){
+  var body = headEl.nextElementSibling;
+  var chev = headEl.querySelector('.htg-card-chev');
+  if(!body) return;
+  var isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if(chev) chev.classList.toggle('open', !isOpen);
+  htgSyncExpandAllBtn();
+}
+
+function htgToggleAll(){
+  var cards  = document.getElementById('htgCards');
+  var btn    = document.getElementById('htgExpandAllBtn');
+  if(!cards) return;
+  // Make sure master panel is open first
+  if(!cards.classList.contains('open')){
+    cards.classList.add('open');
+    var masterChev = document.getElementById('htgMasterChev');
+    if(masterChev) masterChev.classList.add('open');
+  }
+  var bodies = cards.querySelectorAll('.htg-card-body');
+  var chevs  = cards.querySelectorAll('.htg-card-chev');
+  // Determine current state: expand all if any are closed, collapse all if all open
+  var anyClose = Array.from(bodies).some(function(b){ return !b.classList.contains('open'); });
+  bodies.forEach(function(b){ b.classList.toggle('open', anyClose); });
+  chevs.forEach(function(c){  c.classList.toggle('open', anyClose); });
+  if(btn) btn.textContent = anyClose ? 'Collapse all' : 'Expand all';
+}
+
+function htgSyncExpandAllBtn(){
+  var cards = document.getElementById('htgCards');
+  var btn   = document.getElementById('htgExpandAllBtn');
+  if(!cards || !btn) return;
+  var bodies  = cards.querySelectorAll('.htg-card-body');
+  var allOpen = Array.from(bodies).every(function(b){ return b.classList.contains('open'); });
+  btn.textContent = allOpen ? 'Collapse all' : 'Expand all';
+}
+
 </script>
 </body>
 </html>
