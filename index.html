@@ -5170,8 +5170,32 @@ function openSimpleTaskModal(taskId){
       var db=document.createElement('button');db.type='button';db.className='stm-att-btn del';
       db.textContent='✕';db.title='Remove';
       (function(idx2,a2){db.addEventListener('click',function(){
-        if(confirm('Remove "'+a2.name+'" from this task?\nThe file stays in your Google Drive.')){
-          curAtts.splice(idx2,1);buildAttList();updateAttZone();}
+        var msg=a2.driveFileId
+          ?'Remove "'+a2.name+'" from this task AND delete it from Google Drive?'
+          :'Remove "'+a2.name+'" from this task?';
+        if(!confirm(msg))return;
+        // Disable button during delete
+        db.disabled=true;db.textContent='⏳';
+        function removeLocal(){
+          curAtts.splice(idx2,1);buildAttList();updateAttZone();
+        }
+        if(a2.driveFileId){
+          driveDeleteFile(a2.driveFileId,function(err){
+            if(err){
+              // If delete fails, still offer to remove from task only
+              if(confirm('Could not delete from Google Drive ('+err+').
+Remove the link from this task anyway?')){
+                removeLocal();
+              } else {
+                db.disabled=false;db.textContent='✕';
+              }
+            } else {
+              removeLocal();
+            }
+          });
+        } else {
+          removeLocal();
+        }
       });})(i,att);
       acts.appendChild(db);
       item.appendChild(ico);item.appendChild(inf);item.appendChild(acts);
@@ -7030,6 +7054,26 @@ function driveUploadBatch(files,onProgress,onDone){
       }
       next();
     });
+  });
+}
+
+// ── Delete a file from Google Drive by its file ID ────────────────────────────
+function driveDeleteFile(fileId, cb){
+  if(!fileId){if(cb)cb('No file ID provided');return;}
+  driveGetToken(function(err,token){
+    if(err||!token){if(cb)cb(err||'No token');return;}
+    fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(fileId),{
+      method:'DELETE',
+      headers:{'Authorization':'Bearer '+token}
+    }).then(function(r){
+      if(r.status===204||r.status===200){
+        if(cb)cb(null); // success
+      } else if(r.status===404){
+        if(cb)cb(null); // already gone — treat as success
+      } else {
+        r.text().then(function(t){if(cb)cb('Drive delete failed ('+r.status+'): '+t);});
+      }
+    }).catch(function(e){if(cb)cb(e.message);});
   });
 }
 
