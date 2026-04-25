@@ -430,35 +430,48 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   border-radius:8px;padding:9px 8px;cursor:pointer;border:1.5px solid rgba(232,82,82,.35);
   background:#FFF5F5;color:var(--ot);transition:all .15s;text-align:center}
 .stm-del-opt:hover{background:#FFE0E0}
-
-/* ── Attachment Section ── */
-.stm-attach-zone{border:2px dashed var(--gp);border-radius:10px;padding:14px 12px;
-  text-align:center;cursor:pointer;transition:all .18s;background:var(--gc);
-  display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
-.stm-attach-zone:hover,.stm-attach-zone.drag-over{border-color:var(--gm);background:rgba(196,148,42,0.08)}
-.stm-attach-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.stm-attach-icon{font-size:22px;line-height:1}
-.stm-attach-hint{font-size:12px;color:var(--inkl);line-height:1.4}
-.stm-attach-hint strong{color:var(--gd);font-weight:700}
-.stm-attach-limit{font-size:10px;color:var(--inkl);font-style:italic}
-.stm-attach-list{display:flex;flex-direction:column;gap:7px;margin-top:6px}
-.stm-attach-item{display:flex;align-items:center;gap:8px;background:white;
-  border:1.5px solid var(--gp);border-radius:8px;padding:7px 10px;
-  box-shadow:0 1px 4px rgba(139,105,20,0.08)}
-.stm-attach-item:hover{border-color:var(--gm)}
-.stm-attach-file-icon{font-size:18px;flex-shrink:0;width:26px;text-align:center}
-.stm-attach-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
-.stm-attach-name{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis;cursor:pointer;text-decoration:none}
-.stm-attach-name:hover{color:var(--gm);text-decoration:underline}
-.stm-attach-size{font-size:10px;color:var(--inkl)}
-.stm-attach-del{background:transparent;border:none;cursor:pointer;font-size:14px;
-  color:var(--inkl);padding:3px 5px;border-radius:5px;flex-shrink:0;line-height:1;
-  -webkit-tap-highlight-color:transparent;transition:background .12s}
-.stm-attach-del:hover{background:#FFE0E0;color:var(--ot)}
-.stm-attach-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;
+/* ── Drive Attachment UI ── */
+.stm-att-zone{border:2px dashed var(--gp);border-radius:10px;padding:14px 12px;
+  text-align:center;cursor:pointer;background:var(--gc);position:relative;
+  display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .18s}
+.stm-att-zone:hover,.stm-att-zone.drag-over{border-color:var(--gm);background:rgba(196,148,42,.08)}
+.stm-att-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.stm-att-hint{font-size:12px;color:var(--inkl);line-height:1.4}
+.stm-att-hint strong{color:var(--gd);font-weight:700}
+.stm-att-sub{font-size:10px;color:var(--inkl);font-style:italic}
+.stm-att-list{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+.stm-att-item{display:flex;align-items:center;gap:8px;background:white;
+  border:1.5px solid var(--gp);border-radius:8px;padding:7px 10px;transition:border-color .15s}
+.stm-att-item:hover{border-color:var(--gm)}
+.stm-att-ico{font-size:18px;flex-shrink:0;width:24px;text-align:center}
+.stm-att-inf{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.stm-att-nm{font-size:12px;font-weight:600;color:var(--gm);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;text-decoration:none;display:block}
+.stm-att-nm:hover{text-decoration:underline;color:var(--gd)}
+.stm-att-meta{font-size:10px;color:var(--inkl);display:flex;align-items:center;gap:5px}
+.stm-att-dbadge{font-size:9px;font-weight:700;background:#E8F0FE;color:#1a73e8;
+  border-radius:4px;padding:1px 5px;white-space:nowrap}
+.stm-att-acts{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.stm-att-btn{background:transparent;border:none;cursor:pointer;font-size:13px;
+  padding:4px 6px;border-radius:5px;line-height:1;color:var(--inkl);
+  -webkit-tap-highlight-color:transparent;transition:background .12s;
+  text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.stm-att-btn:hover{background:var(--gc)}
+.stm-att-btn.del:hover{background:#FFE0E0;color:var(--ot)}
+.stm-att-prog{width:100%;height:4px;background:var(--gp);border-radius:4px;
+  margin-top:4px;overflow:hidden}
+.stm-att-prog-bar{height:100%;background:var(--gm);border-radius:4px;width:0%;transition:width .2s}
+.stm-att-uploading{display:flex;align-items:center;gap:7px;padding:8px 10px;
+  background:rgba(196,148,42,.07);border-radius:8px;border:1px solid var(--gp);
+  font-size:11px;color:var(--gm);font-weight:600}
+.stm-att-spinner{width:14px;height:14px;border:2px solid var(--gp);border-top-color:var(--gm);
+  border-radius:50%;animation:attSpin .7s linear infinite;flex-shrink:0}
+@keyframes attSpin{to{transform:rotate(360deg)}}
+.stm-att-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;
   font-weight:700;padding:2px 6px;border-radius:10px;
-  background:rgba(139,105,20,0.1);color:var(--gd);margin-left:2px}
+  background:#E8F0FE;color:#1a73e8;margin-left:2px}
+.stm-att-note{font-size:11px;color:var(--inkl);background:rgba(91,155,213,.07);
+  border:1px solid rgba(91,155,213,.25);border-radius:8px;padding:9px 11px;line-height:1.5;margin-top:4px}
 
 @media(max-width:480px){
   .stm-body{padding:14px 15px;gap:12px}
@@ -2145,27 +2158,6 @@ function debounce(fn,ms){
 function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'{}')}catch(e){return{}}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
-
-// ── Attachment helpers ──
-function getFileIcon(mimeType){
-  if(!mimeType)return '📄';
-  if(mimeType.startsWith('image/'))return '🖼️';
-  if(mimeType==='application/pdf')return '📕';
-  if(mimeType.indexOf('word')>=0||mimeType.indexOf('document')>=0)return '📝';
-  if(mimeType.indexOf('excel')>=0||mimeType.indexOf('sheet')>=0||mimeType.indexOf('csv')>=0)return '📊';
-  if(mimeType.indexOf('powerpoint')>=0||mimeType.indexOf('presentation')>=0)return '📑';
-  if(mimeType.startsWith('video/'))return '🎬';
-  if(mimeType.startsWith('audio/'))return '🎵';
-  if(mimeType.indexOf('zip')>=0||mimeType.indexOf('rar')>=0||mimeType.indexOf('compressed')>=0)return '🗜️';
-  if(mimeType.startsWith('text/'))return '📃';
-  return '📄';
-}
-function formatFileSize(bytes){
-  if(!bytes||bytes===0)return '0 B';
-  if(bytes<1024)return bytes+' B';
-  if(bytes<1024*1024)return (bytes/1024).toFixed(1)+' KB';
-  return (bytes/(1024*1024)).toFixed(1)+' MB';
-}
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
 // Handles both DD-MM-YYYY (our storage format) and YYYY-MM-DD (from date inputs)
@@ -4924,15 +4916,14 @@ function renderTasks(){
     '</div>';
 
     // Notes — shown fully
+
+    var attBadge='';
+    if(t.attachments&&t.attachments.length>0){
+      attBadge='<span class="stm-att-badge">📎 '+t.attachments.length+' file'+(t.attachments.length!==1?'s':'')+'</span>';
+    }
     var notesSection='';
     if(t.notes&&t.notes.trim()){
       notesSection='<div class="task-notes-full">'+t.notes.trim().replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>';
-    }
-
-    // Attachment badge
-    var attachBadge='';
-    if(t.attachments&&t.attachments.length>0){
-      attachBadge='<span class="stm-attach-badge">📎 '+t.attachments.length+' file'+(t.attachments.length!==1?'s':'')+'</span>';
     }
 
     card.innerHTML=
@@ -4941,7 +4932,7 @@ function renderTasks(){
         '<input type="checkbox" class="task-chk"'+(t.done?' checked':'')+' id="chk-'+t.id+'">'+
         '<div class="task-bd'+(t.done?' task-done':'')+'">'+
           '<div class="task-ti">'+(t.title||'<span style="color:rgba(139,105,20,.38);font-weight:400">Untitled task</span>')+'</div>'+
-          '<div class="task-meta-row">'+badge+xpChip+attachBadge+'</div>'+
+          '<div class="task-meta-row">'+badge+xpChip+attBadge+'</div>'+
           '<div class="task-details">'+detailRows+'</div>'+
           notesSection+
           // Hidden legacy inputs for JS compat
@@ -5140,100 +5131,115 @@ function openSimpleTaskModal(taskId){
   notesSec.appendChild(notesLbl);notesSec.appendChild(notesInp);
   body.appendChild(notesSec);
 
-  // ── Attachments ──
-  var attachSec=document.createElement('div');attachSec.className='stm-section';
-  var attachLbl=document.createElement('div');attachLbl.className='stm-lbl';
-  attachLbl.textContent='Attachments (max 5 files · 10 MB each)';
-  attachSec.appendChild(attachLbl);
+  // ── Attachments (Google Drive) ──────────────────────────────────────────
+  var attSec=document.createElement('div');attSec.className='stm-section';
+  var attLbl=document.createElement('div');attLbl.className='stm-lbl';
+  attLbl.textContent='Attachments · Google Drive (no size limit, max 5 files)';
+  attSec.appendChild(attLbl);
 
-  // Current attachments list
-  var attachList=document.createElement('div');attachList.className='stm-attach-list';
-  var curAttachments=(t.attachments&&Array.isArray(t.attachments))?t.attachments.slice():[];
+  var attList=document.createElement('div');attList.className='stm-att-list';
+  var curAtts=(t.attachments&&Array.isArray(t.attachments))?t.attachments.slice():[];
 
-  function renderAttachList(){
-    attachList.innerHTML='';
-    curAttachments.forEach(function(att,idx){
-      var item=document.createElement('div');item.className='stm-attach-item';
-      var icon=document.createElement('div');icon.className='stm-attach-file-icon';
-      icon.textContent=getFileIcon(att.type||'');
-      var info=document.createElement('div');info.className='stm-attach-info';
-      var nameEl=document.createElement('a');nameEl.className='stm-attach-name';
-      nameEl.textContent=att.name;nameEl.title=att.name;
-      nameEl.href=att.data;nameEl.download=att.name;nameEl.target='_blank';
-      var sizeEl=document.createElement('div');sizeEl.className='stm-attach-size';
-      sizeEl.textContent=formatFileSize(att.size||0);
-      info.appendChild(nameEl);info.appendChild(sizeEl);
-      var delBtn3=document.createElement('button');delBtn3.className='stm-attach-del';
-      delBtn3.textContent='✕';delBtn3.title='Remove attachment';
-      delBtn3.type='button';
-      delBtn3.addEventListener('click',function(){
-        curAttachments.splice(idx,1);renderAttachList();updateAttachZone();
-      });
-      item.appendChild(icon);item.appendChild(info);item.appendChild(delBtn3);
-      attachList.appendChild(item);
+  function buildAttList(){
+    attList.innerHTML='';
+    curAtts.forEach(function(att,i){
+      if(att._uploading){
+        var wrap=document.createElement('div');
+        var row=document.createElement('div');row.className='stm-att-uploading';
+        var sp=document.createElement('div');sp.className='stm-att-spinner';
+        var tx=document.createElement('span');tx.textContent='Uploading '+att.name+'… '+(att._pct||0)+'%';
+        row.appendChild(sp);row.appendChild(tx);
+        var pg=document.createElement('div');pg.className='stm-att-prog';
+        var pb=document.createElement('div');pb.className='stm-att-prog-bar';pb.style.width=(att._pct||0)+'%';
+        pg.appendChild(pb);wrap.appendChild(row);wrap.appendChild(pg);attList.appendChild(wrap);return;
+      }
+      var item=document.createElement('div');item.className='stm-att-item';
+      var ico=document.createElement('div');ico.className='stm-att-ico';ico.textContent=getFileIcon(att.type||'');
+      var inf=document.createElement('div');inf.className='stm-att-inf';
+      var nm=document.createElement('a');nm.className='stm-att-nm';nm.textContent=att.name;nm.title=att.name;
+      nm.href=att.driveLink||'#';nm.target='_blank';nm.rel='noopener';
+      var mt=document.createElement('div');mt.className='stm-att-meta';
+      mt.innerHTML=fmtBytes(att.size||0)+' <span class="stm-att-dbadge">Drive</span>';
+      inf.appendChild(nm);inf.appendChild(mt);
+      var acts=document.createElement('div');acts.className='stm-att-acts';
+      if(att.downloadLink){
+        var dl=document.createElement('a');dl.className='stm-att-btn';dl.textContent='⬇️';
+        dl.href=att.downloadLink;dl.target='_blank';dl.rel='noopener';dl.title='Download';
+        acts.appendChild(dl);
+      }
+      var db=document.createElement('button');db.type='button';db.className='stm-att-btn del';
+      db.textContent='✕';db.title='Remove';
+      (function(idx2,a2){db.addEventListener('click',function(){
+        if(confirm('Remove "'+a2.name+'" from this task?\nThe file stays in your Google Drive.')){
+          curAtts.splice(idx2,1);buildAttList();updateAttZone();}
+      });})(i,att);
+      acts.appendChild(db);
+      item.appendChild(ico);item.appendChild(inf);item.appendChild(acts);
+      attList.appendChild(item);
     });
   }
 
-  // Drop zone
-  var attachZone=document.createElement('div');attachZone.className='stm-attach-zone';
-  var attachFileInp=document.createElement('input');attachFileInp.type='file';
-  attachFileInp.multiple=true;attachFileInp.accept='image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.mp3,.mp4,.mov';
-  attachZone.appendChild(attachFileInp);
-  var attachZoneIcon=document.createElement('div');attachZoneIcon.className='stm-attach-icon';attachZoneIcon.textContent='📎';
-  var attachZoneHint=document.createElement('div');attachZoneHint.className='stm-attach-hint';
-  var attachZoneLimitEl=document.createElement('div');attachZoneLimitEl.className='stm-attach-limit';
-  attachZone.appendChild(attachZoneIcon);attachZone.appendChild(attachZoneHint);attachZone.appendChild(attachZoneLimitEl);
+  var attZone=document.createElement('div');attZone.className='stm-att-zone';
+  var attFileInp=document.createElement('input');attFileInp.type='file';attFileInp.multiple=true;
+  attFileInp.accept='image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.mp3,.mp4,.mov,.heic';
+  attZone.appendChild(attFileInp);
+  var attHint=document.createElement('div');attHint.className='stm-att-hint';
+  var attSub=document.createElement('div');attSub.className='stm-att-sub';
+  attZone.appendChild(document.createTextNode('📎 '));
+  attZone.appendChild(attHint);attZone.appendChild(attSub);
 
-  function updateAttachZone(){
-    var rem=5-curAttachments.length;
-    if(rem<=0){
-      attachZone.style.display='none';
-    } else {
-      attachZone.style.display='';
-      attachZoneHint.innerHTML='<strong>Click to upload</strong> or drag & drop<br>Images, PDFs, Office docs, and more';
-      attachZoneLimitEl.textContent=rem+' slot'+(rem!==1?'s':'')+' remaining';
+  var attNote=document.createElement('div');attNote.className='stm-att-note';
+  attNote.innerHTML='<strong>📁 Files upload to your Google Drive</strong> in a folder called <em>CD Scheduler Attachments</em>. '+
+    'You\'ll be prompted to sign in to Google on first upload. Files remain in Drive if this app is reset.';
+
+  function updateAttZone(){
+    var used=curAtts.filter(function(a){return !a._uploading;}).length;
+    var rem=5-used;
+    if(rem<=0){attZone.style.display='none';}
+    else{
+      attZone.style.display='';
+      attHint.innerHTML='<strong>Click or drag & drop</strong> to upload to Google Drive';
+      attSub.textContent=rem+' slot'+(rem!==1?'s':'')+' remaining · any file size';
     }
   }
-  updateAttachZone();
+  updateAttZone();
 
-  // Drag & drop on zone
-  attachZone.addEventListener('dragover',function(e){e.preventDefault();attachZone.classList.add('drag-over');});
-  attachZone.addEventListener('dragleave',function(){attachZone.classList.remove('drag-over');});
-  attachZone.addEventListener('drop',function(e){
-    e.preventDefault();attachZone.classList.remove('drag-over');
-    processFiles(e.dataTransfer.files);
-  });
-  attachFileInp.addEventListener('change',function(){processFiles(attachFileInp.files);attachFileInp.value='';});
+  attZone.addEventListener('dragover',function(e){e.preventDefault();attZone.classList.add('drag-over');});
+  attZone.addEventListener('dragleave',function(){attZone.classList.remove('drag-over');});
+  attZone.addEventListener('drop',function(e){e.preventDefault();attZone.classList.remove('drag-over');doUpload(e.dataTransfer.files);});
+  attFileInp.addEventListener('change',function(){doUpload(attFileInp.files);attFileInp.value='';});
 
-  function processFiles(fileList){
+  function doUpload(fileList){
     var arr=Array.from(fileList||[]);
-    var available=5-curAttachments.length;
-    if(available<=0){alert('Maximum 5 attachments per task.');return;}
-    arr=arr.slice(0,available);
-    var pending=arr.length;
-    if(!pending)return;
-    arr.forEach(function(file){
-      if(file.size>10*1024*1024){
-        alert(file.name+' exceeds the 10 MB limit and was skipped.');
-        pending--;if(pending===0){renderAttachList();updateAttachZone();}
-        return;
+    var used=curAtts.filter(function(a){return !a._uploading;}).length;
+    var rem=5-used;if(rem<=0){alert('Maximum 5 attachments per task.');return;}
+    arr=arr.slice(0,rem);if(!arr.length)return;
+    var phs=arr.map(function(f){return{_uploading:true,name:f.name,_pct:0};});
+    phs.forEach(function(p){curAtts.push(p);});
+    buildAttList();updateAttZone();
+    driveUploadBatch(arr,
+      function(idx2,tot,name,pct){
+        var ph=curAtts.find(function(a){return a._uploading&&a.name===name;});
+        if(ph){ph._pct=pct;buildAttList();}
+      },
+      function(err,results){
+        if(err){
+          phs.forEach(function(p){var i=curAtts.indexOf(p);if(i>=0)curAtts.splice(i,1);});
+          buildAttList();updateAttZone();alert('Upload error: '+err);return;
+        }
+        results.forEach(function(res,i){
+          var ph=phs[i];var pi=curAtts.indexOf(ph);
+          if(res.error){if(pi>=0)curAtts.splice(pi,1);alert('Could not upload "'+res.name+'": '+res.error);}
+          else{if(pi>=0)curAtts[pi]=res;else curAtts.push(res);}
+        });
+        buildAttList();updateAttZone();
       }
-      var reader=new FileReader();
-      reader.onload=function(ev){
-        curAttachments.push({name:file.name,size:file.size,type:file.type,data:ev.target.result,uploaded:Date.now()});
-        pending--;if(pending===0){renderAttachList();updateAttachZone();}
-      };
-      reader.onerror=function(){
-        pending--;if(pending===0){renderAttachList();updateAttachZone();}
-      };
-      reader.readAsDataURL(file);
-    });
+    );
   }
 
-  attachSec.appendChild(attachList);
-  attachSec.appendChild(attachZone);
-  body.appendChild(attachSec);
-  renderAttachList();
+  attSec.appendChild(attList);attSec.appendChild(attZone);attSec.appendChild(attNote);
+  body.appendChild(attSec);
+  buildAttList();
 
   // ── Done toggle ──
   var doneToggleRow=document.createElement('label');doneToggleRow.className='stm-toggle-row';
@@ -5543,6 +5549,7 @@ function openSimpleTaskModal(taskId){
       Object.values(tasks2).forEach(function(task){
         if(task.recurrenceGroupId!==groupId3)return;
         task.title=newTitle;task.time=newTime;task.endDate=newEndDate;task.endTime=newEndTime;task.priority=curPri;task.notes=newNotes;
+        task.attachments=curAtts.filter(function(a){return !a._uploading;});
         FB.saveTask(task.id,task);
       });
       tasks2[taskId].done=newDone;tasks2[taskId].date=newDate;
@@ -5552,7 +5559,7 @@ function openSimpleTaskModal(taskId){
       tasks2[taskId].title=newTitle;tasks2[taskId].date=newDate;tasks2[taskId].time=newTime;
       tasks2[taskId].endDate=newEndDate;tasks2[taskId].endTime=newEndTime;
       tasks2[taskId].priority=curPri;tasks2[taskId].notes=newNotes;tasks2[taskId].done=newDone;
-      tasks2[taskId].attachments=curAttachments.slice();
+      tasks2[taskId].attachments=curAtts.filter(function(a){return !a._uploading;});
       FB.saveTask(taskId,tasks2[taskId]);
     }
     FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();
@@ -6797,8 +6804,12 @@ if(document.readyState==='loading'){
 var GCAL_CLIENT_ID = '1033903916825-vtnp7v0t4qcnmkpbplgb40kg5resk93j.apps.googleusercontent.com';
 var GCAL_API_KEY   = 'AIzaSyB6rv6EA5sMUcJ1yRZSMrFK_e4CfX-Oyis';
 var GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
+var DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.file';
+var COMBINED_SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file';
 var GCAL_CAL       = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
 var gcalToken      = null;  // {access_token, expires_at}
+var driveToken     = null;  // {access_token, expires_at}
+var cdDriveFolderId= null;  // cached folder ID
 var gcalBound      = false; // prevent double-binding
 
 // ── Cache: {taskId: {eventId, hash}} ─────────────────────────────────────────
@@ -6908,6 +6919,127 @@ function taskToGcalEvent(t){
 // ── Get OAuth token then run callback ─────────────────────────────────────────
 // Uses signInWithPopup every time — if scope already granted, resolves silently.
 // ── GIS token client (loaded once on first sync) ─────────────────────────────
+// ── File icon & size helpers ──────────────────────────────────────────────────
+function getFileIcon(t){
+  if(!t)return'📄';
+  if(t.startsWith('image/'))return'🖼️';
+  if(t==='application/pdf')return'📕';
+  if(t.indexOf('word')>=0||t.indexOf('document')>=0)return'📝';
+  if(t.indexOf('excel')>=0||t.indexOf('sheet')>=0||t.indexOf('csv')>=0)return'📊';
+  if(t.indexOf('powerpoint')>=0||t.indexOf('presentation')>=0)return'📑';
+  if(t.startsWith('video/'))return'🎬';
+  if(t.startsWith('audio/'))return'🎵';
+  if(t.indexOf('zip')>=0||t.indexOf('rar')>=0)return'🗜️';
+  if(t.startsWith('text/'))return'📃';
+  return'📄';
+}
+function fmtBytes(b){
+  if(!b)return'0 B';
+  if(b<1024)return b+' B';
+  if(b<1048576)return(b/1024).toFixed(1)+' KB';
+  return(b/1048576).toFixed(1)+' MB';
+}
+
+// ════════════════════════════════════════════════════════
+// GOOGLE DRIVE ATTACHMENT FUNCTIONS
+// ════════════════════════════════════════════════════════
+var _driveGisClient=null,_driveGisLoading=false,_driveGisQueue=[];
+
+function _loadDriveGIS(cb){
+  if(_driveGisClient){cb(_driveGisClient);return;}
+  _driveGisQueue.push(cb);
+  if(_driveGisLoading)return;
+  _driveGisLoading=true;
+  function init(){
+    _driveGisClient=google.accounts.oauth2.initTokenClient({
+      client_id:GCAL_CLIENT_ID,scope:COMBINED_SCOPE,callback:''
+    });
+    _driveGisQueue.forEach(function(fn){fn(_driveGisClient);});
+    _driveGisQueue=[];
+  }
+  if(typeof google!=='undefined'&&google.accounts){init();return;}
+  var s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';
+  s.onload=init;
+  s.onerror=function(){_driveGisLoading=false;_driveGisQueue.forEach(function(fn){fn(null);});_driveGisQueue=[];};
+  document.head.appendChild(s);
+}
+
+function driveGetToken(cb){
+  if(driveToken&&driveToken.access_token&&Date.now()<driveToken.expires_at){cb(null,driveToken.access_token);return;}
+  _loadDriveGIS(function(client){
+    if(!client){cb('GIS unavailable',null);return;}
+    client.callback=function(resp){
+      if(resp.error){cb(resp.error,null);return;}
+      var exp=Date.now()+(resp.expires_in||3500)*1000;
+      driveToken={access_token:resp.access_token,expires_at:exp};
+      gcalToken={access_token:resp.access_token,expires_at:exp};
+      cb(null,resp.access_token);
+    };
+    client.requestAccessToken({prompt:''});
+  });
+}
+
+function driveEnsureFolder(token,cb){
+  if(cdDriveFolderId){cb(null,cdDriveFolderId);return;}
+  var q="mimeType='application/vnd.google-apps.folder' and name='CD Scheduler Attachments' and trashed=false";
+  fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id)',{
+    headers:{'Authorization':'Bearer '+token}
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.files&&d.files.length){cdDriveFolderId=d.files[0].id;cb(null,cdDriveFolderId);}
+    else{
+      fetch('https://www.googleapis.com/drive/v3/files',{
+        method:'POST',
+        headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+        body:JSON.stringify({name:'CD Scheduler Attachments',mimeType:'application/vnd.google-apps.folder'})
+      }).then(function(r){return r.json();}).then(function(f){cdDriveFolderId=f.id;cb(null,f.id);}).catch(function(e){cb(e.message,null);});
+    }
+  }).catch(function(e){cb(e.message,null);});
+}
+
+function driveUploadFile(file,token,folderId,onPct,cb){
+  var meta={name:file.name,parents:[folderId]};
+  var form=new FormData();
+  form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
+  form.append('file',file);
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST','https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,mimeType,webViewLink,webContentLink');
+  xhr.setRequestHeader('Authorization','Bearer '+token);
+  xhr.upload.onprogress=function(e){if(e.lengthComputable&&onPct)onPct(Math.round(e.loaded/e.total*100));};
+  xhr.onload=function(){
+    if(xhr.status>=200&&xhr.status<300){cb(null,JSON.parse(xhr.responseText));}
+    else{cb('Upload failed ('+xhr.status+')',null);}
+  };
+  xhr.onerror=function(){cb('Network error',null);};
+  xhr.send(form);
+}
+
+function driveUploadBatch(files,onProgress,onDone){
+  driveGetToken(function(err,token){
+    if(err||!token){onDone('Could not get Google Drive access. Please sign in to Google first.',null);return;}
+    driveEnsureFolder(token,function(err2,folderId){
+      if(err2||!folderId){onDone('Drive folder error: '+(err2||'unknown'),null);return;}
+      var results=[],arr=Array.from(files),idx=0;
+      function next(){
+        if(idx>=arr.length){onDone(null,results);return;}
+        var f=arr[idx++];
+        onProgress(idx,arr.length,f.name,0);
+        driveUploadFile(f,token,folderId,function(pct){onProgress(idx,arr.length,f.name,pct);},function(e,data){
+          if(e){results.push({error:e,name:f.name});}
+          else{results.push({
+            name:data.name,size:f.size,type:f.type,
+            driveFileId:data.id,
+            driveLink:data.webViewLink||('https://drive.google.com/file/d/'+data.id+'/view'),
+            downloadLink:data.webContentLink||('https://drive.google.com/uc?export=download&id='+data.id),
+            source:'drive',uploaded:Date.now()
+          });}
+          next();
+        });
+      }
+      next();
+    });
+  });
+}
+
 var gisClient=null;
 var gisLoading=false;
 var gisCallbackQueue=[];
