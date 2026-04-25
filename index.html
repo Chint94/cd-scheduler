@@ -5211,57 +5211,66 @@ function openSimpleTaskModal(taskId){
     });
   }
 
-  // Hidden file input — used by both desktop (transparent overlay) and mobile (triggered programmatically)
-  var attFileInp=document.createElement('input');attFileInp.type='file';attFileInp.multiple=true;attFileInp.setAttribute('multiple','multiple');
-  attFileInp.style.display='none'; // always hidden — triggered via click() or overlay
-  document.body.appendChild(attFileInp); // attach to body so .click() works on all browsers
-
-  attFileInp.addEventListener('change',function(){
-    if(attFileInp.files&&attFileInp.files.length){
-      doUpload(attFileInp.files);
-    }
-    attFileInp.value='';
-  });
-
-  // Upload zone
+  // Upload zone — single file input kept INSIDE the zone (no body.appendChild leak)
   var attZone=document.createElement('div');attZone.className='stm-att-zone';
   var attHint=document.createElement('div');attHint.className='stm-att-hint';
   var attSub=document.createElement('div');attSub.className='stm-att-sub';
 
-  var onMobileDevice = isMobile()||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
+  // One file input for both desktop and mobile — positioned inside attZone
+  var attFileInp=document.createElement('input');
+  attFileInp.type='file';attFileInp.multiple=true;attFileInp.setAttribute('multiple','multiple');
+  attFileInp.accept='image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.mp3,.mp4,.mov,.heic';
+  attFileInp.addEventListener('change',function(){
+    if(attFileInp.files&&attFileInp.files.length){doUpload(attFileInp.files);}
+    attFileInp.value='';
+  });
+
+  var onMobileDevice=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')||isMobile();
 
   if(!onMobileDevice){
-    // Desktop: transparent file input overlay over the zone
-    var attOverlay=document.createElement('input');attOverlay.type='file';attOverlay.multiple=true;attOverlay.setAttribute('multiple','multiple');
-    attOverlay.addEventListener('change',function(){doUpload(attOverlay.files);attOverlay.value='';});
-    attZone.appendChild(attOverlay);
+    // Desktop: transparent input overlay — clicking anywhere on zone opens picker
+    attFileInp.style.cssText='position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;';
+    attZone.appendChild(attFileInp);
     attZone.appendChild(attHint);
     attZone.appendChild(attSub);
-    // Desktop drag & drop
+    attHint.innerHTML='<strong>Click or drag & drop</strong> to upload to Google Drive';
+    attSub.textContent='Any file size · stored in your Google Drive';
     attZone.addEventListener('dragover',function(e){e.preventDefault();attZone.classList.add('drag-over');});
     attZone.addEventListener('dragleave',function(){attZone.classList.remove('drag-over');});
-    attZone.addEventListener('drop',function(e){
-      e.preventDefault();attZone.classList.remove('drag-over');doUpload(e.dataTransfer.files);
-    });
+    attZone.addEventListener('drop',function(e){e.preventDefault();attZone.classList.remove('drag-over');doUpload(e.dataTransfer.files);});
   } else {
-    // Mobile: a visible button that:
-    //   Step 1 — gets Drive token via Firebase (direct user tap = real gesture)
-    //   Step 2 — opens file picker programmatically
+    // Mobile: dedicated button — Step 1 gets Drive token (direct tap = real user gesture),
+    // Step 2 opens the file picker. This avoids the GIS popup being blocked on mobile.
     attZone.style.cursor='default';
+    // Hide the file input inside the zone (invisible, triggered programmatically)
+    attFileInp.style.cssText='position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
+    attZone.appendChild(attFileInp);
     attZone.appendChild(attHint);
     attZone.appendChild(attSub);
+    attHint.innerHTML='<strong>Tap below</strong> to connect Google Drive and upload files';
+    attSub.textContent='Any file size · stored in your Google Drive';
     var attMobileBtn=document.createElement('button');
     attMobileBtn.type='button';
     attMobileBtn.className='stm-btn save';
     attMobileBtn.style.cssText='width:100%;font-size:13px;padding:11px;margin-top:8px;';
-    attMobileBtn.textContent='Upload file to Google Drive';
+    attMobileBtn.textContent='Connect Google Drive & Upload';
     attZone.appendChild(attMobileBtn);
-
     attMobileBtn.addEventListener('click',function(){
-      // Mobile browsers require the native file picker to open directly from
-      // the user's tap. Asking Google for a token first makes the later
-      // input.click() look non-user-initiated and can silently fail on Android/iOS.
-      attFileInp.click();
+      // Get Drive token first (this tap IS the user gesture — token request is synchronous
+      // from the user's perspective). Then open file picker while still in gesture chain.
+      attMobileBtn.disabled=true;
+      attMobileBtn.textContent='Connecting to Google Drive...';
+      driveGetToken(function(err,token){
+        if(err||!token){
+          attMobileBtn.disabled=false;
+          attMobileBtn.textContent='Connect Google Drive & Upload';
+          alert('Google Drive sign-in failed:\n'+(err||'unknown error')+'\n\nPlease try again.');
+          return;
+        }
+        attMobileBtn.disabled=false;
+        attMobileBtn.textContent='Upload another file';
+        attFileInp.click(); // open native file picker — token already in hand
+      });
     });
   }
 
@@ -5269,7 +5278,13 @@ function openSimpleTaskModal(taskId){
   attNote.innerHTML='<strong>Files are stored in your Google Drive</strong> in a folder called '
     +'<em>CD Scheduler Attachments</em>. Removing an attachment also permanently deletes it from Drive.';
 
-  function updateAttZone(){attZone.style.display='';}
+  function updateAttZone(){
+    attZone.style.display='';
+    // Update slot count or availability on desktop
+    if(!onMobileDevice){
+      attSub.textContent='Any file size · stored in your Google Drive';
+    }
+  }
   updateAttZone();
 
   // Save attachment changes immediately so laptop, mobile and Firebase stay in sync
