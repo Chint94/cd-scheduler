@@ -5132,7 +5132,7 @@ function openSimpleTaskModal(taskId){
   notesSec.appendChild(notesLbl);notesSec.appendChild(notesInp);
   body.appendChild(notesSec);
 
-  // -- Attachments (Google Drive) ----------------------------------------
+  // -- Attachments (Google Drive) -------------------------------------------
   var attSec=document.createElement('div');attSec.className='stm-section';
   var attLbl=document.createElement('div');attLbl.className='stm-lbl';
   attLbl.textContent='Attachments - Google Drive (no size limit)';
@@ -5141,16 +5141,6 @@ function openSimpleTaskModal(taskId){
   var attList=document.createElement('div');attList.className='stm-att-list';
   var curAtts=(t.attachments&&Array.isArray(t.attachments))?t.attachments.slice():[];
 
-  // Save curAtts to Firebase immediately (used after instant delete/upload)
-  function saveAttsNow(){
-    var tasks2=lsGet(TK);
-    if(!tasks2[taskId])return;
-    tasks2[taskId].attachments=curAtts.filter(function(a){return !a._uploading;});
-    FB.saveTask(taskId,tasks2[taskId]);
-    FB.ignoreNextTaskSync=true;
-    lsSet(TK,tasks2);
-  }
-
   function buildAttList(){
     attList.innerHTML='';
     curAtts.forEach(function(att,i){
@@ -5158,15 +5148,13 @@ function openSimpleTaskModal(taskId){
         var wrap=document.createElement('div');
         var row=document.createElement('div');row.className='stm-att-uploading';
         var sp=document.createElement('div');sp.className='stm-att-spinner';
-        var tx=document.createElement('span');
-        tx.textContent='Uploading '+att.name+'... '+(att._pct||0)+'%';
+        var tx=document.createElement('span');tx.textContent='Uploading '+att.name+'... '+(att._pct||0)+'%';
         row.appendChild(sp);row.appendChild(tx);
         var pg=document.createElement('div');pg.className='stm-att-prog';
         var pb=document.createElement('div');pb.className='stm-att-prog-bar';
         pb.style.width=(att._pct||0)+'%';
         pg.appendChild(pb);wrap.appendChild(row);wrap.appendChild(pg);
-        attList.appendChild(wrap);
-        return;
+        attList.appendChild(wrap);return;
       }
       var item=document.createElement('div');item.className='stm-att-item';
       var ico=document.createElement('div');ico.className='stm-att-ico';
@@ -5181,48 +5169,39 @@ function openSimpleTaskModal(taskId){
       var acts=document.createElement('div');acts.className='stm-att-acts';
       if(att.downloadLink){
         var dl=document.createElement('a');dl.className='stm-att-btn';
-        dl.textContent='DL';dl.title='Download';
-        dl.href=att.downloadLink;dl.target='_blank';dl.rel='noopener';
-        dl.style.cssText='font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;'
+        dl.textContent='DL';dl.href=att.downloadLink;
+        dl.target='_blank';dl.rel='noopener';dl.title='Download';
+        dl.style.cssText='font-size:10px;font-weight:700;padding:3px 7px;border-radius:5px;'
           +'background:var(--gc);border:1px solid var(--gp);color:var(--gd);'
-          +'text-decoration:none;display:inline-flex;align-items:center;';
+          +'text-decoration:none;display:inline-flex;align-items:center;justify-content:center;';
         acts.appendChild(dl);
       }
-      // Remove button: deletes from Drive AND saves immediately to Firebase
+      // Remove button - syncs deletion to Google Drive live
       var db=document.createElement('button');db.type='button';db.className='stm-att-btn del';
       db.textContent='X';db.title='Remove & delete from Drive';
       db.style.cssText='font-weight:700;font-size:12px;min-width:28px;min-height:28px;';
       (function(idx2,a2){
         db.addEventListener('click',function(){
           var msg=a2.driveFileId
-            ?'Remove "'+a2.name+'" from this task AND permanently delete from Google Drive?
-
-This will sync to all your devices immediately.'
+            ?'Remove "'+a2.name+'" from this task AND permanently delete from Google Drive?'
             :'Remove "'+a2.name+'" from this task?';
           if(!confirm(msg))return;
           db.disabled=true;db.textContent='...';
-          function removeAndSync(){
-            curAtts.splice(idx2,1);
-            buildAttList();
-            saveAttsNow(); // immediate Firebase sync -> all devices update
-          }
+          function removeLocal(){curAtts.splice(idx2,1);buildAttList();updateAttZone();persistAttachmentSync();}
           if(a2.driveFileId){
             driveDeleteFile(a2.driveFileId,function(err){
               if(err){
-                if(confirm('Could not delete from Google Drive:
-'+err+'
-
-Remove the link from this task anyway?')){
-                  removeAndSync();
+                if(confirm('Could not delete from Google Drive:\n'+err+'\n\nRemove the link from this task anyway?')){
+                  removeLocal();
                 } else {
                   db.disabled=false;db.textContent='X';
                 }
               } else {
-                removeAndSync();
+                removeLocal();
               }
             });
           } else {
-            removeAndSync();
+            removeLocal();
           }
         });
       })(i,att);
@@ -5232,77 +5211,93 @@ Remove the link from this task anyway?')){
     });
   }
 
-  // Hidden file input — triggered programmatically on both desktop and mobile
-  var attFileInp=document.createElement('input');
-  attFileInp.type='file';attFileInp.multiple=true;
-  attFileInp.accept='image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.mp3,.mp4,.mov,.heic';
-  attFileInp.style.display='none';
-  document.body.appendChild(attFileInp);
+  // Hidden file input — used by both desktop (transparent overlay) and mobile (triggered programmatically)
+  var attFileInp=document.createElement('input');attFileInp.type='file';attFileInp.multiple=true;
+  attFileInp.style.display='none'; // always hidden — triggered via click() or overlay
+  document.body.appendChild(attFileInp); // attach to body so .click() works on all browsers
+
   attFileInp.addEventListener('change',function(){
-    if(attFileInp.files&&attFileInp.files.length){doUpload(attFileInp.files);}
+    if(attFileInp.files&&attFileInp.files.length){
+      doUpload(attFileInp.files);
+    }
     attFileInp.value='';
   });
 
+  // Upload zone
   var attZone=document.createElement('div');attZone.className='stm-att-zone';
   var attHint=document.createElement('div');attHint.className='stm-att-hint';
   var attSub=document.createElement('div');attSub.className='stm-att-sub';
 
-  var onMobileDevice=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'');
+  var onMobileDevice = isMobile()||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
 
   if(!onMobileDevice){
-    // Desktop: transparent input overlay + drag & drop
+    // Desktop: transparent file input overlay over the zone
     var attOverlay=document.createElement('input');attOverlay.type='file';attOverlay.multiple=true;
-    attOverlay.accept='image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.mp3,.mp4,.mov,.heic';
     attOverlay.addEventListener('change',function(){doUpload(attOverlay.files);attOverlay.value='';});
     attZone.appendChild(attOverlay);
     attZone.appendChild(attHint);
     attZone.appendChild(attSub);
+    // Desktop drag & drop
     attZone.addEventListener('dragover',function(e){e.preventDefault();attZone.classList.add('drag-over');});
     attZone.addEventListener('dragleave',function(){attZone.classList.remove('drag-over');});
     attZone.addEventListener('drop',function(e){
       e.preventDefault();attZone.classList.remove('drag-over');doUpload(e.dataTransfer.files);
     });
-    attHint.innerHTML='<strong>Click or drag & drop</strong> to upload to Google Drive';
-    attSub.textContent='Any file size - stored in your Google Drive';
   } else {
-    // Mobile: a button that (1) gets Drive token via Firebase, then (2) opens file picker
-    // This is the only reliable pattern on mobile — the token is obtained from a direct
-    // button tap (real user gesture), then the file picker opens while still in that gesture.
+    // Mobile: a visible button that:
+    //   Step 1 — gets Drive token via Firebase (direct user tap = real gesture)
+    //   Step 2 — opens file picker programmatically
     attZone.style.cursor='default';
-    attHint.innerHTML='<strong>Tap the button below</strong> to connect Google Drive and upload files';
-    attSub.textContent='Files are stored in your Google Drive';
     attZone.appendChild(attHint);
     attZone.appendChild(attSub);
     var attMobileBtn=document.createElement('button');
     attMobileBtn.type='button';
     attMobileBtn.className='stm-btn save';
     attMobileBtn.style.cssText='width:100%;font-size:13px;padding:11px;margin-top:8px;';
-    attMobileBtn.textContent='Connect Google Drive & Upload';
+    attMobileBtn.textContent='Upload file to Google Drive';
     attZone.appendChild(attMobileBtn);
+
     attMobileBtn.addEventListener('click',function(){
       attMobileBtn.disabled=true;
       attMobileBtn.textContent='Connecting to Google Drive...';
       driveGetToken(function(err,token){
         if(err||!token){
           attMobileBtn.disabled=false;
-          attMobileBtn.textContent='Connect Google Drive & Upload';
-          alert('Google Drive sign-in failed:
-'+(err||'unknown error')+'
-
-Please try again.');
+          attMobileBtn.textContent='Upload file to Google Drive';
+          alert('Google Drive sign-in failed:\n'+(err||'unknown error'));
           return;
         }
+        // Token obtained — open native file picker
         attMobileBtn.disabled=false;
-        attMobileBtn.textContent='Upload another file to Drive';
-        attFileInp.click(); // open native file picker now that token is ready
+        attMobileBtn.textContent='Upload file to Google Drive';
+        attFileInp.click();
       });
     });
   }
 
   var attNote=document.createElement('div');attNote.className='stm-att-note';
   attNote.innerHTML='<strong>Files are stored in your Google Drive</strong> in a folder called '
-    +'<em>CD Scheduler Attachments</em>. Removing an attachment deletes it from Drive and '
-    +'syncs immediately to all your devices.';
+    +'<em>CD Scheduler Attachments</em>. Removing an attachment also permanently deletes it from Drive.';
+
+  function updateAttZone(){attZone.style.display='';}
+  updateAttZone();
+
+  // Save attachment changes immediately so laptop, mobile and Firebase stay in sync
+  // without waiting for the user to press Save Changes.
+  function cleanAttachmentList(){
+    return curAtts.filter(function(a){return !a._uploading;});
+  }
+  function persistAttachmentSync(){
+    var tasksNow=lsGet(TK);
+    if(!tasksNow[taskId])return;
+    tasksNow[taskId].attachments=cleanAttachmentList();
+    FB.ignoreNextTaskSync=true;
+    lsSet(TK,tasksNow);
+    FB.saveTask(taskId,tasksNow[taskId]);
+    buildGrid();
+    if(currentTab==='tasks')renderTasks();
+    if(currentTab==='dashboard')renderDashboard();
+  }
 
   function doUpload(fileList){
     var arr=Array.from(fileList||[]);
@@ -5319,20 +5314,15 @@ Please try again.');
         if(err){
           phs.forEach(function(p){var pi=curAtts.indexOf(p);if(pi>=0)curAtts.splice(pi,1);});
           buildAttList();
-          alert('Upload error: '+err);
-          return;
+          alert('Upload error: '+err);return;
         }
         results.forEach(function(res,i){
           var ph=phs[i];var pi=curAtts.indexOf(ph);
-          if(res.error){
-            if(pi>=0)curAtts.splice(pi,1);
-            alert('Could not upload "'+res.name+'": '+res.error);
-          } else {
-            if(pi>=0)curAtts[pi]=res;else curAtts.push(res);
-          }
+          if(res.error){if(pi>=0)curAtts.splice(pi,1);alert('Could not upload "'+res.name+'": '+res.error);}
+          else{if(pi>=0)curAtts[pi]=res;else curAtts.push(res);}
         });
         buildAttList();
-        saveAttsNow(); // immediate Firebase sync after successful upload
+        persistAttachmentSync();
       }
     );
   }
@@ -6815,4 +6805,1132 @@ function mktRedeemGoal(id){
   mktShowBanner('🎉 "'+goal.name+'" added to your stash! (−'+goal.cost+' XP)');
 }
 
-// ── Render Purchased stash ─────────────────────────
+// ── Render Purchased stash ─────────────────────────────────────────────────────
+function mktRenderPurchased(){
+  var grid=document.getElementById('mktPurchasedGrid');
+  if(!grid) return;
+  var stash=mktPurchGet();
+  grid.innerHTML='';
+  if(!stash.length){
+    grid.innerHTML='<div class="mkt-p-empty">Nothing purchased yet. Redeem a goal from above to build your stash!</div>';
+    return;
+  }
+  stash.forEach(function(item){
+    var card=document.createElement('div');
+    card.className='mkt-p-card';
+    card.innerHTML=
+      '<div class="mkt-p-top">'+
+        '<span class="mkt-p-emoji">'+item.emoji+'</span>'+
+        '<span class="mkt-p-name">'+mktEsc(item.name)+'</span>'+
+        '<span class="mkt-p-cost">'+item.cost+' XP</span>'+
+      '</div>'+
+      (item.desc?'<div class="mkt-p-desc">'+mktEsc(item.desc)+'</div>':'')+
+      '<button class="mkt-use-btn">✅ Use &amp; Remove</button>';
+    card.querySelector('.mkt-use-btn').addEventListener('click',function(){
+      if(!confirm('Mark "'+item.name+'" as used? It will be removed from your stash.')) return;
+      var stash2=mktPurchGet();
+      mktPurchSet(stash2.filter(function(p){return p.pid!==item.pid;}));
+      mktRenderPurchased();
+      mktShowBanner('✅ Enjoyed "'+item.name+'"! Removed from stash.');
+    });
+    grid.appendChild(card);
+  });
+}
+
+// ── Flash banner ───────────────────────────────────────────────────────────────
+function mktShowBanner(msg){
+  var t=document.getElementById('gamiToast');
+  if(!t) return;
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2800);
+}
+
+// ── Add new goal ───────────────────────────────────────────────────────────────
+function mktAddGoal(){
+  var goals=mktGet();
+  goals.push({id:mktGenId(), emoji:'🎯', name:'New Goal', cost:100, desc:''});
+  mktSet(goals);
+  mktRenderCatalogue();
+  // focus name of last card
+  setTimeout(function(){
+    var cards=document.querySelectorAll('.mkt-card');
+    if(cards.length){var inp=cards[cards.length-1].querySelector('.mkt-card-name');if(inp){inp.focus();inp.select();}}
+  },50);
+}
+
+// ── Init (called from renderRewards) ─────────────────────────────────────────
+function mktInit(){
+  var btn=document.getElementById('mktAddGoalBtn');
+  if(btn && !btn.dataset.bound){
+    btn.dataset.bound='1';
+    btn.addEventListener('click', mktAddGoal);
+  }
+  mktRefreshXpBadge();
+  mktRenderCatalogue();
+  mktRenderPurchased();
+}
+
+function appBootstrap(){
+  renderTasks();
+  renderNotes();
+  renderDashboard();
+  gamiRenderHud();
+  rwdInitHandlers();
+  avMigrate();
+  gmInit();
+  // Position knob after everything is rendered + fonts loaded
+  setTimeout(tnMoveKnob, 80);
+  window.addEventListener('resize', tnMoveKnob);
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', appBootstrap);
+} else {
+  appBootstrap();
+}
+// ════════════════════════════════════════════════════════
+// GOOGLE CALENDAR SYNC
+// ════════════════════════════════════════════════════════
+var GCAL_CLIENT_ID = '1033903916825-vtnp7v0t4qcnmkpbplgb40kg5resk93j.apps.googleusercontent.com';
+var GCAL_API_KEY   = 'AIzaSyB6rv6EA5sMUcJ1yRZSMrFK_e4CfX-Oyis';
+var GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
+var DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.file';
+var COMBINED_SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file';
+var GCAL_CAL       = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+var gcalToken      = null;  // {access_token, expires_at}
+var driveToken     = null;  // {access_token, expires_at}
+var cdDriveFolderId= null;  // cached folder ID
+var gcalBound      = false; // prevent double-binding
+
+// ── Cache: {taskId: {eventId, hash}} ─────────────────────────────────────────
+var GCAL_CK = 'cds_gcal_v3';
+function gcalCacheGet(){ try{return JSON.parse(localStorage.getItem(GCAL_CK)||'{}')}catch(e){return{}} }
+function gcalCacheSet(o){ try{localStorage.setItem(GCAL_CK,JSON.stringify(o))}catch(e){} }
+function gcalHash(t){ return [t.title||'',t.date||'',t.time||'',t.notes||'',t.priority||'',t.recurrence||''].join('|') }
+
+// Delete a task's Google Calendar event silently (fire-and-forget)
+// Called when a task is marked Done or deleted from CD Scheduler
+function gcalDeleteEvent(taskId){
+  var cache=gcalCacheGet();
+  var cv=cache[taskId];
+  if(!cv||!cv.eventId) return; // never synced — nothing to delete
+  var eventId=cv.eventId;
+  // Remove from cache immediately so it won't be re-synced
+  delete cache[taskId];
+  gcalCacheSet(cache);
+  // Need a valid token to call the API
+  function doDelete(token){
+    var url='https://www.googleapis.com/calendar/v3/calendars/primary/events/'
+      +encodeURIComponent(eventId)+'?key='+GCAL_API_KEY;
+    fetch(url,{
+      method:'DELETE',
+      headers:{'Authorization':'Bearer '+token}
+    }).then(function(r){
+      if(r.status===204||r.status===200){
+        // Successfully deleted
+        console.log('GCal event deleted for task',taskId);
+      } else if(r.status===404){
+        // Already gone from Calendar — that's fine
+      } else {
+        console.warn('GCal delete failed for task',taskId,'status:',r.status);
+      }
+    }).catch(function(e){
+      console.warn('GCal delete error for task',taskId,e.message);
+    });
+  }
+  // Use cached token if valid, otherwise skip silently (don't bother user)
+  if(gcalToken&&gcalToken.access_token&&Date.now()<gcalToken.expires_at){
+    doDelete(gcalToken.access_token);
+  }
+  // If no token available, the event stays in Calendar
+  // (user can sync again to clean up, or it will be removed next time they
+  //  mark it done after a sync session)
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function gcalMsg(msg,type){
+  var el=document.getElementById('gcalMsg');
+  if(!el)return;
+  el.textContent=msg;
+  el.className='gcal-msg show'+(type==='err'?' err':type==='ok'?' ok':'');
+  // Keep errors visible; auto-clear others after 6s
+  if(type!=='err') setTimeout(function(){el.classList.remove('show')},6000);
+}
+function gcalStatus2(msg){
+  var el=document.getElementById('gcalStatus2');
+  if(el) el.textContent=msg;
+}
+function gcalPanelOpen(){
+  var p=document.getElementById('gcalPanel'),
+      t=document.getElementById('gcalToggle'),
+      c=document.getElementById('gcalChev');
+  if(p&&!p.classList.contains('open')){
+    p.classList.add('open');t.classList.add('open');c.classList.add('open');
+  }
+}
+
+// ── Toggle ────────────────────────────────────────────────────────────────────
+document.getElementById('gcalToggle').addEventListener('click',function(){
+  var p=document.getElementById('gcalPanel'),
+      t=document.getElementById('gcalToggle'),
+      ch=document.getElementById('gcalChev'),
+      open=p.classList.contains('open');
+  p.classList.toggle('open',!open);
+  t.classList.toggle('open',!open);
+  ch.classList.toggle('open',!open);
+});
+
+// ── Build a Calendar event object from a task ─────────────────────────────────
+function taskToGcalEvent(t){
+  var td=parseDate(t.date); if(!td) return null;
+  var tz=Intl.DateTimeFormat().resolvedOptions().timeZone;
+  var startDT,endDT;
+  if(t.time){
+    var tp=t.time.split(':'),h=parseInt(tp[0]),m=parseInt(tp[1]);
+    var s=new Date(td.getFullYear(),td.getMonth(),td.getDate(),h,m);
+    var e=new Date(td.getFullYear(),td.getMonth(),td.getDate(),h+1,m);
+    startDT={dateTime:s.toISOString(),timeZone:tz};
+    endDT  ={dateTime:e.toISOString(),timeZone:tz};
+  } else {
+    var ymd=td.getFullYear()+'-'+pad(td.getMonth()+1)+'-'+pad(td.getDate());
+    startDT={date:ymd}; endDT={date:ymd};
+  }
+  var desc='Priority: '+(t.priority||'medium');
+  if(t.notes) desc+='\n\nNotes: '+t.notes;
+  return {
+    summary:'[CD] '+(t.title||'Untitled'),
+    description:desc,
+    start:startDT, end:endDT,
+    colorId:t.priority==='high'?'11':t.priority==='low'?'10':'5',
+    extendedProperties:{private:{cdTaskId:t.id,cdScheduler:'true'}}
+  };
+}
+
+// ── Get OAuth token then run callback ─────────────────────────────────────────
+// Uses signInWithPopup every time — if scope already granted, resolves silently.
+// ── GIS token client (loaded once on first sync) ─────────────────────────────
+// ── File icon & size helpers ──────────────────────────────────────────────────
+function getFileIcon(t){
+  if(!t)return'📄';
+  if(t.startsWith('image/'))return'🖼️';
+  if(t==='application/pdf')return'📕';
+  if(t.indexOf('word')>=0||t.indexOf('document')>=0)return'📝';
+  if(t.indexOf('excel')>=0||t.indexOf('sheet')>=0||t.indexOf('csv')>=0)return'📊';
+  if(t.indexOf('powerpoint')>=0||t.indexOf('presentation')>=0)return'📑';
+  if(t.startsWith('video/'))return'🎬';
+  if(t.startsWith('audio/'))return'🎵';
+  if(t.indexOf('zip')>=0||t.indexOf('rar')>=0)return'🗜️';
+  if(t.startsWith('text/'))return'📃';
+  return'📄';
+}
+function fmtBytes(b){
+  if(!b)return'0 B';
+  if(b<1024)return b+' B';
+  if(b<1048576)return(b/1024).toFixed(1)+' KB';
+  return(b/1048576).toFixed(1)+' MB';
+}
+
+// ════════════════════════════════════════════════════════
+// GOOGLE DRIVE ATTACHMENT FUNCTIONS
+// ════════════════════════════════════════════════════════
+var _driveGisClient=null,_driveGisLoading=false,_driveGisQueue=[];
+
+function _loadDriveGIS(cb){
+  if(_driveGisClient){cb(_driveGisClient);return;}
+  _driveGisQueue.push(cb);
+  if(_driveGisLoading)return;
+  _driveGisLoading=true;
+  function init(){
+    _driveGisClient=google.accounts.oauth2.initTokenClient({
+      client_id:GCAL_CLIENT_ID,scope:COMBINED_SCOPE,callback:''
+    });
+    _driveGisQueue.forEach(function(fn){fn(_driveGisClient);});
+    _driveGisQueue=[];
+  }
+  if(typeof google!=='undefined'&&google.accounts){init();return;}
+  var s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';
+  s.onload=init;
+  s.onerror=function(){_driveGisLoading=false;_driveGisQueue.forEach(function(fn){fn(null);});_driveGisQueue=[];};
+  document.head.appendChild(s);
+}
+
+// Preload Google Identity Services early. This makes mobile uploads much more reliable
+// because the actual upload tap can request the Drive token immediately.
+setTimeout(function(){try{_loadDriveGIS(function(){});}catch(e){}},800);
+
+function driveGetToken(cb){
+  // Return cached token if still valid
+  if(driveToken&&driveToken.access_token&&Date.now()<driveToken.expires_at){
+    cb(null,driveToken.access_token);return;
+  }
+
+  // Primary method for both desktop and mobile: Google Identity Services.
+  // The GIS script is preloaded above so requestAccessToken can run immediately
+  // from the user's tap on mobile.
+  _loadDriveGIS(function(client){
+    if(client){
+      var triedConsent=false;
+      client.callback=function(resp){
+        if(resp&&resp.access_token){
+          var exp=Date.now()+(resp.expires_in||3500)*1000;
+          driveToken={access_token:resp.access_token,expires_at:exp};
+          gcalToken={access_token:resp.access_token,expires_at:exp};
+          cb(null,resp.access_token);
+          return;
+        }
+        if(!triedConsent){
+          triedConsent=true;
+          try{client.requestAccessToken({prompt:'consent'});return;}catch(e2){}
+        }
+        cb((resp&&resp.error)||'Google Drive permission was not granted.',null);
+      };
+      try{
+        client.requestAccessToken({prompt:''});
+        return;
+      }catch(e){
+        // Fall through to Firebase fallback below.
+      }
+    }
+
+    // Fallback: Firebase popup on desktop-style browsers.
+    if(typeof firebase!=='undefined' && firebase.auth){
+      var driveProvider = new firebase.auth.GoogleAuthProvider();
+      driveProvider.addScope('https://www.googleapis.com/auth/drive.file');
+      driveProvider.addScope('https://www.googleapis.com/auth/calendar.events');
+      driveProvider.setCustomParameters({prompt:'consent'});
+      firebase.auth().signInWithPopup(driveProvider)
+        .then(function(result){
+          var tok = result && result.credential && result.credential.accessToken || null;
+          if(tok){
+            var exp = Date.now()+3500000;
+            driveToken={access_token:tok,expires_at:exp};
+            gcalToken={access_token:tok,expires_at:exp};
+            cb(null,tok);
+          } else {
+            cb('No Google Drive access token returned. Please sign out and sign in again.',null);
+          }
+        })
+        .catch(function(e){
+          if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
+            cb('Sign-in was cancelled. Please try again.',null);
+          } else if(e.code==='auth/popup-blocked'){
+            cb('Popup blocked by your browser. Please allow popups for this site, then try again.',null);
+          } else {
+            cb('Google sign-in error: '+(e.message||e),null);
+          }
+        });
+      return;
+    }
+
+    cb('Google Drive sign-in is unavailable on this browser.',null);
+  });
+}
+
+// ── Delete a file from Google Drive by its ID (live sync on delete) ────────
+function driveDeleteFile(fileId, cb){
+  if(!fileId){if(cb)cb('No file ID provided');return;}
+  driveGetToken(function(err,token){
+    if(err||!token){if(cb)cb(err||'Could not authenticate with Google Drive');return;}
+    fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(fileId),{
+      method:'DELETE',
+      headers:{'Authorization':'Bearer '+token}
+    }).then(function(r){
+      if(r.status===204||r.status===200||r.status===404){
+        if(cb)cb(null); // success (404 = already gone, still ok)
+      } else {
+        r.text().then(function(t){if(cb)cb('Drive delete failed ('+r.status+'): '+t);});
+      }
+    }).catch(function(e){if(cb)cb('Network error: '+e.message);});
+  });
+}
+
+function driveEnsureFolder(token,cb){
+  if(cdDriveFolderId){cb(null,cdDriveFolderId);return;}
+  var q="mimeType='application/vnd.google-apps.folder' and name='CD Scheduler Attachments' and trashed=false";
+  fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id)',{
+    headers:{'Authorization':'Bearer '+token}
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.files&&d.files.length){cdDriveFolderId=d.files[0].id;cb(null,cdDriveFolderId);}
+    else{
+      fetch('https://www.googleapis.com/drive/v3/files',{
+        method:'POST',
+        headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+        body:JSON.stringify({name:'CD Scheduler Attachments',mimeType:'application/vnd.google-apps.folder'})
+      }).then(function(r){return r.json();}).then(function(f){cdDriveFolderId=f.id;cb(null,f.id);}).catch(function(e){cb(e.message,null);});
+    }
+  }).catch(function(e){cb(e.message,null);});
+}
+
+function driveUploadFile(file,token,folderId,onPct,cb){
+  // Resumable upload is used instead of multipart upload so the app does not
+  // impose its own file-size limit. Google Drive/account storage limits still apply.
+  var meta={name:file.name,parents:[folderId]};
+  fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,size,mimeType,webViewLink,webContentLink',{
+    method:'POST',
+    headers:{
+      'Authorization':'Bearer '+token,
+      'Content-Type':'application/json; charset=UTF-8',
+      'X-Upload-Content-Type':file.type||'application/octet-stream',
+      'X-Upload-Content-Length':String(file.size||0)
+    },
+    body:JSON.stringify(meta)
+  }).then(function(r){
+    if(!r.ok){return r.text().then(function(t){throw new Error('Upload session failed ('+r.status+'): '+t);});}
+    var sessionUrl=r.headers.get('Location');
+    if(!sessionUrl)throw new Error('Google Drive did not return an upload session.');
+    var xhr=new XMLHttpRequest();
+    xhr.open('PUT',sessionUrl);
+    xhr.setRequestHeader('Content-Type',file.type||'application/octet-stream');
+    xhr.upload.onprogress=function(e){if(e.lengthComputable&&onPct)onPct(Math.round(e.loaded/e.total*100));};
+    xhr.onload=function(){
+      if(xhr.status>=200&&xhr.status<300){
+        try{cb(null,JSON.parse(xhr.responseText));}
+        catch(parseErr){cb('Upload completed but response could not be read.',null);}
+      } else {
+        cb('Upload failed ('+xhr.status+'): '+(xhr.responseText||''),null);
+      }
+    };
+    xhr.onerror=function(){cb('Network error while uploading to Google Drive',null);};
+    xhr.send(file);
+  }).catch(function(e){cb(e.message||String(e),null);});
+}
+
+function driveUploadBatch(files,onProgress,onDone){
+  driveGetToken(function(err,token){
+    if(err||!token){onDone('Could not get Google Drive access. Please sign in to Google first.',null);return;}
+    driveEnsureFolder(token,function(err2,folderId){
+      if(err2||!folderId){onDone('Drive folder error: '+(err2||'unknown'),null);return;}
+      var results=[],arr=Array.from(files),idx=0;
+      function next(){
+        if(idx>=arr.length){onDone(null,results);return;}
+        var f=arr[idx++];
+        onProgress(idx,arr.length,f.name,0);
+        driveUploadFile(f,token,folderId,function(pct){onProgress(idx,arr.length,f.name,pct);},function(e,data){
+          if(e){results.push({error:e,name:f.name});}
+          else{results.push({
+            name:data.name,size:f.size,type:f.type,
+            driveFileId:data.id,
+            driveLink:data.webViewLink||('https://drive.google.com/file/d/'+data.id+'/view'),
+            downloadLink:data.webContentLink||('https://drive.google.com/uc?export=download&id='+data.id),
+            source:'drive',uploaded:Date.now()
+          });}
+          next();
+        });
+      }
+      next();
+    });
+  });
+}
+
+var gisClient=null;
+var gisLoading=false;
+var gisCallbackQueue=[];
+
+function loadGIS(onReady){
+  if(gisClient){onReady(gisClient);return;}
+  gisCallbackQueue.push(onReady);
+  if(gisLoading) return;
+  gisLoading=true;
+  var s=document.createElement('script');
+  s.src='https://accounts.google.com/gsi/client';
+  s.onload=function(){
+    gisClient=google.accounts.oauth2.initTokenClient({
+      client_id:GCAL_CLIENT_ID,
+      scope:GCAL_SCOPE,
+      callback:'' // set per-request below
+    });
+    gisCallbackQueue.forEach(function(cb){cb(gisClient);});
+    gisCallbackQueue=[];
+  };
+  s.onerror=function(){
+    // GIS failed to load (e.g. WebView) — fall back to Firebase popup
+    gisLoading=false;
+    gisCallbackQueue.forEach(function(cb){cb(null);});
+    gisCallbackQueue=[];
+  };
+  document.head.appendChild(s);
+}
+
+function gcalGetToken(callback){
+  // Use cached token if still valid
+  if(gcalToken&&gcalToken.access_token&&Date.now()<gcalToken.expires_at){
+    callback(gcalToken.access_token); return;
+  }
+
+  // Try GIS first (most reliable for Calendar scope in browser)
+  loadGIS(function(client){
+    if(client){
+      // GIS token client — most reliable way to get Calendar-scoped token
+      client.callback=function(resp){
+        if(resp.error){
+          gcalMsg('Calendar access error: '+resp.error,'err');
+          gcalStatus2('Access error');
+          return;
+        }
+        gcalToken={access_token:resp.access_token,
+                   expires_at:Date.now()+(resp.expires_in||3500)*1000};
+        callback(resp.access_token);
+      };
+      // requestAccessToken opens a popup asking specifically for Calendar scope
+      client.requestAccessToken({prompt:''});
+    } else {
+      // GIS unavailable (WebView) — fall back to Firebase signInWithPopup
+      gcalGetTokenViaFirebase(callback);
+    }
+  });
+}
+
+function gcalGetTokenViaFirebase(callback){
+  var p=new firebase.auth.GoogleAuthProvider();
+  p.addScope(GCAL_SCOPE);
+  p.setCustomParameters({prompt:'consent'});
+  firebase.auth().signInWithPopup(p).then(function(result){
+    var tok=result&&result.credential&&result.credential.accessToken||null;
+    if(tok){
+      gcalToken={access_token:tok,expires_at:Date.now()+3500000};
+      callback(tok);
+    } else {
+      gcalMsg('❌ No access token returned. Sign out, sign back in, then try again.','err');
+      gcalStatus2('Token error');
+    }
+  }).catch(function(e){
+    if(e.code==='auth/popup-closed-by-user'){
+      gcalMsg('Popup closed — click Sync again and click Allow.','');
+      gcalStatus2('Tap to try again');
+    } else if(e.code==='auth/cancelled-popup-request'){
+      // ignore silently
+    } else if(e.code==='auth/popup-blocked'){
+      gcalMsg('Popup blocked. Allow popups for this site in browser settings.','err');
+      gcalStatus2('Popup blocked');
+    } else {
+      gcalMsg('Auth error: '+e.message,'err');
+    }
+  });
+}
+
+// ── Sync all pending/today/overdue tasks (delta — skip unchanged) ─────────────
+function gcalSyncAllTasks(){
+  var tasks=lsGet(TK);
+  var eligible=Object.values(tasks).filter(function(t){
+    return t.date&&!t.done&&
+      (taskStatus(t)==='today'||taskStatus(t)==='pending'||taskStatus(t)==='overdue');
+  });
+  if(eligible.length===0){
+    gcalMsg('No pending tasks with dates to sync.','');
+    gcalStatus2('Nothing to sync');
+    return;
+  }
+  var cache=gcalCacheGet();
+  var toSync=eligible.filter(function(t){
+    var cv=cache[t.id];
+    return !cv||!cv.eventId||gcalHash(t)!==cv.hash;
+  });
+  if(toSync.length===0){
+    gcalMsg('All tasks already up to date — nothing to sync.','ok');
+    gcalStatus2('Already up to date ✓');
+    return;
+  }
+
+  gcalGetToken(function(token){
+    var btn=document.getElementById('gcalSyncBtn');
+    if(btn) btn.classList.add('syncing');
+    gcalMsg('Syncing '+toSync.length+' task'+(toSync.length>1?'s':'')+
+      '… ('+eligible.length+' total, '+(eligible.length-toSync.length)+' unchanged)','');
+    gcalStatus2('Syncing '+toSync.length+'…');
+    var done=0,errs=0;
+
+    function next(i){
+      if(i>=toSync.length){
+        if(btn) btn.classList.remove('syncing');
+        var now=new Date(),hm=now.getHours()+':'+(now.getMinutes()<10?'0':'')+now.getMinutes();
+        if(errs===0){
+          gcalMsg('✓ '+done+' task'+(done>1?'s':'')+' synced to Google Calendar!','ok');
+          gcalStatus2('Synced at '+hm+' ✓');
+        } else {
+          gcalMsg('⚠ '+done+' synced, '+errs+' failed. Try again shortly.','err');
+          gcalStatus2('⚠ Some failed');
+        }
+        return;
+      }
+      var t=toSync[i];
+      var ev=taskToGcalEvent(t);
+      if(!ev){ next(i+1); return; }
+      var cv=cache[t.id];
+      var url,method;
+      if(cv&&cv.eventId){
+        url=GCAL_CAL+'/'+encodeURIComponent(cv.eventId)+'?key='+GCAL_API_KEY;
+        method='PATCH';
+      } else {
+        url=GCAL_CAL+'?key='+GCAL_API_KEY;
+        method='POST';
+      }
+      fetch(url,{
+        method:method,
+        headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+        body:JSON.stringify(ev)
+      }).then(function(r){return r.json();}).then(function(d){
+        if(d.error){
+          var code=d.error.code, reason=(d.error.errors&&d.error.errors[0]&&d.error.errors[0].reason)||'';
+          if(code===404){
+            // Event deleted from Calendar — retry as insert
+            cache[t.id]={};gcalCacheSet(cache);
+            setTimeout(function(){next(i);},400); return;
+          }
+          if(code===401||reason==='authError'||reason==='invalidCredentials'){
+            // Token expired or invalid scope — clear token and show fix
+            gcalToken=null;
+            if(btn) btn.classList.remove('syncing');
+            gcalMsg('❌ Auth error (401): Token invalid or Calendar scope not granted. '
+              +'Please sign out of CD Scheduler, sign back in, and try syncing again.','err');
+            gcalStatus2('Auth error — sign out & in');
+            return;
+          }
+          if(code===403){
+            if(btn) btn.classList.remove('syncing');
+            gcalMsg('❌ Access denied (403): '+d.error.message
+              +' — Check that chint94.github.io is added as an Authorised JavaScript origin '
+              +'in your Google Cloud Console OAuth credentials.','err');
+            gcalStatus2('403 — check OAuth origin');
+            return;
+          }
+          // Log unknown errors with full detail
+          console.error('GCal error on task',t.id,'code:',code,'msg:',d.error.message,'reason:',reason);
+          gcalMsg('❌ Error '+code+': '+d.error.message,'err');
+          errs++;
+        } else {
+          cache[t.id]={eventId:d.id,hash:gcalHash(t)};
+          gcalCacheSet(cache);
+          done++;
+        }
+        setTimeout(function(){next(i+1);},300);
+      }).catch(function(){
+        errs++;
+        setTimeout(function(){next(i+1);},300);
+      });
+    }
+    next(0);
+  });
+}
+
+// ── Export .ics ───────────────────────────────────────────────────────────────
+document.getElementById('gcalExportBtn').addEventListener('click',function(){
+  var tasks=lsGet(TK);
+  var items=Object.values(tasks).filter(function(t){return t.date&&!t.done;});
+  if(items.length===0){alert('No tasks with dates to export.');return;}
+  var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//CD Scheduler//EN','CALSCALE:GREGORIAN'];
+  var now=new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  items.forEach(function(t){
+    var td=parseDate(t.date);if(!td)return;
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:'+t.id+'@cdscheduler');
+    lines.push('DTSTAMP:'+now);
+    lines.push('SUMMARY:[CD] '+(t.title||'Untitled'));
+    if(t.notes) lines.push('DESCRIPTION:'+t.notes.split('\n').join('\\n'));
+    if(t.time){
+      var tp=t.time.split(':'),h=parseInt(tp[0]),m=parseInt(tp[1]);
+      var fmt=function(d){return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'T'+pad(d.getHours())+pad(d.getMinutes())+'00';};
+      var s=new Date(td.getFullYear(),td.getMonth(),td.getDate(),h,m);
+      var e=new Date(td.getFullYear(),td.getMonth(),td.getDate(),h+1,m);
+      lines.push('DTSTART:'+fmt(s));
+      lines.push('DTEND:'+fmt(e));
+    } else {
+      var ymd=td.getFullYear()+pad(td.getMonth()+1)+pad(td.getDate());
+      lines.push('DTSTART;VALUE=DATE:'+ymd);
+      lines.push('DTEND;VALUE=DATE:'+ymd);
+    }
+    if(t.recurrence){
+      var freq=t.recurrence==='daily'?'DAILY':t.recurrence==='weekly'?'WEEKLY':'MONTHLY';
+      lines.push('RRULE:FREQ='+freq+';COUNT=20');
+    }
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  var blob=new Blob([lines.join('\r\n')],{type:'text/calendar;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='cd-scheduler-tasks.ics';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ── Wire Sync button ──────────────────────────────────────────────────────────
+(function(){
+  var btn=document.getElementById('gcalSyncBtn');
+  if(!btn||gcalBound) return;
+  gcalBound=true;
+  btn.addEventListener('click',function(){
+    gcalPanelOpen();
+    gcalMsg('Requesting calendar access…','');
+    gcalSyncAllTasks();
+  });
+})();
+
+// ── Current time line ────────────────────────────────────────────────────────
+var TIME_LINE_COLOR = '#E85252'; // red accent
+var TB_ROW_H_DESKTOP = 40;
+var TB_ROW_H_MOBILE  = 48;
+var PLANNER_START_H  = 5; // 05:00
+var SCHEDULER_TIMEZONE = 'Asia/Kolkata';
+
+function getNowInSchedulerTZ(){
+  var parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: SCHEDULER_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).formatToParts(new Date()).reduce(function(acc, part){
+    if(part.type !== 'literal') acc[part.type] = part.value;
+    return acc;
+  }, {});
+
+  return {
+    year: parseInt(parts.year, 10),
+    month: parseInt(parts.month, 10),
+    day: parseInt(parts.day, 10),
+    hours: parseInt(parts.hour, 10),
+    minutes: parseInt(parts.minute, 10),
+    seconds: parseInt(parts.second || '0', 10)
+  };
+}
+
+function getTodayInSchedulerTZDate(){
+  var now = getNowInSchedulerTZ();
+  return new Date(now.year, now.month - 1, now.day);
+}
+
+function isSameYMD(dateObj, y, m, d){
+  return dateObj &&
+    dateObj.getFullYear() === y &&
+    (dateObj.getMonth() + 1) === m &&
+    dateObj.getDate() === d;
+}
+
+function renderTimeLine(){
+  ['timeLineD','timeLineM'].forEach(function(id){var e=document.getElementById(id);if(e)e.remove();});
+}
+
+setTimeout(renderPlannerTimeBlocks, 300);
+
+window.addEventListener('resize',function(){setTimeout(renderPlannerTimeBlocks,80);});
+setInterval(markOverdue,60000);
+setInterval(function(){if(currentTab==='tasks')renderTasks(); if(currentTab==='dashboard')renderDashboard();},60000);
+
+</script>
+
+<!-- Firebase compat SDKs — work in ALL browsers and Android WebView -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+(function() {
+  'use strict';
+
+  // ── REPLACE these 7 values with your Firebase project config ──────────
+  var firebaseConfig = {
+    apiKey:            "AIzaSyBfxXR0i6qevze2lGTQyFR7XkeCxxAZBnc",
+    authDomain:        "cd-scheduler-3fdad.firebaseapp.com",
+    databaseURL:       "https://cd-scheduler-3fdad-default-rtdb.firebaseio.com",
+    projectId:         "cd-scheduler-3fdad",
+    storageBucket:     "cd-scheduler-3fdad.firebasestorage.app",
+    messagingSenderId: "654814312302",
+    appId:             "1:654814312302:web:394f66b4eb29327de3b37f"
+  };
+  // ──────────────────────────────────────────────────────────────────────
+
+  // Bail out silently if still using placeholder values
+  if (firebaseConfig.apiKey.startsWith('REPLACE')) return;
+
+  try {
+    firebase.initializeApp(firebaseConfig);
+  } catch(e) {
+    if (e.code !== 'app/duplicate-app') { console.warn('Firebase init error:', e); return; }
+  }
+
+  var auth     = firebase.auth();
+  var db       = firebase.database();
+  var provider = new firebase.auth.GoogleAuthProvider();
+  provider.addScope('https://www.googleapis.com/auth/drive.file');
+  provider.addScope('https://www.googleapis.com/auth/calendar.events');
+
+  // ── Detect Android WebView ─────────────────────────────────────────────
+  // Google blocks signInWithPopup in WebView — use signInWithRedirect instead
+  function isWebView() {
+    var ua = navigator.userAgent || '';
+    return /; wv\)/.test(ua) ||
+           /Android.*Version\/[\d.]+.*Chrome\/[\d.]+ Mobile/.test(ua) ||
+           typeof window.Android !== 'undefined';
+  }
+
+  function isMobileLikeBrowser() {
+    var ua = navigator.userAgent || '';
+    // Only match genuine mobile UA strings — NOT (pointer: coarse), because
+    // touchscreen laptops (e.g. Surface, Lenovo Yoga) also report coarse pointer,
+    // which incorrectly triggers signInWithRedirect and causes a silent auth loop
+    // when third-party cookies are restricted on desktop browsers.
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+  }
+
+  function isFileProtocol() {
+    return window.location.protocol === 'file:';
+  }
+
+  function beginGoogleSignIn(lbl) {
+    // Google Sign-In does not work when the file is opened directly from disk (file://).
+    // Show a friendly warning and offer to open the hosted version instead.
+    if (isFileProtocol()) {
+      if (lbl) lbl.textContent = 'Sign in with Google';
+      document.getElementById('fileProtocolWarning').style.display = 'flex';
+      return;
+    }
+
+    var useRedirect = isWebView() || isMobileLikeBrowser();
+    if (lbl) lbl.textContent = 'Signing in...';
+
+    return auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(function() {
+      if (useRedirect) {
+        return auth.signInWithRedirect(provider);
+      }
+      return auth.signInWithPopup(provider).catch(function(e) {
+        if (e.code === 'auth/popup-blocked' ||
+            e.code === 'auth/popup-closed-by-user' ||
+            e.code === 'auth/cancelled-popup-request' ||
+            e.code === 'auth/operation-not-supported-in-this-environment') {
+          return auth.signInWithRedirect(provider);
+        }
+        throw e;
+      });
+    }).catch(function(e) {
+      if (lbl) lbl.textContent = 'Sign in with Google';
+      if (e.code === 'auth/configuration-not-found' || e.code === 'auth/invalid-api-key' || e.code === 'auth/unauthorized-domain') {
+        document.getElementById('configWarning').style.display = 'flex';
+      } else if (e.code !== 'auth/no-auth-event') {
+        alert('Sign-in error: ' + e.message);
+      }
+    });
+  }
+
+  var plannerPath = null, plannerCb = null;
+  var tasksCb = null, notesCb = null;
+
+  function uid() {
+    return auth.currentUser ? auth.currentUser.uid : null;
+  }
+
+  // ── Wire up FB hooks ───────────────────────────────────────────────────
+  window.FB.savePlannerCell = function(wk, key, value) {
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/weeks/' + wk + '/' + key).set(value);
+  };
+  window.FB.saveTask = function(id, obj) {
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/tasks/' + id).set(obj);
+  };
+  window.FB.deleteTask = function(id) {
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/tasks/' + id).remove();
+  };
+  window.FB.saveNote = function(id, obj) {
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/notes/' + id).set(obj);
+  };
+  window.FB.deleteNote = function(id) {
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/notes/' + id).remove();
+  };
+
+  // ── Gami / Marketplace write hooks ────────────────────────────────────
+  window.FB.saveGami = function(g) {
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/gami').set(g);
+  };
+  window.FB.saveGamiCfg = function(c) {
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/gamiCfg').set(c);
+  };
+  window.FB.saveMktGoals = function(goals) {
+    if (!uid()) return;
+    // Firebase can't store plain arrays at the root; store as object keyed by index
+    var obj = {};
+    goals.forEach(function(g, i) { obj[g.id] = g; });
+    db.ref('users/' + uid() + '/mktGoals').set(obj);
+  };
+  window.FB.saveMktPurchased = function(items) {
+    if (!uid()) return;
+    var obj = {};
+    items.forEach(function(p) { obj[p.pid] = p; });
+    db.ref('users/' + uid() + '/mktPurchased').set(obj);
+  };
+
+  window.FB.reattachPlanner = function(wk) {
+    if (!uid()) return;
+    if (plannerCb && plannerPath) db.ref(plannerPath).off('value', plannerCb);
+    plannerPath = 'users/' + uid() + '/weeks/' + wk;
+    plannerCb = db.ref(plannerPath).on('value', function(snap) {
+      var remote = snap.val() || {};
+      Object.keys(remote).forEach(function(key) {
+        var cell = document.querySelector('[data-key="' + key + '"]');
+        if (cell && cell.value !== remote[key]) cell.value = remote[key];
+      });
+      markOverdue();
+    });
+  };
+
+  // ── Sign In ────────────────────────────────────────────────────────────
+  document.getElementById('signInBtn').addEventListener('click', function() {
+    beginGoogleSignIn(document.getElementById('signInLabel'));
+  });
+
+  // ── Handle redirect result on page load ───────────────────────────────
+  auth.getRedirectResult().then(function(result) {
+    var lbl = document.getElementById('signInLabel');
+    if (lbl) lbl.textContent = 'Sign in with Google';
+    // onAuthStateChanged below handles updating the UI
+  }).catch(function(e) {
+    var lbl = document.getElementById('signInLabel');
+    if (lbl) lbl.textContent = 'Sign in with Google';
+    if (e.code === 'auth/configuration-not-found' || e.code === 'auth/invalid-api-key' || e.code === 'auth/unauthorized-domain') {
+      document.getElementById('configWarning').style.display = 'flex';
+    } else if (e.code !== 'auth/no-auth-event') {
+      console.warn('Redirect result:', e.message);
+    }
+  });
+
+  // ── Sign Out ───────────────────────────────────────────────────────────
+  document.getElementById('signOutBtn').addEventListener('click', function() {
+    if (plannerCb && plannerPath) db.ref(plannerPath).off('value', plannerCb);
+    if (tasksCb) db.ref('users/' + uid() + '/tasks').off('value', tasksCb);
+    if (notesCb) db.ref('users/' + uid() + '/notes').off('value', notesCb);
+    if (uid()) {
+      db.ref('users/' + uid() + '/gami').off();
+      db.ref('users/' + uid() + '/mktGoals').off();
+      db.ref('users/' + uid() + '/mktPurchased').off();
+    }
+    auth.signOut();
+  });
+
+  // ── Auth state observer ────────────────────────────────────────────────
+  auth.onAuthStateChanged(function(user) {
+    if (user) {
+      document.getElementById('loginPanel').style.display = 'none';
+      document.getElementById('userInfo').style.display = 'flex';
+      document.getElementById('syncBadge').style.display = 'flex';
+      document.getElementById('userName').textContent = user.displayName || user.email;
+      var av = document.getElementById('userAvatar');
+      if (user.photoURL) { av.src = user.photoURL; av.style.display = 'block'; }
+      var lbl = document.getElementById('signInLabel');
+      if (lbl) lbl.textContent = 'Sign in with Google';
+
+      // Planner listener
+      var wk = window.weekStart ? fmtDate(window.weekStart) : null;
+      if (wk) window.FB.reattachPlanner(wk);
+
+      // Tasks listener
+      if (tasksCb) db.ref('users/' + uid() + '/tasks').off('value', tasksCb);
+      var firstTaskSync = true;
+      tasksCb = db.ref('users/' + uid() + '/tasks').on('value', function(snap) {
+        var remote = snap.val() || {};
+        if (!firstTaskSync && window.FB.ignoreNextTaskSync) {
+          window.FB.ignoreNextTaskSync = false;
+          return;
+        }
+        firstTaskSync = false;
+        lsSet(TK, remote);
+        Object.values(remote).forEach(function(t) {
+          var ti = document.getElementById('tt-' + t.id);
+          if (ti && document.activeElement !== ti) ti.value = t.title || '';
+          var ni = document.querySelector('[data-notes-id="' + t.id + '"]');
+          if (ni && document.activeElement !== ni) ni.value = t.notes || '';
+        });
+        buildGrid();
+        // XP is managed exclusively via Firebase /gami — no local recomputation here.
+        // Just refresh the HUD so task completion counts stay current.
+        gamiRenderHud();
+        mktRefreshXpBadge();
+        if (currentTab === 'rewards') renderRewards();
+      });
+
+      // Notes listener
+      if (notesCb) db.ref('users/' + uid() + '/notes').off('value', notesCb);
+      var firstNoteSync = true;
+      notesCb = db.ref('users/' + uid() + '/notes').on('value', function(snap) {
+        var remote = snap.val() || {};
+        if (!firstNoteSync && window.FB.ignoreNextNoteSync) {
+          window.FB.ignoreNextNoteSync = false;
+          return;
+        }
+        firstNoteSync = false;
+        lsSet(NK, remote);
+        Object.values(remote).forEach(function(n) {
+          var ti = document.getElementById('nt-' + n.id);
+          if (ti && document.activeElement !== ti) ti.value = n.title || '';
+          var bi = document.querySelector('[data-note-body="' + n.id + '"]');
+          if (bi && document.activeElement !== bi) bi.value = n.body || '';
+        });
+      });
+
+      // ── GamiCfg listener (XP values + level thresholds) ─────────────────
+      var ignoringGamiCfgEcho = false;
+      var _origGamiCfgSet = window.gamiCfgSet;
+      window.gamiCfgSet = function(c) {
+        ignoringGamiCfgEcho = true;
+        _origGamiCfgSet(c);
+        setTimeout(function() { ignoringGamiCfgEcho = false; }, 600);
+      };
+      db.ref('users/' + uid() + '/gamiCfg').on('value', function(snap) {
+        if (ignoringGamiCfgEcho) return;
+        var remote = snap.val();
+        if (!remote) return;
+        try { localStorage.setItem(GCK, JSON.stringify(remote)); } catch(e) {}
+        gamiApplyCfg();
+        gamiRenderHud();
+        // Re-render avatar gallery so customised emojis appear on all devices
+        if (typeof avRenderGallery === 'function') {
+          // Sync GAMI_LEVELS avatars from the freshly applied config
+          var c2 = gamiCfgGet();
+          GAMI_LEVELS.forEach(function(l, i) {
+            if (c2.levels[i]) l.avatar = c2.levels[i].avatar || l.avatar;
+          });
+          avRenderGallery();
+        }
+        if (currentTab === 'rewards') renderRewards();
+      });
+
+            // ── Gami listener — Firebase is the single source of truth ─────────
+      var ignoringGamiEcho = false;
+      // Patch gamiSet to suppress the echo from our own writes
+      var _origGamiSet = window.gamiSet;
+      window.gamiSet = function(g) {
+        ignoringGamiEcho = true;
+        _origGamiSet(g);
+        // Reset echo flag after Firebase round-trip (~300ms)
+        setTimeout(function() { ignoringGamiEcho = false; }, 600);
+      };
+      db.ref('users/' + uid() + '/gami').on('value', function(snap) {
+        if (ignoringGamiEcho) return;   // skip echo of our own write
+        var remote = snap.val();
+        if (!remote) {
+          // Nothing in Firebase yet — push local state up so all devices get it
+          var local = gamiGet();
+          if (local.xp > 0 || Object.keys(local.completedIds||{}).length > 0) {
+            db.ref('users/' + uid() + '/gami').set(local);
+          }
+          return;
+        }
+        // Always apply Firebase data — it is the authoritative value
+        try { localStorage.setItem(GK, JSON.stringify(remote)); } catch(e) {}
+        gamiRenderHud();
+        mktRefreshXpBadge();
+        if (currentTab === 'rewards') renderRewards();
+        if (currentTab === 'tasks') renderTasks();
+      });
+
+      // ── Marketplace goals listener ─────────────────────────────────────
+      var ignoringMktGoalsEcho = false;
+      var _origMktSet = window.mktSet;
+      window.mktSet = function(d) {
+        ignoringMktGoalsEcho = true;
+        _origMktSet(d);
+        setTimeout(function() { ignoringMktGoalsEcho = false; }, 600);
+      };
+      db.ref('users/' + uid() + '/mktGoals').on('value', function(snap) {
+        if (ignoringMktGoalsEcho) return;
+        var remote = snap.val();
+        // Convert Firebase object back to ordered array (sort by id for stable order)
+        var goals = remote
+          ? Object.values(remote).sort(function(a,b){ return (a.id||'').localeCompare(b.id||''); })
+          : [];
+        try { localStorage.setItem(MKT_KEY, JSON.stringify(goals)); } catch(e) {}
+        // Always re-render — whether user is on rewards tab or not, keep data fresh
+        mktRefreshXpBadge();
+        if (currentTab === 'rewards') mktRenderCatalogue();
+      });
+
+      // ── Marketplace purchased listener ─────────────────────────────────
+      var ignoringMktPurchEcho = false;
+      var _origMktPurchSet = window.mktPurchSet;
+      window.mktPurchSet = function(d) {
+        ignoringMktPurchEcho = true;
+        _origMktPurchSet(d);
+        setTimeout(function() { ignoringMktPurchEcho = false; }, 600);
+      };
+      db.ref('users/' + uid() + '/mktPurchased').on('value', function(snap) {
+        if (ignoringMktPurchEcho) return;
+        var remote = snap.val();
+        var items = remote
+          ? Object.values(remote).sort(function(a,b){ return (a.purchasedAt||0)-(b.purchasedAt||0); })
+          : [];
+        try { localStorage.setItem(MKT_PURCH_KEY, JSON.stringify(items)); } catch(e) {}
+        if (currentTab === 'rewards') mktRenderPurchased();
+      });
+
+    } else {
+      document.getElementById('loginPanel').style.display = 'flex';
+      document.getElementById('userInfo').style.display = 'none';
+      document.getElementById('syncBadge').style.display = 'none';
+    }
+  });
+
+})();
+}); // DOMContentLoaded
+
+/* ═══════════════════════════════════════════════════════════
+   HOW-TO GUIDE — accordion logic
+   All functions are global so onclick attributes work.
+═══════════════════════════════════════════════════════════ */
+function htgToggleMaster(){
+  var cards  = document.getElementById('htgCards');
+  var chev   = document.getElementById('htgMasterChev');
+  if(!cards || !chev) return;
+  var isOpen = cards.classList.contains('open');
+  cards.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+  // Update expand-all button label based on current card states
+  htgSyncExpandAllBtn();
+}
+
+function htgToggleCard(headEl){
+  var body = headEl.nextElementSibling;
+  var chev = headEl.querySelector('.htg-card-chev');
+  if(!body) return;
+  var isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if(chev) chev.classList.toggle('open', !isOpen);
+  htgSyncExpandAllBtn();
+}
+
+function htgToggleAll(){
+  var cards  = document.getElementById('htgCards');
+  var btn    = document.getElementById('htgExpandAllBtn');
+  if(!cards) return;
+  // Make sure master panel is open first
+  if(!cards.classList.contains('open')){
+    cards.classList.add('open');
+    var masterChev = document.getElementById('htgMasterChev');
+    if(masterChev) masterChev.classList.add('open');
+  }
+  var bodies = cards.querySelectorAll('.htg-card-body');
+  var chevs  = cards.querySelectorAll('.htg-card-chev');
+  // Determine current state: expand all if any are closed, collapse all if all open
+  var anyClose = Array.from(bodies).some(function(b){ return !b.classList.contains('open'); });
+  bodies.forEach(function(b){ b.classList.toggle('open', anyClose); });
+  chevs.forEach(function(c){  c.classList.toggle('open', anyClose); });
+  if(btn) btn.textContent = anyClose ? 'Collapse all' : 'Expand all';
+}
+
+function htgSyncExpandAllBtn(){
+  var cards = document.getElementById('htgCards');
+  var btn   = document.getElementById('htgExpandAllBtn');
+  if(!cards || !btn) return;
+  var bodies  = cards.querySelectorAll('.htg-card-body');
+  var allOpen = Array.from(bodies).every(function(b){ return b.classList.contains('open'); });
+  btn.textContent = allOpen ? 'Collapse all' : 'Expand all';
+}
+
+</script>
+</body>
+</html>
