@@ -5212,7 +5212,7 @@ function openSimpleTaskModal(taskId){
   }
 
   // Hidden file input — used by both desktop (transparent overlay) and mobile (triggered programmatically)
-  var attFileInp=document.createElement('input');attFileInp.type='file';attFileInp.multiple=true;
+  var attFileInp=document.createElement('input');attFileInp.type='file';attFileInp.multiple=true;attFileInp.setAttribute('multiple','multiple');
   attFileInp.style.display='none'; // always hidden — triggered via click() or overlay
   document.body.appendChild(attFileInp); // attach to body so .click() works on all browsers
 
@@ -5232,7 +5232,7 @@ function openSimpleTaskModal(taskId){
 
   if(!onMobileDevice){
     // Desktop: transparent file input overlay over the zone
-    var attOverlay=document.createElement('input');attOverlay.type='file';attOverlay.multiple=true;
+    var attOverlay=document.createElement('input');attOverlay.type='file';attOverlay.multiple=true;attOverlay.setAttribute('multiple','multiple');
     attOverlay.addEventListener('change',function(){doUpload(attOverlay.files);attOverlay.value='';});
     attZone.appendChild(attOverlay);
     attZone.appendChild(attHint);
@@ -5258,20 +5258,10 @@ function openSimpleTaskModal(taskId){
     attZone.appendChild(attMobileBtn);
 
     attMobileBtn.addEventListener('click',function(){
-      attMobileBtn.disabled=true;
-      attMobileBtn.textContent='Connecting to Google Drive...';
-      driveGetToken(function(err,token){
-        if(err||!token){
-          attMobileBtn.disabled=false;
-          attMobileBtn.textContent='Upload file to Google Drive';
-          alert('Google Drive sign-in failed:\n'+(err||'unknown error'));
-          return;
-        }
-        // Token obtained — open native file picker
-        attMobileBtn.disabled=false;
-        attMobileBtn.textContent='Upload file to Google Drive';
-        attFileInp.click();
-      });
+      // Mobile browsers require the native file picker to open directly from
+      // the user's tap. Asking Google for a token first makes the later
+      // input.click() look non-user-initiated and can silently fail on Android/iOS.
+      attFileInp.click();
     });
   }
 
@@ -5302,6 +5292,8 @@ function openSimpleTaskModal(taskId){
   function doUpload(fileList){
     var arr=Array.from(fileList||[]);
     if(!arr.length)return;
+    if(!navigator.onLine){alert('No internet connection. Please reconnect and try uploading again.');return;}
+    if(typeof attMobileBtn!=='undefined'&&attMobileBtn){attMobileBtn.disabled=true;attMobileBtn.textContent='Uploading to Google Drive...';}
     var phs=arr.map(function(f){return{_uploading:true,name:f.name,_pct:0};});
     phs.forEach(function(p){curAtts.push(p);});
     buildAttList();
@@ -5314,6 +5306,7 @@ function openSimpleTaskModal(taskId){
         if(err){
           phs.forEach(function(p){var pi=curAtts.indexOf(p);if(pi>=0)curAtts.splice(pi,1);});
           buildAttList();
+          if(typeof attMobileBtn!=='undefined'&&attMobileBtn){attMobileBtn.disabled=false;attMobileBtn.textContent='Upload file to Google Drive';}
           alert('Upload error: '+err);return;
         }
         results.forEach(function(res,i){
@@ -5323,6 +5316,7 @@ function openSimpleTaskModal(taskId){
         });
         buildAttList();
         persistAttachmentSync();
+        if(typeof attMobileBtn!=='undefined'&&attMobileBtn){attMobileBtn.disabled=false;attMobileBtn.textContent='Upload file to Google Drive';}
       }
     );
   }
@@ -7150,20 +7144,46 @@ function driveEnsureFolder(token,cb){
   fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id)',{
     headers:{'Authorization':'Bearer '+token}
   }).then(function(r){return r.json();}).then(function(d){
+    if(d.error){cb(d.error.message||JSON.stringify(d.error),null);return;}
     if(d.files&&d.files.length){cdDriveFolderId=d.files[0].id;cb(null,cdDriveFolderId);}
     else{
       fetch('https://www.googleapis.com/drive/v3/files',{
         method:'POST',
         headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
         body:JSON.stringify({name:'CD Scheduler Attachments',mimeType:'application/vnd.google-apps.folder'})
-      }).then(function(r){return r.json();}).then(function(f){cdDriveFolderId=f.id;cb(null,f.id);}).catch(function(e){cb(e.message,null);});
+      }).then(function(r){return r.json();}).then(function(f){
+        if(f.error){cb(f.error.message||JSON.stringify(f.error),null);return;}
+        cdDriveFolderId=f.id;cb(null,f.id);
+      }).catch(function(e){cb(e.message,null);});
     }
   }).catch(function(e){cb(e.message,null);});
 }
 
+function driveUploadFileMultipart(file,token,folderId,onPct,cb){
+  // Fallback uploader. No app-side file size/count limits are applied here.
+  var meta={name:file.name,parents:[folderId],mimeType:file.type||'application/octet-stream'};
+  var fd=new FormData();
+  fd.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
+  fd.append('file',file,file.name);
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST','https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,mimeType,webViewLink,webContentLink');
+  xhr.setRequestHeader('Authorization','Bearer '+token);
+  xhr.upload.onprogress=function(e){if(e.lengthComputable&&onPct)onPct(Math.round(e.loaded/e.total*100));};
+  xhr.onload=function(){
+    if(xhr.status>=200&&xhr.status<300){
+      try{cb(null,JSON.parse(xhr.responseText));}
+      catch(parseErr){cb('Upload completed but response could not be read.',null);}
+    } else {
+      cb('Upload failed ('+xhr.status+'): '+(xhr.responseText||''),null);
+    }
+  };
+  xhr.onerror=function(){cb('Network error while uploading to Google Drive',null);};
+  xhr.send(fd);
+}
+
 function driveUploadFile(file,token,folderId,onPct,cb){
-  // Resumable upload is used instead of multipart upload so the app does not
-  // impose its own file-size limit. Google Drive/account storage limits still apply.
+  // Try resumable upload first, then automatically fall back to multipart if
+  // the browser/API does not expose a resumable session URL.
   var meta={name:file.name,parents:[folderId]};
   fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,size,mimeType,webViewLink,webContentLink',{
     method:'POST',
@@ -7177,7 +7197,7 @@ function driveUploadFile(file,token,folderId,onPct,cb){
   }).then(function(r){
     if(!r.ok){return r.text().then(function(t){throw new Error('Upload session failed ('+r.status+'): '+t);});}
     var sessionUrl=r.headers.get('Location');
-    if(!sessionUrl)throw new Error('Google Drive did not return an upload session.');
+    if(!sessionUrl){driveUploadFileMultipart(file,token,folderId,onPct,cb);return;}
     var xhr=new XMLHttpRequest();
     xhr.open('PUT',sessionUrl);
     xhr.setRequestHeader('Content-Type',file.type||'application/octet-stream');
@@ -7192,7 +7212,7 @@ function driveUploadFile(file,token,folderId,onPct,cb){
     };
     xhr.onerror=function(){cb('Network error while uploading to Google Drive',null);};
     xhr.send(file);
-  }).catch(function(e){cb(e.message||String(e),null);});
+  }).catch(function(){driveUploadFileMultipart(file,token,folderId,onPct,cb);});
 }
 
 function driveUploadBatch(files,onProgress,onDone){
