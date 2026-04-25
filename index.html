@@ -431,7 +431,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   background:#FFF5F5;color:var(--ot);transition:all .15s;text-align:center}
 .stm-del-opt:hover{background:#FFE0E0}
 
-/* ── Drive Attachment Section ── */
+/* ── Attachment Section ── */
 .stm-attach-zone{border:2px dashed var(--gp);border-radius:10px;padding:14px 12px;
   text-align:center;cursor:pointer;transition:all .18s;background:var(--gc);
   display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
@@ -444,38 +444,22 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .stm-attach-list{display:flex;flex-direction:column;gap:7px;margin-top:6px}
 .stm-attach-item{display:flex;align-items:center;gap:8px;background:white;
   border:1.5px solid var(--gp);border-radius:8px;padding:7px 10px;
-  box-shadow:0 1px 4px rgba(139,105,20,0.08);transition:border-color .15s}
+  box-shadow:0 1px 4px rgba(139,105,20,0.08)}
 .stm-attach-item:hover{border-color:var(--gm)}
 .stm-attach-file-icon{font-size:18px;flex-shrink:0;width:26px;text-align:center}
 .stm-attach-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
-.stm-attach-name{font-size:12px;font-weight:600;color:var(--gm);white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis;text-decoration:none;display:block}
-.stm-attach-name:hover{text-decoration:underline;color:var(--gd)}
-.stm-attach-meta{font-size:10px;color:var(--inkl);display:flex;align-items:center;gap:6px}
-.stm-attach-drive-badge{display:inline-flex;align-items:center;gap:2px;font-size:9px;
-  font-weight:700;background:#E8F0FE;color:#1a73e8;border-radius:4px;padding:1px 5px}
-.stm-attach-actions{display:flex;align-items:center;gap:2px;flex-shrink:0}
-.stm-attach-btn{background:transparent;border:none;cursor:pointer;font-size:13px;
-  padding:4px 6px;border-radius:5px;line-height:1;-webkit-tap-highlight-color:transparent;
-  transition:background .12s;color:var(--inkl)}
-.stm-attach-btn:hover{background:var(--gc)}
-.stm-attach-btn.del:hover{background:#FFE0E0;color:var(--ot)}
-.stm-attach-progress{width:100%;height:4px;background:var(--gp);border-radius:4px;
-  margin-top:4px;overflow:hidden;display:none}
-.stm-attach-progress-bar{height:100%;background:var(--gm);border-radius:4px;
-  transition:width .2s;width:0%}
-.stm-attach-uploading{font-size:11px;color:var(--gm);font-weight:600;
-  display:flex;align-items:center;gap:6px;padding:8px 10px;background:rgba(196,148,42,0.07);
-  border-radius:8px;border:1px solid var(--gp)}
-.stm-attach-spinner{width:14px;height:14px;border:2px solid var(--gp);
-  border-top-color:var(--gm);border-radius:50%;animation:attachSpin .7s linear infinite;flex-shrink:0}
-@keyframes attachSpin{to{transform:rotate(360deg)}}
+.stm-attach-name{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;cursor:pointer;text-decoration:none}
+.stm-attach-name:hover{color:var(--gm);text-decoration:underline}
+.stm-attach-size{font-size:10px;color:var(--inkl)}
+.stm-attach-del{background:transparent;border:none;cursor:pointer;font-size:14px;
+  color:var(--inkl);padding:3px 5px;border-radius:5px;flex-shrink:0;line-height:1;
+  -webkit-tap-highlight-color:transparent;transition:background .12s}
+.stm-attach-del:hover{background:#FFE0E0;color:var(--ot)}
 .stm-attach-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;
   font-weight:700;padding:2px 6px;border-radius:10px;
-  background:#E8F0FE;color:#1a73e8;margin-left:2px}
-.stm-drive-signin-note{font-size:11px;color:var(--inkl);background:rgba(91,155,213,0.07);
-  border:1px solid rgba(91,155,213,0.25);border-radius:8px;padding:9px 11px;line-height:1.5}
-.stm-drive-signin-note a{color:var(--gm);font-weight:600;cursor:pointer}
+  background:rgba(139,105,20,0.1);color:var(--gd);margin-left:2px}
+
 @media(max-width:480px){
   .stm-body{padding:14px 15px;gap:12px}
   .stm-actions{padding:12px 15px;gap:7px}
@@ -2162,7 +2146,7 @@ function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'{}')}catch(e){
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 
-// ── File/attachment helpers ──
+// ── Attachment helpers ──
 function getFileIcon(mimeType){
   if(!mimeType)return '📄';
   if(mimeType.startsWith('image/'))return '🖼️';
@@ -4945,18 +4929,10 @@ function renderTasks(){
       notesSection='<div class="task-notes-full">'+t.notes.trim().replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>';
     }
 
-    card.innerHTML=
-      '<div class="task-stripe" style="background:'+stripeColor+'"></div>'+
-      '<div class="task-top">'+
-        '<input type="checkbox" class="task-chk"'+(t.done?' checked':'')+' id="chk-'+t.id+'">'+
-        '<div class="task-bd'+(t.done?' task-done':'')+'">'+
-          '<div class="task-ti">'+(t.title||'<span style="color:rgba(139,105,20,.38);font-weight:400">Untitled task</span>')+'</div>'+
-          
-    // Drive attachment badge
+    // Attachment badge
     var attachBadge='';
     if(t.attachments&&t.attachments.length>0){
-      var hasDrive=t.attachments.some(function(a){return a.source==='drive';});
-      attachBadge='<span class="stm-attach-badge">'+(hasDrive?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px"><path d="M12 2L2 19h20L12 2z" fill="#1a73e8" opacity=".3"/><path d="M2 19h8l-4-7-4 7zm14-7l-4 7h8l-4-7z" fill="#1a73e8"/></svg> ':'📎 ')+t.attachments.length+' file'+(t.attachments.length!==1?'s':'')+'</span>';
+      attachBadge='<span class="stm-attach-badge">📎 '+t.attachments.length+' file'+(t.attachments.length!==1?'s':'')+'</span>';
     }
 
     card.innerHTML=
@@ -5164,73 +5140,36 @@ function openSimpleTaskModal(taskId){
   notesSec.appendChild(notesLbl);notesSec.appendChild(notesInp);
   body.appendChild(notesSec);
 
-  // ── Attachments (Google Drive) ──
+  // ── Attachments ──
   var attachSec=document.createElement('div');attachSec.className='stm-section';
   var attachLbl=document.createElement('div');attachLbl.className='stm-lbl';
-  attachLbl.textContent='Attachments · via Google Drive (no size limit)';
+  attachLbl.textContent='Attachments (max 5 files · 10 MB each)';
   attachSec.appendChild(attachLbl);
 
+  // Current attachments list
   var attachList=document.createElement('div');attachList.className='stm-attach-list';
   var curAttachments=(t.attachments&&Array.isArray(t.attachments))?t.attachments.slice():[];
-
-  function driveFileIcon(mime){return getFileIcon(mime||'');}
 
   function renderAttachList(){
     attachList.innerHTML='';
     curAttachments.forEach(function(att,idx){
-      if(att._uploading){
-        var upRow=document.createElement('div');upRow.className='stm-attach-uploading';
-        var spin=document.createElement('div');spin.className='stm-attach-spinner';
-        var upTxt=document.createElement('span');upTxt.textContent='Uploading '+att.name+'…';
-        var pct=document.createElement('span');pct.style.cssText='margin-left:auto;font-size:10px;color:var(--inkl)';
-        pct.textContent=(att._pct||0)+'%';
-        upRow.appendChild(spin);upRow.appendChild(upTxt);upRow.appendChild(pct);
-        var bar=document.createElement('div');bar.className='stm-attach-progress';bar.style.display='block';
-        var barInner=document.createElement('div');barInner.className='stm-attach-progress-bar';
-        barInner.style.width=(att._pct||0)+'%';
-        bar.appendChild(barInner);
-        var wrap=document.createElement('div');
-        wrap.appendChild(upRow);wrap.appendChild(bar);
-        attachList.appendChild(wrap);
-        return;
-      }
       var item=document.createElement('div');item.className='stm-attach-item';
       var icon=document.createElement('div');icon.className='stm-attach-file-icon';
-      icon.textContent=driveFileIcon(att.type||'');
+      icon.textContent=getFileIcon(att.type||'');
       var info=document.createElement('div');info.className='stm-attach-info';
       var nameEl=document.createElement('a');nameEl.className='stm-attach-name';
       nameEl.textContent=att.name;nameEl.title=att.name;
-      nameEl.href=att.driveLink||'#';nameEl.target='_blank';nameEl.rel='noopener';
-      var metaEl=document.createElement('div');metaEl.className='stm-attach-meta';
-      metaEl.innerHTML=formatFileSize(att.size||0)+
-        ' <span class="stm-attach-drive-badge">'+
-        '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px">'+
-        '<path d="M12 2L2 19h8l2-4 2 4h8L12 2z" fill="#1a73e8" opacity=".4"/>'+
-        '<path d="M4 19h16" stroke="#1a73e8" stroke-width="2"/></svg> Drive</span>';
-      info.appendChild(nameEl);info.appendChild(metaEl);
-      var acts=document.createElement('div');acts.className='stm-attach-actions';
-      // Download btn
-      if(att.downloadLink){
-        var dlBtn=document.createElement('a');dlBtn.className='stm-attach-btn';
-        dlBtn.href=att.downloadLink;dlBtn.target='_blank';dlBtn.rel='noopener';
-        dlBtn.title='Download';dlBtn.textContent='⬇️';
-        dlBtn.style.cssText='text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;';
-        acts.appendChild(dlBtn);
-      }
-      // Delete btn
-      var delBtn=document.createElement('button');delBtn.className='stm-attach-btn del';
-      delBtn.type='button';delBtn.textContent='✕';delBtn.title='Remove attachment';
-      (function(i,a){
-        delBtn.addEventListener('click',function(){
-          if(confirm('Remove "'+a.name+'" from this task?
-
-Note: The file will remain in your Google Drive.')){
-            curAttachments.splice(i,1);renderAttachList();updateAttachZone();
-          }
-        });
-      })(idx,att);
-      acts.appendChild(delBtn);
-      item.appendChild(icon);item.appendChild(info);item.appendChild(acts);
+      nameEl.href=att.data;nameEl.download=att.name;nameEl.target='_blank';
+      var sizeEl=document.createElement('div');sizeEl.className='stm-attach-size';
+      sizeEl.textContent=formatFileSize(att.size||0);
+      info.appendChild(nameEl);info.appendChild(sizeEl);
+      var delBtn3=document.createElement('button');delBtn3.className='stm-attach-del';
+      delBtn3.textContent='✕';delBtn3.title='Remove attachment';
+      delBtn3.type='button';
+      delBtn3.addEventListener('click',function(){
+        curAttachments.splice(idx,1);renderAttachList();updateAttachZone();
+      });
+      item.appendChild(icon);item.appendChild(info);item.appendChild(delBtn3);
       attachList.appendChild(item);
     });
   }
@@ -5238,96 +5177,61 @@ Note: The file will remain in your Google Drive.')){
   // Drop zone
   var attachZone=document.createElement('div');attachZone.className='stm-attach-zone';
   var attachFileInp=document.createElement('input');attachFileInp.type='file';
-  attachFileInp.multiple=true;
-  attachFileInp.accept='image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.mp3,.mp4,.mov,.heic';
+  attachFileInp.multiple=true;attachFileInp.accept='image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.mp3,.mp4,.mov';
   attachZone.appendChild(attachFileInp);
-  var attachZoneIcon=document.createElement('div');attachZoneIcon.className='stm-attach-icon';
-  attachZoneIcon.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M19 11H13V5a1 1 0 00-2 0v6H5a1 1 0 000 2h6v6a1 1 0 002 0v-6h6a1 1 0 000-2z" fill="#1a73e8"/></svg>';
+  var attachZoneIcon=document.createElement('div');attachZoneIcon.className='stm-attach-icon';attachZoneIcon.textContent='📎';
   var attachZoneHint=document.createElement('div');attachZoneHint.className='stm-attach-hint';
-  var attachZoneSub=document.createElement('div');attachZoneSub.className='stm-attach-limit';
-  attachZone.appendChild(attachZoneIcon);attachZone.appendChild(attachZoneHint);attachZone.appendChild(attachZoneSub);
-
-  // Drive sign-in note
-  var driveNote=document.createElement('div');driveNote.className='stm-drive-signin-note';
-  driveNote.innerHTML='<strong>📁 Google Drive required</strong> — files upload to your Drive in a folder called <em>CD Scheduler Attachments</em>. '+
-    'You'll be prompted to sign in to Google if not already signed in. Files stay in your Drive even if you uninstall this app.';
+  var attachZoneLimitEl=document.createElement('div');attachZoneLimitEl.className='stm-attach-limit';
+  attachZone.appendChild(attachZoneIcon);attachZone.appendChild(attachZoneHint);attachZone.appendChild(attachZoneLimitEl);
 
   function updateAttachZone(){
-    var rem=5-curAttachments.filter(function(a){return !a._uploading;}).length;
+    var rem=5-curAttachments.length;
     if(rem<=0){
       attachZone.style.display='none';
     } else {
       attachZone.style.display='';
-      attachZoneHint.innerHTML='<strong>Click or drag & drop</strong> to upload to Drive';
-      attachZoneSub.textContent=rem+' slot'+(rem!==1?'s':'')+' remaining · any file size · uploads to your Google Drive';
+      attachZoneHint.innerHTML='<strong>Click to upload</strong> or drag & drop<br>Images, PDFs, Office docs, and more';
+      attachZoneLimitEl.textContent=rem+' slot'+(rem!==1?'s':'')+' remaining';
     }
   }
   updateAttachZone();
 
-  // Drag & drop
+  // Drag & drop on zone
   attachZone.addEventListener('dragover',function(e){e.preventDefault();attachZone.classList.add('drag-over');});
   attachZone.addEventListener('dragleave',function(){attachZone.classList.remove('drag-over');});
   attachZone.addEventListener('drop',function(e){
     e.preventDefault();attachZone.classList.remove('drag-over');
-    processAndUploadFiles(e.dataTransfer.files);
+    processFiles(e.dataTransfer.files);
   });
-  attachFileInp.addEventListener('change',function(){
-    processAndUploadFiles(attachFileInp.files);
-    attachFileInp.value='';
-  });
+  attachFileInp.addEventListener('change',function(){processFiles(attachFileInp.files);attachFileInp.value='';});
 
-  function processAndUploadFiles(fileList){
+  function processFiles(fileList){
     var arr=Array.from(fileList||[]);
-    var used=curAttachments.filter(function(a){return !a._uploading;}).length;
-    var available=5-used;
+    var available=5-curAttachments.length;
     if(available<=0){alert('Maximum 5 attachments per task.');return;}
     arr=arr.slice(0,available);
-    if(!arr.length) return;
-    // Add uploading placeholders
-    var placeholders=arr.map(function(f,i){
-      return {_uploading:true,name:f.name,_pct:0,_idx:curAttachments.length+i};
-    });
-    placeholders.forEach(function(p){curAttachments.push(p);});
-    renderAttachList();updateAttachZone();
-    // Upload to Drive
-    uploadAttachmentsToDrive(
-      arr,
-      function(fileNum,total,fileName,pct){
-        // Update progress on placeholder
-        var ph=curAttachments.find(function(a){return a._uploading&&a.name===fileName;});
-        if(ph){ph._pct=pct;renderAttachList();}
-      },
-      function(err,results){
-        if(err){
-          // Remove placeholders for this batch
-          placeholders.forEach(function(p){
-            var i=curAttachments.indexOf(p);
-            if(i>=0)curAttachments.splice(i,1);
-          });
-          renderAttachList();updateAttachZone();
-          alert('Upload error: '+err);
-          return;
-        }
-        // Replace placeholders with real results
-        results.forEach(function(res,i){
-          var ph=placeholders[i];
-          var phIdx=curAttachments.indexOf(ph);
-          if(res.error){
-            if(phIdx>=0)curAttachments.splice(phIdx,1);
-            alert('Could not upload "'+res.name+'": '+res.error);
-          } else {
-            if(phIdx>=0)curAttachments[phIdx]=res;
-            else curAttachments.push(res);
-          }
-        });
-        renderAttachList();updateAttachZone();
+    var pending=arr.length;
+    if(!pending)return;
+    arr.forEach(function(file){
+      if(file.size>10*1024*1024){
+        alert(file.name+' exceeds the 10 MB limit and was skipped.');
+        pending--;if(pending===0){renderAttachList();updateAttachZone();}
+        return;
       }
-    );
+      var reader=new FileReader();
+      reader.onload=function(ev){
+        curAttachments.push({name:file.name,size:file.size,type:file.type,data:ev.target.result,uploaded:Date.now()});
+        pending--;if(pending===0){renderAttachList();updateAttachZone();}
+      };
+      reader.onerror=function(){
+        pending--;if(pending===0){renderAttachList();updateAttachZone();}
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   attachSec.appendChild(attachList);
   attachSec.appendChild(attachZone);
-  attachSec.appendChild(driveNote);
   body.appendChild(attachSec);
   renderAttachList();
 
@@ -5639,7 +5543,6 @@ Note: The file will remain in your Google Drive.')){
       Object.values(tasks2).forEach(function(task){
         if(task.recurrenceGroupId!==groupId3)return;
         task.title=newTitle;task.time=newTime;task.endDate=newEndDate;task.endTime=newEndTime;task.priority=curPri;task.notes=newNotes;
-        task.attachments=curAttachments.filter(function(a){return !a._uploading;});
         FB.saveTask(task.id,task);
       });
       tasks2[taskId].done=newDone;tasks2[taskId].date=newDate;
@@ -5649,7 +5552,7 @@ Note: The file will remain in your Google Drive.')){
       tasks2[taskId].title=newTitle;tasks2[taskId].date=newDate;tasks2[taskId].time=newTime;
       tasks2[taskId].endDate=newEndDate;tasks2[taskId].endTime=newEndTime;
       tasks2[taskId].priority=curPri;tasks2[taskId].notes=newNotes;tasks2[taskId].done=newDone;
-      tasks2[taskId].attachments=curAttachments.filter(function(a){return !a._uploading;});
+      tasks2[taskId].attachments=curAttachments.slice();
       FB.saveTask(taskId,tasks2[taskId]);
     }
     FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();
@@ -6894,8 +6797,6 @@ if(document.readyState==='loading'){
 var GCAL_CLIENT_ID = '1033903916825-vtnp7v0t4qcnmkpbplgb40kg5resk93j.apps.googleusercontent.com';
 var GCAL_API_KEY   = 'AIzaSyB6rv6EA5sMUcJ1yRZSMrFK_e4CfX-Oyis';
 var GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
-var DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.file';
-var COMBINED_SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file';
 var GCAL_CAL       = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
 var gcalToken      = null;  // {access_token, expires_at}
 var gcalBound      = false; // prevent double-binding
@@ -7010,166 +6911,6 @@ function taskToGcalEvent(t){
 var gisClient=null;
 var gisLoading=false;
 var gisCallbackQueue=[];
-
-// ════════════════════════════════════════════════════════
-// GOOGLE DRIVE ATTACHMENT SUPPORT
-// ════════════════════════════════════════════════════════
-
-// Get a Drive-scoped token (reuses GIS infrastructure)
-var driveGisClient=null;
-var driveGisLoading=false;
-var driveGisQueue=[];
-
-function loadDriveGIS(onReady){
-  if(driveGisClient){onReady(driveGisClient);return;}
-  driveGisQueue.push(onReady);
-  if(driveGisLoading) return;
-  driveGisLoading=true;
-  function initClient(){
-    driveGisClient=google.accounts.oauth2.initTokenClient({
-      client_id:GCAL_CLIENT_ID,
-      scope:COMBINED_SCOPE,
-      callback:''
-    });
-    driveGisQueue.forEach(function(cb){cb(driveGisClient);});
-    driveGisQueue=[];
-  }
-  if(typeof google!=='undefined'&&google.accounts){
-    initClient(); return;
-  }
-  var s=document.createElement('script');
-  s.src='https://accounts.google.com/gsi/client';
-  s.onload=function(){initClient();};
-  s.onerror=function(){
-    driveGisLoading=false;
-    driveGisQueue.forEach(function(cb){cb(null);});
-    driveGisQueue=[];
-  };
-  document.head.appendChild(s);
-}
-
-function driveGetToken(callback){
-  if(driveToken&&driveToken.access_token&&Date.now()<driveToken.expires_at){
-    callback(null,driveToken.access_token); return;
-  }
-  loadDriveGIS(function(client){
-    if(!client){callback('GIS unavailable',null);return;}
-    client.callback=function(resp){
-      if(resp.error){callback(resp.error,null);return;}
-      driveToken={access_token:resp.access_token,
-                  expires_at:Date.now()+(resp.expires_in||3500)*1000};
-      // Also keep gcalToken in sync so Calendar still works
-      gcalToken={access_token:resp.access_token,
-                 expires_at:Date.now()+(resp.expires_in||3500)*1000};
-      callback(null,resp.access_token);
-    };
-    client.requestAccessToken({prompt:''});
-  });
-}
-
-// Ensure the CD Scheduler folder exists in Drive, return its ID
-var cdDriveFolderId=null;
-function ensureDriveFolder(token,callback){
-  if(cdDriveFolderId){callback(null,cdDriveFolderId);return;}
-  // Search for existing folder
-  var q="mimeType='application/vnd.google-apps.folder' and name='CD Scheduler Attachments' and trashed=false";
-  fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id,name)',{
-    headers:{'Authorization':'Bearer '+token}
-  }).then(function(r){return r.json();}).then(function(data){
-    if(data.files&&data.files.length>0){
-      cdDriveFolderId=data.files[0].id;
-      callback(null,cdDriveFolderId);
-    } else {
-      // Create the folder
-      fetch('https://www.googleapis.com/drive/v3/files',{
-        method:'POST',
-        headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-        body:JSON.stringify({name:'CD Scheduler Attachments',mimeType:'application/vnd.google-apps.folder'})
-      }).then(function(r){return r.json();}).then(function(folder){
-        cdDriveFolderId=folder.id;
-        callback(null,folder.id);
-      }).catch(function(e){callback(e.message,null);});
-    }
-  }).catch(function(e){callback(e.message,null);});
-}
-
-// Upload a File object to Drive, return metadata
-function uploadFileToDrive(file,token,folderId,onProgress,callback){
-  var metadata={name:file.name,parents:[folderId]};
-  var form=new FormData();
-  form.append('metadata',new Blob([JSON.stringify(metadata)],{type:'application/json'}));
-  form.append('file',file);
-  var xhr=new XMLHttpRequest();
-  xhr.open('POST','https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,mimeType,webViewLink,webContentLink');
-  xhr.setRequestHeader('Authorization','Bearer '+token);
-  xhr.upload.onprogress=function(e){
-    if(e.lengthComputable&&onProgress) onProgress(Math.round(e.loaded/e.total*100));
-  };
-  xhr.onload=function(){
-    if(xhr.status>=200&&xhr.status<300){
-      var data=JSON.parse(xhr.responseText);
-      callback(null,data);
-    } else {
-      callback('Upload failed ('+xhr.status+'): '+xhr.responseText,null);
-    }
-  };
-  xhr.onerror=function(){callback('Network error during upload',null);};
-  xhr.send(form);
-}
-
-// Delete a file from Drive by ID
-function deleteDriveFile(fileId,token){
-  if(!fileId||!token) return;
-  fetch('https://www.googleapis.com/drive/v3/files/'+fileId,{
-    method:'DELETE',
-    headers:{'Authorization':'Bearer '+token}
-  }).catch(function(){});
-}
-
-// Main entry: upload one or more files, returns array of attachment metadata
-function uploadAttachmentsToDrive(files,onFileProgress,onAllDone){
-  driveGetToken(function(err,token){
-    if(err||!token){
-      onAllDone('Could not get Google Drive access. Please sign in to Google first.',null);
-      return;
-    }
-    ensureDriveFolder(token,function(err2,folderId){
-      if(err2||!folderId){
-        onAllDone('Could not access Drive folder: '+(err2||'unknown error'),null);
-        return;
-      }
-      var results=[];
-      var fileArr=Array.from(files);
-      var idx=0;
-      function uploadNext(){
-        if(idx>=fileArr.length){onAllDone(null,results);return;}
-        var file=fileArr[idx];
-        idx++;
-        onFileProgress(idx,fileArr.length,file.name,0);
-        uploadFileToDrive(file,token,folderId,function(pct){
-          onFileProgress(idx,fileArr.length,file.name,pct);
-        },function(err3,data){
-          if(err3){
-            results.push({error:err3,name:file.name});
-          } else {
-            results.push({
-              name:data.name,
-              size:file.size,
-              type:file.type,
-              driveFileId:data.id,
-              driveLink:data.webViewLink||('https://drive.google.com/file/d/'+data.id+'/view'),
-              downloadLink:data.webContentLink||('https://drive.google.com/uc?export=download&id='+data.id),
-              source:'drive',
-              uploaded:Date.now()
-            });
-          }
-          uploadNext();
-        });
-      }
-      uploadNext();
-    });
-  });
-}
 
 function loadGIS(onReady){
   if(gisClient){onReady(gisClient);return;}
