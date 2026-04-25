@@ -967,6 +967,39 @@ footer strong{color:rgba(255,253,245,0.85)}
   .dash-chart-bar-wrap{height:90px}
 }
 
+
+/* ══ Activity & Sync Centre — desktop-only tab ══ */
+.activity-sub{font-size:12px;color:var(--inkl);line-height:1.45;margin-top:3px}
+.activity-toolbar{display:flex;gap:8px;flex-wrap:wrap}
+.activity-toolbar .btn-add.secondary{background:var(--gc);color:var(--gd);border:1.5px solid var(--gp);box-shadow:none}
+.activity-toolbar .btn-add.secondary:hover{background:var(--gp);border-color:var(--gm)}
+.activity-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.activity-summary .dash-stat-card{cursor:default}
+.activity-summary .dash-stat-card::after{display:none!important;content:''!important}
+.activity-summary .dash-stat-card:hover{transform:none;box-shadow:0 2px 8px var(--sg)}
+.activity-panel{background:white;border:1.5px solid var(--gp);border-radius:12px;padding:14px 16px;box-shadow:0 2px 8px var(--sg)}
+.activity-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.activity-panel-title{font-family:'Playfair Display',serif;font-size:16px;color:var(--gd);font-weight:700}
+.activity-panel-sub{font-size:11px;color:var(--inkl);line-height:1.4}
+.activity-list{display:flex;flex-direction:column;gap:8px}
+.activity-item{display:flex;align-items:flex-start;gap:10px;background:var(--gc);border:1.5px solid var(--gp);border-radius:10px;padding:11px 12px;transition:border-color .15s,box-shadow .15s}
+.activity-item:hover{border-color:var(--gm);box-shadow:0 3px 12px var(--sg)}
+.activity-ico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:white;border:1px solid var(--gp);font-size:17px;flex-shrink:0}
+.activity-body{flex:1;min-width:0}
+.activity-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:3px;flex-wrap:wrap}
+.activity-title{font-size:13px;font-weight:700;color:var(--ink);line-height:1.35}
+.activity-meta{font-size:10px;color:var(--inkl);display:flex;gap:8px;flex-wrap:wrap;line-height:1.4}
+.activity-details{font-size:11px;color:var(--inkm);line-height:1.45;margin-top:3px;word-break:break-word}
+.activity-status{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;border-radius:999px;padding:3px 8px;white-space:nowrap}
+.activity-status.success{background:#E8F5E9;color:#2E7D32}
+.activity-status.failed{background:#FFE0E0;color:#B32020}
+.activity-status.pending{background:#FFF3CD;color:#8B6914}
+.activity-status.info{background:#E8F0FE;color:#1A73E8}
+.activity-empty{text-align:center;padding:34px 20px;border:1.5px dashed var(--gp);border-radius:12px;background:var(--gc);color:var(--inkl);font-size:13px;line-height:1.6}
+.activity-empty strong{font-family:'Playfair Display',serif;font-size:16px;color:var(--gd)}
+@media(max-width:980px){.activity-summary{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.tab-btn[data-tab="activity"],#tab-activity{display:none!important}}
+
 /* ══ Gamification HUD ══ */
 .gami-hud{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 100%);
@@ -1612,6 +1645,7 @@ body.adv-mode .htg-expand-all{background:rgba(255,255,255,.15)}
     <button class="tab-btn" data-tab="tasks"><span class="tn-icon">✅</span><span class="tn-lbl">Tasks</span></button>
     <button class="tab-btn" data-tab="notes"><span class="tn-icon">📓</span><span class="tn-lbl">Notes</span></button>
     <button class="tab-btn gm-hidden" data-tab="rewards"><span class="tn-icon">⚡</span><span class="tn-lbl">Advanced</span></button>
+    <button class="tab-btn" data-tab="activity"><span class="tn-icon">🧾</span><span class="tn-lbl">Activity</span></button>
   </div>
 </nav>
 
@@ -2113,7 +2147,24 @@ body.adv-mode .htg-expand-all{background:rgba(255,255,255,.15)}
   </div>
 </div>
 
-<footer><strong>CD Scheduler</strong> · Dashboard · Planner · Tasks · Notes · Advanced · Sync across all devices</footer>
+<!-- ACTIVITY TAB — desktop/laptop only -->
+<div id="tab-activity" class="tab-panel">
+  <div class="sw">
+    <div class="sh">
+      <div>
+        <div class="st">🧾 Activity &amp; Sync Centre</div>
+        <div class="activity-sub">Laptop-only view with synced logs from laptop and mobile. Shows top summary cards and the latest 20 activities.</div>
+      </div>
+      <div class="activity-toolbar">
+        <button class="btn-add secondary" onclick="renderActivityCenter()">↻ Refresh</button>
+        <button class="btn-add secondary" onclick="activityClearLogs()">Clear Log</button>
+      </div>
+    </div>
+    <div id="activityContent"></div>
+  </div>
+</div>
+
+<footer><strong>CD Scheduler</strong> · Dashboard · Planner · Tasks · Notes · Advanced · Activity · Sync across all devices</footer>
 
 </div><!-- #app -->
 
@@ -2123,7 +2174,7 @@ body.adv-mode .htg-expand-all{background:rgba(255,255,255,.15)}
      ══════════════════════════════════════════════════════ -->
 <script>
 // ── Storage keys ─────────────────────────────────────────────────────────────
-var SK='cds_sched_v4', TK='cds_tasks_v4', NK='cds_notes_v4';
+var SK='cds_sched_v4', TK='cds_tasks_v4', NK='cds_notes_v4', AK='cds_activity_v1';
 var NOTE_COLORS=['#E8B84B','#5CB85C','#5B9BD5','#E85252','#9B59B6','#E67E22'];
 var PRIORITY_COLORS={high:'#E85252',medium:'#C4942A',low:'#5CB85C'};
 var DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
@@ -2141,6 +2192,8 @@ var FB={
   saveMktGoals:function(){},
   saveMktPurchased:function(){},
   saveGamiCfg:function(){},
+  saveActivityLog:function(){},
+  clearActivityLogs:function(){},
   ignoreNextTaskSync:false,
   ignoreNextNoteSync:false
 };
@@ -2159,6 +2212,119 @@ function debounce(fn,ms){
 function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'{}')}catch(e){return{}}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+// ── Activity & Sync Centre helpers ───────────────────────────────────────────
+function activityIsDesktop(){return window.innerWidth>700;}
+function activityDevice(){return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')?'Mobile':'Laptop';}
+function activityGet(){
+  try{var v=JSON.parse(localStorage.getItem(AK)||'[]');return Array.isArray(v)?v:[];}catch(e){return[];}
+}
+function activitySet(list){try{
+  var clean=(list||[]).filter(Boolean).sort(function(a,b){return (b.ts||0)-(a.ts||0);}).slice(0,200);
+  localStorage.setItem(AK,JSON.stringify(clean));
+}catch(e){}}
+function activityEscape(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function activityTime(ts){
+  var d=new Date(ts||Date.now());
+  return pad(d.getDate())+'/'+pad(d.getMonth()+1)+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+}
+function activityStatusLabel(status){
+  status=status||'info';
+  if(status==='success')return 'Success';
+  if(status==='failed')return 'Failed';
+  if(status==='pending')return 'Pending';
+  return 'Info';
+}
+function activityIcon(category,status){
+  if(status==='failed')return '⚠️';
+  if(status==='pending')return '⏳';
+  if(category==='attachment')return '📎';
+  if(category==='drive')return '☁️';
+  if(category==='sync')return '🔄';
+  if(category==='task')return '✅';
+  if(category==='note')return '📓';
+  if(category==='calendar')return '📅';
+  return '🧾';
+}
+function addActivityLog(entry){
+  // The Activity section is laptop/desktop-only, but logs are captured on BOTH mobile and laptop.
+  entry=entry||{};
+  var log={
+    id:'act_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+    ts:Date.now(),
+    device:activityDevice(),
+    category:entry.category||'info',
+    status:entry.status||'info',
+    title:entry.title||'Activity recorded',
+    details:entry.details||'',
+    taskTitle:entry.taskTitle||'',
+    fileName:entry.fileName||'',
+    source:entry.source||''
+  };
+  var logs=activityGet().filter(function(x){return x&&x.id!==log.id;});
+  logs.unshift(log);
+  activitySet(logs);
+  if(window.FB&&typeof window.FB.saveActivityLog==='function')window.FB.saveActivityLog(log.id,log);
+  if(typeof currentTab!=='undefined'&&currentTab==='activity'&&activityIsDesktop())renderActivityCenter();
+}
+function activityFindLatest(logs,cats){
+  cats=cats||[];
+  for(var i=0;i<logs.length;i++){if(cats.indexOf(logs[i].category)>=0)return logs[i];}
+  return null;
+}
+function activitySummaryCard(icon,kicker,value,sub){
+  return '<div class="dash-stat-card act-stat-card">'+
+    '<div class="dash-stat-icon" style="background:rgba(196,148,42,.12);">'+icon+'</div>'+
+    '<div class="dash-stat-body"><div class="dash-stat-kicker">'+activityEscape(kicker)+'</div>'+
+    '<div class="dash-stat-val">'+activityEscape(value)+'</div>'+
+    '<div class="dash-stat-sub">'+activityEscape(sub)+'</div></div></div>';
+}
+function renderActivityCenter(){
+  var mount=document.getElementById('activityContent');
+  if(!mount)return;
+  if(!activityIsDesktop())return;
+  var logs=activityGet();
+  var latestDrive=activityFindLatest(logs,['drive','attachment']);
+  var latestSync=activityFindLatest(logs,['sync','task','note','calendar']);
+  var pending=logs.filter(function(l){return l.status==='pending';}).length;
+  var todayStart=new Date();todayStart.setHours(0,0,0,0);
+  var errorsToday=logs.filter(function(l){return l.status==='failed'&&(l.ts||0)>=todayStart.getTime();}).length;
+
+  var html='';
+  html+='<div class="activity-summary">';
+  html+=activitySummaryCard('☁️','Google Drive',latestDrive?activityStatusLabel(latestDrive.status):'No activity',latestDrive?latestDrive.title:'Uploads/deletes will appear here');
+  html+=activitySummaryCard('🔄','App Sync',latestSync?activityStatusLabel(latestSync.status):'No sync yet',latestSync?activityTime(latestSync.ts)+' · '+latestSync.title:'Task/note updates will appear here');
+  html+=activitySummaryCard('⏳','Pending',String(pending),pending===1?'1 action still in progress':'actions still in progress');
+  html+=activitySummaryCard('⚠️','Errors Today',String(errorsToday),errorsToday===0?'No errors recorded today':'Check failed items below');
+  html+='</div>';
+  html+='<div class="activity-panel">';
+  html+='<div class="activity-panel-head"><div><div class="activity-panel-title">Recent Activity</div><div class="activity-panel-sub">Showing the latest 20 actions from laptop and mobile activity logs.</div></div></div>';
+  if(!logs.length){
+    html+='<div class="activity-empty"><strong>No activity yet.</strong><br>Upload/delete files, edit tasks, sync data or update notes — the latest actions will appear here.</div>';
+  } else {
+    html+='<div class="activity-list">';
+    logs.slice(0,20).forEach(function(l){
+      var cls=(l.status||'info');
+      var details=l.details||l.taskTitle||l.fileName||'';
+      html+='<div class="activity-item">';
+      html+='<div class="activity-ico">'+activityIcon(l.category,l.status)+'</div>';
+      html+='<div class="activity-body">';
+      html+='<div class="activity-title-row"><div class="activity-title">'+activityEscape(l.title)+'</div><span class="activity-status '+activityEscape(cls)+'">'+activityEscape(activityStatusLabel(cls))+'</span></div>';
+      html+='<div class="activity-meta"><span>'+activityEscape(activityTime(l.ts))+'</span><span>'+activityEscape(l.device||'Laptop')+'</span><span>'+activityEscape((l.category||'info').toUpperCase())+'</span></div>';
+      if(details)html+='<div class="activity-details">'+activityEscape(details)+'</div>';
+      html+='</div></div>';
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+  mount.innerHTML=html;
+}
+function activityClearLogs(){
+  if(!confirm('Clear the Activity & Sync Centre log across synced devices?'))return;
+  activitySet([]);
+  if(window.FB&&typeof window.FB.clearActivityLogs==='function')window.FB.clearActivityLogs();
+  renderActivityCenter();
+}
+
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
 // Handles both DD-MM-YYYY (our storage format) and YYYY-MM-DD (from date inputs)
@@ -7115,18 +7281,29 @@ function driveGetToken(cb){
 // ── Delete a file from Google Drive by its ID (live sync on delete) ────────
 function driveDeleteFile(fileId, cb){
   if(!fileId){if(cb)cb('No file ID provided');return;}
+  addActivityLog({category:'drive',status:'pending',title:'Google Drive delete started',details:'Deleting file from Google Drive.',source:'google-drive'});
   driveGetToken(function(err,token){
-    if(err||!token){if(cb)cb(err||'Could not authenticate with Google Drive');return;}
+    if(err||!token){
+      addActivityLog({category:'drive',status:'failed',title:'Google Drive delete failed',details:err||'Could not authenticate with Google Drive',source:'google-drive'});
+      if(cb)cb(err||'Could not authenticate with Google Drive');return;
+    }
     fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(fileId),{
       method:'DELETE',
       headers:{'Authorization':'Bearer '+token}
     }).then(function(r){
       if(r.status===204||r.status===200||r.status===404){
+        addActivityLog({category:'drive',status:'success',title:'Google Drive file deleted',details:'Attachment file was deleted from Google Drive.',source:'google-drive'});
         if(cb)cb(null); // success (404 = already gone, still ok)
       } else {
-        r.text().then(function(t){if(cb)cb('Drive delete failed ('+r.status+'): '+t);});
+        r.text().then(function(t){
+          addActivityLog({category:'drive',status:'failed',title:'Google Drive delete failed',details:'Drive delete failed ('+r.status+'): '+t,source:'google-drive'});
+          if(cb)cb('Drive delete failed ('+r.status+'): '+t);
+        });
       }
-    }).catch(function(e){if(cb)cb('Network error: '+e.message);});
+    }).catch(function(e){
+      addActivityLog({category:'drive',status:'failed',title:'Google Drive delete failed',details:'Network error: '+e.message,source:'google-drive'});
+      if(cb)cb('Network error: '+e.message);
+    });
   });
 }
 
@@ -7208,24 +7385,42 @@ function driveUploadFile(file,token,folderId,onPct,cb){
 }
 
 function driveUploadBatch(files,onProgress,onDone){
+  var arr=Array.from(files||[]);
+  if(arr.length){addActivityLog({category:'attachment',status:'pending',title:'Attachment upload started',details:arr.length+' file(s) selected for Google Drive upload.',source:'google-drive'});}
   driveGetToken(function(err,token){
-    if(err||!token){onDone('Could not get Google Drive access. Please sign in to Google first.',null);return;}
+    if(err||!token){
+      addActivityLog({category:'drive',status:'failed',title:'Google Drive access failed',details:'Could not get Google Drive access. Please sign in to Google first.',source:'google-drive'});
+      onDone('Could not get Google Drive access. Please sign in to Google first.',null);return;
+    }
     driveEnsureFolder(token,function(err2,folderId){
-      if(err2||!folderId){onDone('Drive folder error: '+(err2||'unknown'),null);return;}
-      var results=[],arr=Array.from(files),idx=0;
+      if(err2||!folderId){
+        addActivityLog({category:'drive',status:'failed',title:'Drive folder error',details:'Drive folder error: '+(err2||'unknown'),source:'google-drive'});
+        onDone('Drive folder error: '+(err2||'unknown'),null);return;
+      }
+      var results=[],idx=0;
       function next(){
-        if(idx>=arr.length){onDone(null,results);return;}
+        if(idx>=arr.length){
+          addActivityLog({category:'sync',status:'success',title:'Attachment upload batch finished',details:results.length+' file result(s) processed for Google Drive.',source:'google-drive'});
+          onDone(null,results);return;
+        }
         var f=arr[idx++];
+        addActivityLog({category:'attachment',status:'pending',title:'Uploading file',details:f.name+' is uploading to Google Drive.',fileName:f.name,source:'google-drive'});
         onProgress(idx,arr.length,f.name,0);
         driveUploadFile(f,token,folderId,function(pct){onProgress(idx,arr.length,f.name,pct);},function(e,data){
-          if(e){results.push({error:e,name:f.name});}
-          else{results.push({
-            name:data.name,size:f.size,type:f.type,
-            driveFileId:data.id,
-            driveLink:data.webViewLink||('https://drive.google.com/file/d/'+data.id+'/view'),
-            downloadLink:data.webContentLink||('https://drive.google.com/uc?export=download&id='+data.id),
-            source:'drive',uploaded:Date.now()
-          });}
+          if(e){
+            results.push({error:e,name:f.name});
+            addActivityLog({category:'attachment',status:'failed',title:'File upload failed',details:f.name+' could not be uploaded: '+e,fileName:f.name,source:'google-drive'});
+          }
+          else{
+            results.push({
+              name:data.name,size:f.size,type:f.type,
+              driveFileId:data.id,
+              driveLink:data.webViewLink||('https://drive.google.com/file/d/'+data.id+'/view'),
+              downloadLink:data.webContentLink||('https://drive.google.com/uc?export=download&id='+data.id),
+              source:'drive',uploaded:Date.now()
+            });
+            addActivityLog({category:'attachment',status:'success',title:'File uploaded to Google Drive',details:(data.name||f.name)+' was uploaded successfully.',fileName:data.name||f.name,source:'google-drive'});
+          }
           next();
         });
       }
@@ -7627,7 +7822,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   var plannerPath = null, plannerCb = null;
-  var tasksCb = null, notesCb = null;
+  var tasksCb = null, notesCb = null, activityCb = null;
 
   function uid() {
     return auth.currentUser ? auth.currentUser.uid : null;
@@ -7637,22 +7832,35 @@ document.addEventListener('DOMContentLoaded', function() {
   window.FB.savePlannerCell = function(wk, key, value) {
     if (!uid()) return;
     db.ref('users/' + uid() + '/weeks/' + wk + '/' + key).set(value);
+    addActivityLog({category:'sync',status:'success',title:'Planner cell synced',details:'Planner update saved to cloud sync.',source:'firebase'});
   };
   window.FB.saveTask = function(id, obj) {
     if (!uid()) return;
     db.ref('users/' + uid() + '/tasks/' + id).set(obj);
+    addActivityLog({category:'task',status:'success',title:'Task synced',details:(obj&&obj.title?obj.title:'Task')+' was saved to cloud sync.',taskTitle:obj&&obj.title||'',source:'firebase'});
   };
   window.FB.deleteTask = function(id) {
     if (!uid()) return;
     db.ref('users/' + uid() + '/tasks/' + id).remove();
+    addActivityLog({category:'task',status:'success',title:'Task deleted',details:'Task was removed from cloud sync.',source:'firebase'});
   };
   window.FB.saveNote = function(id, obj) {
     if (!uid()) return;
     db.ref('users/' + uid() + '/notes/' + id).set(obj);
+    addActivityLog({category:'note',status:'success',title:'Note synced',details:(obj&&obj.title?obj.title:'Note')+' was saved to cloud sync.',source:'firebase'});
   };
   window.FB.deleteNote = function(id) {
     if (!uid()) return;
     db.ref('users/' + uid() + '/notes/' + id).remove();
+    addActivityLog({category:'note',status:'success',title:'Note deleted',details:'Note was removed from cloud sync.',source:'firebase'});
+  };
+  window.FB.saveActivityLog = function(id, log) {
+    if (!uid() || !id || !log) return;
+    db.ref('users/' + uid() + '/activity/' + id).set(log);
+  };
+  window.FB.clearActivityLogs = function() {
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/activity').remove();
   };
 
   // ── Gami / Marketplace write hooks ────────────────────────────────────
@@ -7717,6 +7925,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (plannerCb && plannerPath) db.ref(plannerPath).off('value', plannerCb);
     if (tasksCb) db.ref('users/' + uid() + '/tasks').off('value', tasksCb);
     if (notesCb) db.ref('users/' + uid() + '/notes').off('value', notesCb);
+    if (activityCb) db.ref('users/' + uid() + '/activity').off('value', activityCb);
     if (uid()) {
       db.ref('users/' + uid() + '/gami').off();
       db.ref('users/' + uid() + '/mktGoals').off();
@@ -7783,6 +7992,15 @@ document.addEventListener('DOMContentLoaded', function() {
           var bi = document.querySelector('[data-note-body="' + n.id + '"]');
           if (bi && document.activeElement !== bi) bi.value = n.body || '';
         });
+      });
+
+      // Activity listener — syncs mobile/laptop activity logs into the desktop Activity tab.
+      if (activityCb) db.ref('users/' + uid() + '/activity').off('value', activityCb);
+      activityCb = db.ref('users/' + uid() + '/activity').limitToLast(200).on('value', function(snap) {
+        var remote = snap.val() || {};
+        var logs = Object.keys(remote).map(function(k){return remote[k];}).filter(Boolean);
+        activitySet(logs);
+        if(typeof currentTab!=='undefined'&&currentTab==='activity'&&activityIsDesktop())renderActivityCenter();
       });
 
       // ── GamiCfg listener (XP values + level thresholds) ─────────────────
