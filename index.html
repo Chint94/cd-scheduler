@@ -430,6 +430,36 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   border-radius:8px;padding:9px 8px;cursor:pointer;border:1.5px solid rgba(232,82,82,.35);
   background:#FFF5F5;color:var(--ot);transition:all .15s;text-align:center}
 .stm-del-opt:hover{background:#FFE0E0}
+
+/* ── Attachment Section ── */
+.stm-attach-zone{border:2px dashed var(--gp);border-radius:10px;padding:14px 12px;
+  text-align:center;cursor:pointer;transition:all .18s;background:var(--gc);
+  display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
+.stm-attach-zone:hover,.stm-attach-zone.drag-over{border-color:var(--gm);background:rgba(196,148,42,0.08)}
+.stm-attach-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.stm-attach-icon{font-size:22px;line-height:1}
+.stm-attach-hint{font-size:12px;color:var(--inkl);line-height:1.4}
+.stm-attach-hint strong{color:var(--gd);font-weight:700}
+.stm-attach-limit{font-size:10px;color:var(--inkl);font-style:italic}
+.stm-attach-list{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+.stm-attach-item{display:flex;align-items:center;gap:8px;background:white;
+  border:1.5px solid var(--gp);border-radius:8px;padding:7px 10px;
+  box-shadow:0 1px 4px rgba(139,105,20,0.08)}
+.stm-attach-item:hover{border-color:var(--gm)}
+.stm-attach-file-icon{font-size:18px;flex-shrink:0;width:26px;text-align:center}
+.stm-attach-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.stm-attach-name{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;cursor:pointer;text-decoration:none}
+.stm-attach-name:hover{color:var(--gm);text-decoration:underline}
+.stm-attach-size{font-size:10px;color:var(--inkl)}
+.stm-attach-del{background:transparent;border:none;cursor:pointer;font-size:14px;
+  color:var(--inkl);padding:3px 5px;border-radius:5px;flex-shrink:0;line-height:1;
+  -webkit-tap-highlight-color:transparent;transition:background .12s}
+.stm-attach-del:hover{background:#FFE0E0;color:var(--ot)}
+.stm-attach-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;
+  font-weight:700;padding:2px 6px;border-radius:10px;
+  background:rgba(139,105,20,0.1);color:var(--gd);margin-left:2px}
+
 @media(max-width:480px){
   .stm-body{padding:14px 15px;gap:12px}
   .stm-actions{padding:12px 15px;gap:7px}
@@ -2115,6 +2145,27 @@ function debounce(fn,ms){
 function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'{}')}catch(e){return{}}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+
+// ── Attachment helpers ──
+function getFileIcon(mimeType){
+  if(!mimeType)return '📄';
+  if(mimeType.startsWith('image/'))return '🖼️';
+  if(mimeType==='application/pdf')return '📕';
+  if(mimeType.indexOf('word')>=0||mimeType.indexOf('document')>=0)return '📝';
+  if(mimeType.indexOf('excel')>=0||mimeType.indexOf('sheet')>=0||mimeType.indexOf('csv')>=0)return '📊';
+  if(mimeType.indexOf('powerpoint')>=0||mimeType.indexOf('presentation')>=0)return '📑';
+  if(mimeType.startsWith('video/'))return '🎬';
+  if(mimeType.startsWith('audio/'))return '🎵';
+  if(mimeType.indexOf('zip')>=0||mimeType.indexOf('rar')>=0||mimeType.indexOf('compressed')>=0)return '🗜️';
+  if(mimeType.startsWith('text/'))return '📃';
+  return '📄';
+}
+function formatFileSize(bytes){
+  if(!bytes||bytes===0)return '0 B';
+  if(bytes<1024)return bytes+' B';
+  if(bytes<1024*1024)return (bytes/1024).toFixed(1)+' KB';
+  return (bytes/(1024*1024)).toFixed(1)+' MB';
+}
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
 // Handles both DD-MM-YYYY (our storage format) and YYYY-MM-DD (from date inputs)
@@ -4878,13 +4929,19 @@ function renderTasks(){
       notesSection='<div class="task-notes-full">'+t.notes.trim().replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>';
     }
 
+    // Attachment badge
+    var attachBadge='';
+    if(t.attachments&&t.attachments.length>0){
+      attachBadge='<span class="stm-attach-badge">📎 '+t.attachments.length+' file'+(t.attachments.length!==1?'s':'')+'</span>';
+    }
+
     card.innerHTML=
       '<div class="task-stripe" style="background:'+stripeColor+'"></div>'+
       '<div class="task-top">'+
         '<input type="checkbox" class="task-chk"'+(t.done?' checked':'')+' id="chk-'+t.id+'">'+
         '<div class="task-bd'+(t.done?' task-done':'')+'">'+
           '<div class="task-ti">'+(t.title||'<span style="color:rgba(139,105,20,.38);font-weight:400">Untitled task</span>')+'</div>'+
-          '<div class="task-meta-row">'+badge+xpChip+'</div>'+
+          '<div class="task-meta-row">'+badge+xpChip+attachBadge+'</div>'+
           '<div class="task-details">'+detailRows+'</div>'+
           notesSection+
           // Hidden legacy inputs for JS compat
@@ -5082,6 +5139,101 @@ function openSimpleTaskModal(taskId){
   notesInp.placeholder='Add notes…';notesInp.value=t.notes||'';
   notesSec.appendChild(notesLbl);notesSec.appendChild(notesInp);
   body.appendChild(notesSec);
+
+  // ── Attachments ──
+  var attachSec=document.createElement('div');attachSec.className='stm-section';
+  var attachLbl=document.createElement('div');attachLbl.className='stm-lbl';
+  attachLbl.textContent='Attachments (max 5 files · 10 MB each)';
+  attachSec.appendChild(attachLbl);
+
+  // Current attachments list
+  var attachList=document.createElement('div');attachList.className='stm-attach-list';
+  var curAttachments=(t.attachments&&Array.isArray(t.attachments))?t.attachments.slice():[];
+
+  function renderAttachList(){
+    attachList.innerHTML='';
+    curAttachments.forEach(function(att,idx){
+      var item=document.createElement('div');item.className='stm-attach-item';
+      var icon=document.createElement('div');icon.className='stm-attach-file-icon';
+      icon.textContent=getFileIcon(att.type||'');
+      var info=document.createElement('div');info.className='stm-attach-info';
+      var nameEl=document.createElement('a');nameEl.className='stm-attach-name';
+      nameEl.textContent=att.name;nameEl.title=att.name;
+      nameEl.href=att.data;nameEl.download=att.name;nameEl.target='_blank';
+      var sizeEl=document.createElement('div');sizeEl.className='stm-attach-size';
+      sizeEl.textContent=formatFileSize(att.size||0);
+      info.appendChild(nameEl);info.appendChild(sizeEl);
+      var delBtn3=document.createElement('button');delBtn3.className='stm-attach-del';
+      delBtn3.textContent='✕';delBtn3.title='Remove attachment';
+      delBtn3.type='button';
+      delBtn3.addEventListener('click',function(){
+        curAttachments.splice(idx,1);renderAttachList();updateAttachZone();
+      });
+      item.appendChild(icon);item.appendChild(info);item.appendChild(delBtn3);
+      attachList.appendChild(item);
+    });
+  }
+
+  // Drop zone
+  var attachZone=document.createElement('div');attachZone.className='stm-attach-zone';
+  var attachFileInp=document.createElement('input');attachFileInp.type='file';
+  attachFileInp.multiple=true;attachFileInp.accept='image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.mp3,.mp4,.mov';
+  attachZone.appendChild(attachFileInp);
+  var attachZoneIcon=document.createElement('div');attachZoneIcon.className='stm-attach-icon';attachZoneIcon.textContent='📎';
+  var attachZoneHint=document.createElement('div');attachZoneHint.className='stm-attach-hint';
+  var attachZoneLimitEl=document.createElement('div');attachZoneLimitEl.className='stm-attach-limit';
+  attachZone.appendChild(attachZoneIcon);attachZone.appendChild(attachZoneHint);attachZone.appendChild(attachZoneLimitEl);
+
+  function updateAttachZone(){
+    var rem=5-curAttachments.length;
+    if(rem<=0){
+      attachZone.style.display='none';
+    } else {
+      attachZone.style.display='';
+      attachZoneHint.innerHTML='<strong>Click to upload</strong> or drag & drop<br>Images, PDFs, Office docs, and more';
+      attachZoneLimitEl.textContent=rem+' slot'+(rem!==1?'s':'')+' remaining';
+    }
+  }
+  updateAttachZone();
+
+  // Drag & drop on zone
+  attachZone.addEventListener('dragover',function(e){e.preventDefault();attachZone.classList.add('drag-over');});
+  attachZone.addEventListener('dragleave',function(){attachZone.classList.remove('drag-over');});
+  attachZone.addEventListener('drop',function(e){
+    e.preventDefault();attachZone.classList.remove('drag-over');
+    processFiles(e.dataTransfer.files);
+  });
+  attachFileInp.addEventListener('change',function(){processFiles(attachFileInp.files);attachFileInp.value='';});
+
+  function processFiles(fileList){
+    var arr=Array.from(fileList||[]);
+    var available=5-curAttachments.length;
+    if(available<=0){alert('Maximum 5 attachments per task.');return;}
+    arr=arr.slice(0,available);
+    var pending=arr.length;
+    if(!pending)return;
+    arr.forEach(function(file){
+      if(file.size>10*1024*1024){
+        alert(file.name+' exceeds the 10 MB limit and was skipped.');
+        pending--;if(pending===0){renderAttachList();updateAttachZone();}
+        return;
+      }
+      var reader=new FileReader();
+      reader.onload=function(ev){
+        curAttachments.push({name:file.name,size:file.size,type:file.type,data:ev.target.result,uploaded:Date.now()});
+        pending--;if(pending===0){renderAttachList();updateAttachZone();}
+      };
+      reader.onerror=function(){
+        pending--;if(pending===0){renderAttachList();updateAttachZone();}
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  attachSec.appendChild(attachList);
+  attachSec.appendChild(attachZone);
+  body.appendChild(attachSec);
+  renderAttachList();
 
   // ── Done toggle ──
   var doneToggleRow=document.createElement('label');doneToggleRow.className='stm-toggle-row';
@@ -5400,6 +5552,7 @@ function openSimpleTaskModal(taskId){
       tasks2[taskId].title=newTitle;tasks2[taskId].date=newDate;tasks2[taskId].time=newTime;
       tasks2[taskId].endDate=newEndDate;tasks2[taskId].endTime=newEndTime;
       tasks2[taskId].priority=curPri;tasks2[taskId].notes=newNotes;tasks2[taskId].done=newDone;
+      tasks2[taskId].attachments=curAttachments.slice();
       FB.saveTask(taskId,tasks2[taskId]);
     }
     FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();
