@@ -5258,11 +5258,8 @@ function openSimpleTaskModal(taskId){
     attZone.appendChild(attMobileBtn);
 
     attMobileBtn.addEventListener('click',function(){
-      // Step 1: Get Drive token from this direct tap (real user gesture).
-      // GIS requestAccessToken is called synchronously from this tap — it works.
-      // Step 2: Once token is cached, open file picker.
-      // When file is picked and change fires, driveUploadBatch finds cached token
-      // and uploads without needing another auth round-trip.
+      // Pre-fetch Drive token on this direct tap (reauthenticateWithPopup prompt:none
+      // = silent, no popup shown). Then open file picker with token already cached.
       attMobileBtn.disabled=true;
       attMobileBtn.textContent='Connecting to Google Drive...';
       driveGetToken(function(err,token){
@@ -5272,12 +5269,11 @@ function openSimpleTaskModal(taskId){
           alert('Google Drive sign-in failed:\n'+(err||'unknown error')+'\n\nPlease try again.');
           return;
         }
-        // Token obtained — open file picker (still within gesture chain on most browsers)
         attMobileBtn.disabled=false;
         attMobileBtn.textContent='Upload another file';
         attFileInp.click();
       });
-    });
+    });;
   }
 
   var attNote=document.createElement('div');attNote.className='stm-att-note';
@@ -7067,53 +7063,70 @@ function _loadDriveGIS(cb){
 // because the actual upload tap can request the Drive token immediately.
 setTimeout(function(){try{_loadDriveGIS(function(){});}catch(e){}},800);
 
-function _isMobileUA(){
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')||isMobile();
+function _driveIsMobile(){
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')||
+         (typeof isMobile==='function'&&isMobile());
 }
 
 function driveGetToken(cb){
-  // Return cached token if still valid (with 5-min buffer)
+  // Return cached token if still valid (5-min buffer)
   if(driveToken&&driveToken.access_token&&Date.now()<driveToken.expires_at-300000){
     cb(null,driveToken.access_token);return;
   }
 
-  if(_isMobileUA()){
-    // ── MOBILE: Use GIS requestAccessToken only ──────────────────────────
-    // firebase.auth().signInWithPopup() causes auth/network-request-failed on
-    // mobile browsers because cross-origin auth popups are killed.
-    // GIS requestAccessToken works reliably on mobile when called from a direct
-    // user tap (button click). The caller (mobile upload button, delete button)
-    // is always a direct tap, so this is safe.
-    _loadDriveGIS(function(client){
-      if(!client){
-        cb('Google Drive sign-in is not available on this browser. Please use the desktop version.',null);
-        return;
-      }
-      client.callback=function(resp){
-        if(resp&&resp.access_token){
-          var exp=Date.now()+(resp.expires_in||3500)*1000;
-          driveToken={access_token:resp.access_token,expires_at:exp};
-          gcalToken={access_token:resp.access_token,expires_at:exp};
-          cb(null,resp.access_token);
+  if(_driveIsMobile()){
+    // ── MOBILE: use reauthenticateWithPopup(prompt:none) ──────────────────
+    // NEVER call GIS requestAccessToken on mobile — it opens a popup window
+    // that spins forever (Google logo + loading circle) because mobile browsers
+    // cannot complete the cross-origin GIS auth flow in a popup.
+    //
+    // reauthenticateWithPopup with prompt:none reuses the existing Firebase
+    // session silently — no visible popup or spinner at all when already signed in.
+    if(typeof firebase==='undefined'||!firebase.auth){
+      cb('Firebase not available. Please reload the page.',null);return;
+    }
+    var fbUser=firebase.auth().currentUser;
+    if(!fbUser){
+      cb('Please sign in to Google first (tap the Sign In button at the top), then try again.',null);return;
+    }
+    var mp=new firebase.auth.GoogleAuthProvider();
+    mp.addScope('https://www.googleapis.com/auth/drive.file');
+    mp.setCustomParameters({prompt:'none'});
+    fbUser.reauthenticateWithPopup(mp)
+      .then(function(result){
+        var tok=result&&result.credential&&result.credential.accessToken||null;
+        if(tok){
+          var exp=Date.now()+3500000;
+          driveToken={access_token:tok,expires_at:exp};
+          gcalToken={access_token:tok,expires_at:exp};
+          cb(null,tok);
         } else {
-          cb((resp&&resp.error)||'Google Drive permission was not granted. Please try again.',null);
+          cb('Drive token not returned. Please sign out and sign back in.',null);
         }
-      };
-      try{
-        client.requestAccessToken({prompt:''});
-      }catch(e){
-        cb('Could not request Google Drive access: '+e.message,null);
-      }
-    });
+      })
+      .catch(function(e){
+        if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
+          cb('Cancelled. Please tap the button and try again.',null);
+        } else if(e.code==='auth/network-request-failed'){
+          cb('Network error. Please check your connection and try again.',null);
+        } else if(e.code==='auth/user-mismatch'||e.code==='auth/requires-recent-login'){
+          cb('Session expired. Please sign out and sign back in.',null);
+        } else if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment'){
+          // Last resort for mobile: try full signInWithRedirect
+          // This reloads the page but will cache the token in getRedirectResult
+          cb('Popup blocked on your device. Please sign out and sign back in to refresh access.',null);
+        } else {
+          cb('Google Drive error: '+(e.message||e.code||'unknown'),null);
+        }
+      });
     return;
   }
 
-  // ── DESKTOP: Use Firebase signInWithPopup ────────────────────────────
-  // Works reliably on desktop browsers. Never called on mobile.
+  // ── DESKTOP: use Firebase signInWithPopup ─────────────────────────────
   if(typeof firebase!=='undefined'&&firebase.auth){
     var p=new firebase.auth.GoogleAuthProvider();
     p.addScope('https://www.googleapis.com/auth/drive.file');
-    p.setCustomParameters({prompt:'none'}); // silent if already authed
+    p.setCustomParameters({prompt:'none'});
     firebase.auth().signInWithPopup(p)
       .then(function(result){
         var tok=result&&result.credential&&result.credential.accessToken||null;
@@ -7123,7 +7136,6 @@ function driveGetToken(cb){
           gcalToken={access_token:tok,expires_at:exp};
           cb(null,tok);
         } else {
-          // Token not returned with prompt:none — try with consent
           var p2=new firebase.auth.GoogleAuthProvider();
           p2.addScope('https://www.googleapis.com/auth/drive.file');
           p2.setCustomParameters({prompt:'consent'});
@@ -7142,17 +7154,17 @@ function driveGetToken(cb){
       })
       .catch(function(e){
         if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
-          cb('Sign-in was cancelled. Please try again.',null);
+          cb('Sign-in cancelled. Please try again.',null);
         } else if(e.code==='auth/popup-blocked'){
           cb('Popup blocked. Please allow popups for this site in browser settings.',null);
         } else {
-          cb('Google sign-in error: '+(e.message||e),null);
+          cb('Google Drive sign-in error: '+(e.message||e),null);
         }
       });
     return;
   }
 
-  // GIS fallback for desktop if Firebase unavailable
+  // GIS fallback — desktop only, Firebase unavailable
   _loadDriveGIS(function(client){
     if(!client){cb('Google Drive sign-in unavailable.',null);return;}
     client.callback=function(resp){
@@ -7169,7 +7181,6 @@ function driveGetToken(cb){
     catch(e){cb('Could not request Drive access: '+e.message,null);}
   });
 }
-
 // ── Delete a file from Google Drive by its ID (live sync on delete) ────────
 function driveDeleteFile(fileId, cb){
   if(!fileId){if(cb)cb('No file ID provided');return;}
@@ -7759,8 +7770,10 @@ document.addEventListener('DOMContentLoaded', function() {
   auth.getRedirectResult().then(function(result) {
     var lbl = document.getElementById('signInLabel');
     if (lbl) lbl.textContent = 'Sign in with Google';
-    // Cache the Drive access token from the redirect result so mobile upload/delete
-    // works immediately without a second auth round-trip.
+    // Cache Drive token from redirect result.
+    // On mobile, sign-in uses signInWithRedirect. The OAuth credential
+    // (with drive.file scope) is only available here after the redirect.
+    // Caching it means the first upload/delete works with no extra auth round-trip.
     if(result&&result.credential&&result.credential.accessToken){
       var tok=result.credential.accessToken;
       var exp=Date.now()+3500000;
@@ -7768,7 +7781,7 @@ document.addEventListener('DOMContentLoaded', function() {
       window.gcalToken={access_token:tok,expires_at:exp};
     }
     // onAuthStateChanged below handles updating the UI
-  }).catch(function(e) {
+    }).catch(function(e) {
     var lbl = document.getElementById('signInLabel');
     if (lbl) lbl.textContent = 'Sign in with Google';
     if (e.code === 'auth/configuration-not-found' || e.code === 'auth/invalid-api-key' || e.code === 'auth/unauthorized-domain') {
