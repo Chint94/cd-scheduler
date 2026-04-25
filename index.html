@@ -5135,8 +5135,7 @@ function openSimpleTaskModal(taskId){
   // -- Attachments (Google Drive) -------------------------------------------
   var attSec=document.createElement('div');attSec.className='stm-section';
   var attLbl=document.createElement('div');attLbl.className='stm-lbl';
-  var _isMobLbl=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')||isMobile();
-  attLbl.textContent=_isMobLbl?'Attachments (download only)':'Attachments - Google Drive (no size limit)';
+  attLbl.textContent='Attachments - Google Drive (no size limit)';
   attSec.appendChild(attLbl);
 
   var attList=document.createElement('div');attList.className='stm-att-list';
@@ -5177,39 +5176,36 @@ function openSimpleTaskModal(taskId){
           +'text-decoration:none;display:inline-flex;align-items:center;justify-content:center;';
         acts.appendChild(dl);
       }
-      // Remove button — desktop only (hidden on mobile)
-      var _isMob=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')||isMobile();
-      if(!_isMob){
-        var db=document.createElement('button');db.type='button';db.className='stm-att-btn del';
-        db.textContent='X';db.title='Remove & delete from Drive';
-        db.style.cssText='font-weight:700;font-size:12px;min-width:28px;min-height:28px;';
-        (function(idx2,a2){
-          db.addEventListener('click',function(){
-            var msg=a2.driveFileId
-              ?'Remove "'+a2.name+'" from this task AND permanently delete from Google Drive?'
-              :'Remove "'+a2.name+'" from this task?';
-            if(!confirm(msg))return;
-            db.disabled=true;db.textContent='...';
-            function removeLocal(){curAtts.splice(idx2,1);buildAttList();updateAttZone();persistAttachmentSync();}
-            if(a2.driveFileId){
-              driveDeleteFile(a2.driveFileId,function(err){
-                if(err){
-                  if(confirm('Could not delete from Google Drive:\n'+err+'\n\nRemove the link from this task anyway?')){
-                    removeLocal();
-                  } else {
-                    db.disabled=false;db.textContent='X';
-                  }
-                } else {
+      // Remove button - syncs deletion to Google Drive live
+      var db=document.createElement('button');db.type='button';db.className='stm-att-btn del';
+      db.textContent='X';db.title='Remove & delete from Drive';
+      db.style.cssText='font-weight:700;font-size:12px;min-width:28px;min-height:28px;';
+      (function(idx2,a2){
+        db.addEventListener('click',function(){
+          var msg=a2.driveFileId
+            ?'Remove "'+a2.name+'" from this task AND permanently delete from Google Drive?'
+            :'Remove "'+a2.name+'" from this task?';
+          if(!confirm(msg))return;
+          db.disabled=true;db.textContent='...';
+          function removeLocal(){curAtts.splice(idx2,1);buildAttList();updateAttZone();persistAttachmentSync();}
+          if(a2.driveFileId){
+            driveDeleteFile(a2.driveFileId,function(err){
+              if(err){
+                if(confirm('Could not delete from Google Drive:\n'+err+'\n\nRemove the link from this task anyway?')){
                   removeLocal();
+                } else {
+                  db.disabled=false;db.textContent='X';
                 }
-              });
-            } else {
-              removeLocal();
-            }
-          });
-        })(i,att);
-        acts.appendChild(db);
-      }
+              } else {
+                removeLocal();
+              }
+            });
+          } else {
+            removeLocal();
+          }
+        });
+      })(i,att);
+      acts.appendChild(db);
       item.appendChild(ico);item.appendChild(inf);item.appendChild(acts);
       attList.appendChild(item);
     });
@@ -5248,18 +5244,41 @@ function openSimpleTaskModal(taskId){
       e.preventDefault();attZone.classList.remove('drag-over');doUpload(e.dataTransfer.files);
     });
   } else {
-    // Mobile: upload zone is hidden — view and download only
-    attZone.style.display='none';
+    // Mobile: a visible button that:
+    //   Step 1 — gets Drive token via Firebase (direct user tap = real gesture)
+    //   Step 2 — opens file picker programmatically
+    attZone.style.cursor='default';
+    attZone.appendChild(attHint);
+    attZone.appendChild(attSub);
+    var attMobileBtn=document.createElement('button');
+    attMobileBtn.type='button';
+    attMobileBtn.className='stm-btn save';
+    attMobileBtn.style.cssText='width:100%;font-size:13px;padding:11px;margin-top:8px;';
+    attMobileBtn.textContent='Upload file to Google Drive';
+    attZone.appendChild(attMobileBtn);
+
+    attMobileBtn.addEventListener('click',function(){
+      // Pre-fetch Drive token on this direct tap (reauthenticateWithPopup prompt:none
+      // = silent, no popup shown). Then open file picker with token already cached.
+      attMobileBtn.disabled=true;
+      attMobileBtn.textContent='Connecting to Google Drive...';
+      driveGetToken(function(err,token){
+        if(err||!token){
+          attMobileBtn.disabled=false;
+          attMobileBtn.textContent='Connect Google Drive & Upload';
+          alert('Google Drive sign-in failed:\n'+(err||'unknown error')+'\n\nPlease try again.');
+          return;
+        }
+        attMobileBtn.disabled=false;
+        attMobileBtn.textContent='Upload another file';
+        attFileInp.click();
+      });
+    });;
   }
 
   var attNote=document.createElement('div');attNote.className='stm-att-note';
-  var _isMobNote=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')||isMobile();
-  if(_isMobNote){
-    attNote.innerHTML='<strong>View only on mobile.</strong> To add or remove attachments, please use the laptop version.';
-  } else {
-    attNote.innerHTML='<strong>Files are stored in your Google Drive</strong> in a folder called '
-      +'<em>CD Scheduler Attachments</em>. Removing an attachment also permanently deletes it from Drive.';
-  }
+  attNote.innerHTML='<strong>Files are stored in your Google Drive</strong> in a folder called '
+    +'<em>CD Scheduler Attachments</em>. Removing an attachment also permanently deletes it from Drive.';
 
   function updateAttZone(){attZone.style.display='';}
   updateAttZone();
@@ -7044,74 +7063,124 @@ function _loadDriveGIS(cb){
 // because the actual upload tap can request the Drive token immediately.
 setTimeout(function(){try{_loadDriveGIS(function(){});}catch(e){}},800);
 
+function _driveIsMobile(){
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')||
+         (typeof isMobile==='function'&&isMobile());
+}
+
 function driveGetToken(cb){
-  // Return cached token if still valid
-  if(driveToken&&driveToken.access_token&&Date.now()<driveToken.expires_at){
+  // Return cached token if still valid (5-min buffer)
+  if(driveToken&&driveToken.access_token&&Date.now()<driveToken.expires_at-300000){
     cb(null,driveToken.access_token);return;
   }
 
-  // Primary method for both desktop and mobile: Google Identity Services.
-  // The GIS script is preloaded above so requestAccessToken can run immediately
-  // from the user's tap on mobile.
+  if(_driveIsMobile()){
+    // ── MOBILE: use reauthenticateWithPopup(prompt:none) ──────────────────
+    // NEVER call GIS requestAccessToken on mobile — it opens a popup window
+    // that spins forever (Google logo + loading circle) because mobile browsers
+    // cannot complete the cross-origin GIS auth flow in a popup.
+    //
+    // reauthenticateWithPopup with prompt:none reuses the existing Firebase
+    // session silently — no visible popup or spinner at all when already signed in.
+    if(typeof firebase==='undefined'||!firebase.auth){
+      cb('Firebase not available. Please reload the page.',null);return;
+    }
+    var fbUser=firebase.auth().currentUser;
+    if(!fbUser){
+      cb('Please sign in to Google first (tap the Sign In button at the top), then try again.',null);return;
+    }
+    var mp=new firebase.auth.GoogleAuthProvider();
+    mp.addScope('https://www.googleapis.com/auth/drive.file');
+    mp.setCustomParameters({prompt:'none'});
+    fbUser.reauthenticateWithPopup(mp)
+      .then(function(result){
+        var tok=result&&result.credential&&result.credential.accessToken||null;
+        if(tok){
+          var exp=Date.now()+3500000;
+          driveToken={access_token:tok,expires_at:exp};
+          gcalToken={access_token:tok,expires_at:exp};
+          cb(null,tok);
+        } else {
+          cb('Drive token not returned. Please sign out and sign back in.',null);
+        }
+      })
+      .catch(function(e){
+        if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
+          cb('Cancelled. Please tap the button and try again.',null);
+        } else if(e.code==='auth/network-request-failed'){
+          cb('Network error. Please check your connection and try again.',null);
+        } else if(e.code==='auth/user-mismatch'||e.code==='auth/requires-recent-login'){
+          cb('Session expired. Please sign out and sign back in.',null);
+        } else if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment'){
+          // Last resort for mobile: try full signInWithRedirect
+          // This reloads the page but will cache the token in getRedirectResult
+          cb('Popup blocked on your device. Please sign out and sign back in to refresh access.',null);
+        } else {
+          cb('Google Drive error: '+(e.message||e.code||'unknown'),null);
+        }
+      });
+    return;
+  }
+
+  // ── DESKTOP: use Firebase signInWithPopup ─────────────────────────────
+  if(typeof firebase!=='undefined'&&firebase.auth){
+    var p=new firebase.auth.GoogleAuthProvider();
+    p.addScope('https://www.googleapis.com/auth/drive.file');
+    p.setCustomParameters({prompt:'none'});
+    firebase.auth().signInWithPopup(p)
+      .then(function(result){
+        var tok=result&&result.credential&&result.credential.accessToken||null;
+        if(tok){
+          var exp=Date.now()+3500000;
+          driveToken={access_token:tok,expires_at:exp};
+          gcalToken={access_token:tok,expires_at:exp};
+          cb(null,tok);
+        } else {
+          var p2=new firebase.auth.GoogleAuthProvider();
+          p2.addScope('https://www.googleapis.com/auth/drive.file');
+          p2.setCustomParameters({prompt:'consent'});
+          return firebase.auth().signInWithPopup(p2).then(function(r2){
+            var t2=r2&&r2.credential&&r2.credential.accessToken||null;
+            if(t2){
+              var exp2=Date.now()+3500000;
+              driveToken={access_token:t2,expires_at:exp2};
+              gcalToken={access_token:t2,expires_at:exp2};
+              cb(null,t2);
+            } else {
+              cb('No Drive token returned. Please sign out and sign back in.',null);
+            }
+          });
+        }
+      })
+      .catch(function(e){
+        if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
+          cb('Sign-in cancelled. Please try again.',null);
+        } else if(e.code==='auth/popup-blocked'){
+          cb('Popup blocked. Please allow popups for this site in browser settings.',null);
+        } else {
+          cb('Google Drive sign-in error: '+(e.message||e),null);
+        }
+      });
+    return;
+  }
+
+  // GIS fallback — desktop only, Firebase unavailable
   _loadDriveGIS(function(client){
-    if(client){
-      var triedConsent=false;
-      client.callback=function(resp){
-        if(resp&&resp.access_token){
-          var exp=Date.now()+(resp.expires_in||3500)*1000;
-          driveToken={access_token:resp.access_token,expires_at:exp};
-          gcalToken={access_token:resp.access_token,expires_at:exp};
-          cb(null,resp.access_token);
-          return;
-        }
-        if(!triedConsent){
-          triedConsent=true;
-          try{client.requestAccessToken({prompt:'consent'});return;}catch(e2){}
-        }
+    if(!client){cb('Google Drive sign-in unavailable.',null);return;}
+    client.callback=function(resp){
+      if(resp&&resp.access_token){
+        var exp=Date.now()+(resp.expires_in||3500)*1000;
+        driveToken={access_token:resp.access_token,expires_at:exp};
+        gcalToken={access_token:resp.access_token,expires_at:exp};
+        cb(null,resp.access_token);
+      } else {
         cb((resp&&resp.error)||'Google Drive permission was not granted.',null);
-      };
-      try{
-        client.requestAccessToken({prompt:''});
-        return;
-      }catch(e){
-        // Fall through to Firebase fallback below.
       }
-    }
-
-    // Fallback: Firebase popup on desktop-style browsers.
-    if(typeof firebase!=='undefined' && firebase.auth){
-      var driveProvider = new firebase.auth.GoogleAuthProvider();
-      driveProvider.addScope('https://www.googleapis.com/auth/drive.file');
-      driveProvider.addScope('https://www.googleapis.com/auth/calendar.events');
-      driveProvider.setCustomParameters({prompt:'consent'});
-      firebase.auth().signInWithPopup(driveProvider)
-        .then(function(result){
-          var tok = result && result.credential && result.credential.accessToken || null;
-          if(tok){
-            var exp = Date.now()+3500000;
-            driveToken={access_token:tok,expires_at:exp};
-            gcalToken={access_token:tok,expires_at:exp};
-            cb(null,tok);
-          } else {
-            cb('No Google Drive access token returned. Please sign out and sign in again.',null);
-          }
-        })
-        .catch(function(e){
-          if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
-            cb('Sign-in was cancelled. Please try again.',null);
-          } else if(e.code==='auth/popup-blocked'){
-            cb('Popup blocked by your browser. Please allow popups for this site, then try again.',null);
-          } else {
-            cb('Google sign-in error: '+(e.message||e),null);
-          }
-        });
-      return;
-    }
-
-    cb('Google Drive sign-in is unavailable on this browser.',null);
+    };
+    try{client.requestAccessToken({prompt:''});}
+    catch(e){cb('Could not request Drive access: '+e.message,null);}
   });
 }
-
 // ── Delete a file from Google Drive by its ID (live sync on delete) ────────
 function driveDeleteFile(fileId, cb){
   if(!fileId){if(cb)cb('No file ID provided');return;}
@@ -7701,8 +7770,18 @@ document.addEventListener('DOMContentLoaded', function() {
   auth.getRedirectResult().then(function(result) {
     var lbl = document.getElementById('signInLabel');
     if (lbl) lbl.textContent = 'Sign in with Google';
+    // Cache Drive token from redirect result.
+    // On mobile, sign-in uses signInWithRedirect. The OAuth credential
+    // (with drive.file scope) is only available here after the redirect.
+    // Caching it means the first upload/delete works with no extra auth round-trip.
+    if(result&&result.credential&&result.credential.accessToken){
+      var tok=result.credential.accessToken;
+      var exp=Date.now()+3500000;
+      window.driveToken={access_token:tok,expires_at:exp};
+      window.gcalToken={access_token:tok,expires_at:exp};
+    }
     // onAuthStateChanged below handles updating the UI
-  }).catch(function(e) {
+    }).catch(function(e) {
     var lbl = document.getElementById('signInLabel');
     if (lbl) lbl.textContent = 'Sign in with Google';
     if (e.code === 'auth/configuration-not-found' || e.code === 'auth/invalid-api-key' || e.code === 'auth/unauthorized-domain') {
