@@ -458,6 +458,7 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
 .stm-att-btn:hover{background:var(--gc)}
 .stm-att-btn.del:hover{background:#FFE0E0;color:var(--ot)}
+.stm-att-btn:disabled{opacity:.5;cursor:not-allowed}
 .stm-att-prog{width:100%;height:4px;background:var(--gp);border-radius:4px;
   margin-top:4px;overflow:hidden}
 .stm-att-prog-bar{height:100%;background:var(--gm);border-radius:4px;width:0%;transition:width .2s}
@@ -5131,10 +5132,10 @@ function openSimpleTaskModal(taskId){
   notesSec.appendChild(notesLbl);notesSec.appendChild(notesInp);
   body.appendChild(notesSec);
 
-  // ── Attachments (Google Drive) ──────────────────────────────────────────
+  // -- Attachments (Google Drive) -------------------------------------------
   var attSec=document.createElement('div');attSec.className='stm-section';
   var attLbl=document.createElement('div');attLbl.className='stm-lbl';
-  attLbl.textContent='Attachments · Google Drive (no size limit, max 5 files)';
+  attLbl.textContent='Attachments - Google Drive (no size limit)';
   attSec.appendChild(attLbl);
 
   var attList=document.createElement('div');attList.className='stm-att-list';
@@ -5147,73 +5148,140 @@ function openSimpleTaskModal(taskId){
         var wrap=document.createElement('div');
         var row=document.createElement('div');row.className='stm-att-uploading';
         var sp=document.createElement('div');sp.className='stm-att-spinner';
-        var tx=document.createElement('span');tx.textContent='Uploading '+att.name+'… '+(att._pct||0)+'%';
+        var tx=document.createElement('span');tx.textContent='Uploading '+att.name+'... '+(att._pct||0)+'%';
         row.appendChild(sp);row.appendChild(tx);
         var pg=document.createElement('div');pg.className='stm-att-prog';
-        var pb=document.createElement('div');pb.className='stm-att-prog-bar';pb.style.width=(att._pct||0)+'%';
-        pg.appendChild(pb);wrap.appendChild(row);wrap.appendChild(pg);attList.appendChild(wrap);return;
+        var pb=document.createElement('div');pb.className='stm-att-prog-bar';
+        pb.style.width=(att._pct||0)+'%';
+        pg.appendChild(pb);wrap.appendChild(row);wrap.appendChild(pg);
+        attList.appendChild(wrap);return;
       }
       var item=document.createElement('div');item.className='stm-att-item';
-      var ico=document.createElement('div');ico.className='stm-att-ico';ico.textContent=getFileIcon(att.type||'');
+      var ico=document.createElement('div');ico.className='stm-att-ico';
+      ico.textContent=getFileIcon(att.type||'');
       var inf=document.createElement('div');inf.className='stm-att-inf';
-      var nm=document.createElement('a');nm.className='stm-att-nm';nm.textContent=att.name;nm.title=att.name;
+      var nm=document.createElement('a');nm.className='stm-att-nm';
+      nm.textContent=att.name;nm.title=att.name;
       nm.href=att.driveLink||'#';nm.target='_blank';nm.rel='noopener';
       var mt=document.createElement('div');mt.className='stm-att-meta';
       mt.innerHTML=fmtBytes(att.size||0)+' <span class="stm-att-dbadge">Drive</span>';
       inf.appendChild(nm);inf.appendChild(mt);
       var acts=document.createElement('div');acts.className='stm-att-acts';
       if(att.downloadLink){
-        var dl=document.createElement('a');dl.className='stm-att-btn';dl.textContent='⬇️';
+        var dl=document.createElement('a');dl.className='stm-att-btn';dl.textContent='Download';
         dl.href=att.downloadLink;dl.target='_blank';dl.rel='noopener';dl.title='Download';
+        dl.style.cssText='font-size:10px;font-weight:600;padding:3px 7px;border-radius:5px;background:var(--gc);border:1px solid var(--gp);color:var(--gd);text-decoration:none;display:inline-flex;align-items:center;';
         acts.appendChild(dl);
       }
       var db=document.createElement('button');db.type='button';db.className='stm-att-btn del';
-      db.textContent='✕';db.title='Remove';
-      (function(idx2,a2){db.addEventListener('click',function(){
-        if(confirm('Remove "'+a2.name+'" from this task?\nThe file stays in your Google Drive.')){
-          curAtts.splice(idx2,1);buildAttList();updateAttZone();}
-      });})(i,att);
+      db.textContent='X';db.title='Remove and delete from Drive';
+      db.style.cssText='font-weight:700;font-size:12px;';
+      (function(idx2,a2){
+        db.addEventListener('click',function(){
+          var msg=a2.driveFileId
+            ?'Remove "'+a2.name+'" from this task AND permanently delete it from Google Drive?'
+            :'Remove "'+a2.name+'" from this task?';
+          if(!confirm(msg))return;
+          db.disabled=true;db.textContent='...';
+          function removeLocal(){curAtts.splice(idx2,1);buildAttList();updateAttZone();}
+          if(a2.driveFileId){
+            driveDeleteFile(a2.driveFileId,function(err){
+              if(err){
+                if(confirm('Could not delete from Google Drive:\n'+err+'\n\nRemove link from task anyway?')){
+                  removeLocal();
+                } else {
+                  db.disabled=false;db.textContent='X';
+                }
+              } else {
+                removeLocal();
+              }
+            });
+          } else {
+            removeLocal();
+          }
+        });
+      })(i,att);
       acts.appendChild(db);
       item.appendChild(ico);item.appendChild(inf);item.appendChild(acts);
       attList.appendChild(item);
     });
   }
 
+  // Upload zone - desktop uses click/drop, mobile uses a button to pre-auth
   var attZone=document.createElement('div');attZone.className='stm-att-zone';
   var attFileInp=document.createElement('input');attFileInp.type='file';attFileInp.multiple=true;
   attFileInp.accept='image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.mp3,.mp4,.mov,.heic';
-  attZone.appendChild(attFileInp);
   var attHint=document.createElement('div');attHint.className='stm-att-hint';
   var attSub=document.createElement('div');attSub.className='stm-att-sub';
-  attZone.appendChild(document.createTextNode('📎 '));
-  attZone.appendChild(attHint);attZone.appendChild(attSub);
+
+  // Mobile upload button - fires on direct user tap, gets auth token THEN opens file picker
+  var attMobileBtn=document.createElement('button');
+  attMobileBtn.type='button';attMobileBtn.className='stm-btn save';
+  attMobileBtn.style.cssText='width:100%;font-size:13px;padding:10px;margin-top:8px';
+  attMobileBtn.textContent='Sign in & Upload to Drive';
+
+  if(isMobile()){
+    attFileInp.style.display='none'; // hide invisible overlay on mobile
+    attZone.style.cssText+='cursor:default;'; // no pointer on zone itself
+    attZone.appendChild(attHint);
+    attZone.appendChild(attSub);
+    attZone.appendChild(attMobileBtn);
+  } else {
+    attZone.appendChild(attFileInp); // desktop: transparent overlay
+    attZone.appendChild(attHint);
+    attZone.appendChild(attSub);
+  }
 
   var attNote=document.createElement('div');attNote.className='stm-att-note';
-  attNote.innerHTML='<strong>📁 Files upload to your Google Drive</strong> in a folder called <em>CD Scheduler Attachments</em>. '+
-    'You\'ll be prompted to sign in to Google on first upload. Files remain in Drive if this app is reset.';
+  attNote.innerHTML='<strong>Files upload to your Google Drive</strong> in a folder called '
+    +'<em>CD Scheduler Attachments</em>. Removing an attachment also permanently deletes it from Drive.';
 
   function updateAttZone(){
-    var used=curAtts.filter(function(a){return !a._uploading;}).length;
-    var rem=5-used;
-    if(rem<=0){attZone.style.display='none';}
-    else{
-      attZone.style.display='';
+    attZone.style.display='';
+    if(isMobile()){
+      attHint.innerHTML='<strong>Tap the button below</strong> to sign in and choose files';
+      attSub.textContent='Any file size - stored in your Google Drive';
+    } else {
       attHint.innerHTML='<strong>Click or drag & drop</strong> to upload to Google Drive';
-      attSub.textContent=rem+' slot'+(rem!==1?'s':'')+' remaining · any file size';
+      attSub.textContent='Any file size - stored in your Google Drive';
     }
   }
   updateAttZone();
 
+  // Desktop: drag & drop
   attZone.addEventListener('dragover',function(e){e.preventDefault();attZone.classList.add('drag-over');});
   attZone.addEventListener('dragleave',function(){attZone.classList.remove('drag-over');});
-  attZone.addEventListener('drop',function(e){e.preventDefault();attZone.classList.remove('drag-over');doUpload(e.dataTransfer.files);});
+  attZone.addEventListener('drop',function(e){
+    e.preventDefault();attZone.classList.remove('drag-over');
+    doUpload(e.dataTransfer.files);
+  });
+
+  // Desktop: file input change
   attFileInp.addEventListener('change',function(){doUpload(attFileInp.files);attFileInp.value='';});
+
+  // Mobile button: authenticate on direct tap (real user gesture), then open file picker
+  attMobileBtn.addEventListener('click',function(){
+    attMobileBtn.disabled=true;
+    attMobileBtn.textContent='Signing in to Google...';
+    driveGetToken(function(err,token){
+      if(err||!token){
+        attMobileBtn.disabled=false;
+        attMobileBtn.textContent='Sign in & Upload to Drive';
+        alert('Google Drive sign-in failed:\n'+(err||'unknown error')+'\n\nPlease try again.');
+        return;
+      }
+      // Token ready - now open native file picker (still in user gesture chain on most mobile browsers)
+      attMobileBtn.disabled=false;
+      attMobileBtn.textContent='Upload another file to Drive';
+      attFileInp.removeAttribute('style'); // make visible briefly
+      attFileInp.click();
+      setTimeout(function(){attFileInp.style.display='none';},200);
+    });
+  });
 
   function doUpload(fileList){
     var arr=Array.from(fileList||[]);
-    var used=curAtts.filter(function(a){return !a._uploading;}).length;
-    var rem=5-used;if(rem<=0){alert('Maximum 5 attachments per task.');return;}
-    arr=arr.slice(0,rem);if(!arr.length)return;
+    if(!arr.length)return;
     var phs=arr.map(function(f){return{_uploading:true,name:f.name,_pct:0};});
     phs.forEach(function(p){curAtts.push(p);});
     buildAttList();updateAttZone();
@@ -5224,8 +5292,9 @@ function openSimpleTaskModal(taskId){
       },
       function(err,results){
         if(err){
-          phs.forEach(function(p){var i=curAtts.indexOf(p);if(i>=0)curAtts.splice(i,1);});
-          buildAttList();updateAttZone();alert('Upload error: '+err);return;
+          phs.forEach(function(p){var pi=curAtts.indexOf(p);if(pi>=0)curAtts.splice(pi,1);});
+          buildAttList();updateAttZone();
+          alert('Upload error: '+err);return;
         }
         results.forEach(function(res,i){
           var ph=phs[i];var pi=curAtts.indexOf(ph);
@@ -5233,6 +5302,7 @@ function openSimpleTaskModal(taskId){
           else{if(pi>=0)curAtts[pi]=res;else curAtts.push(res);}
         });
         buildAttList();updateAttZone();
+        if(isMobile()&&attMobileBtn){attMobileBtn.textContent='Upload another file to Drive';}
       }
     );
   }
@@ -6965,7 +7035,38 @@ function _loadDriveGIS(cb){
 }
 
 function driveGetToken(cb){
-  if(driveToken&&driveToken.access_token&&Date.now()<driveToken.expires_at){cb(null,driveToken.access_token);return;}
+  // Return cached token if still valid
+  if(driveToken&&driveToken.access_token&&Date.now()<driveToken.expires_at){
+    cb(null,driveToken.access_token);return;
+  }
+  // On mobile, GIS popup is blocked after file-picker gesture — use Firebase instead
+  if(isMobile()&&typeof firebase!=='undefined'&&firebase.auth){
+    var p=new firebase.auth.GoogleAuthProvider();
+    p.addScope(DRIVE_SCOPE);
+    p.addScope('https://www.googleapis.com/auth/calendar.events');
+    p.setCustomParameters({prompt:'select_account'});
+    firebase.auth().signInWithPopup(p).then(function(result){
+      var tok=result&&result.credential&&result.credential.accessToken||null;
+      if(tok){
+        var exp=Date.now()+3500000;
+        driveToken={access_token:tok,expires_at:exp};
+        gcalToken={access_token:tok,expires_at:exp};
+        cb(null,tok);
+      } else {
+        cb('No access token returned from Google sign-in.',null);
+      }
+    }).catch(function(e){
+      if(e.code==='auth/popup-closed-by-user'||e.code==='auth/cancelled-popup-request'){
+        cb('Sign-in cancelled. Tap the upload button again.',null);
+      } else if(e.code==='auth/popup-blocked'){
+        cb('Popup blocked by your browser. Please allow popups for this site.',null);
+      } else {
+        cb('Google sign-in error: '+e.message,null);
+      }
+    });
+    return;
+  }
+  // Desktop: use GIS token client
   _loadDriveGIS(function(client){
     if(!client){cb('GIS unavailable',null);return;}
     client.callback=function(resp){
@@ -6976,6 +7077,22 @@ function driveGetToken(cb){
       cb(null,resp.access_token);
     };
     client.requestAccessToken({prompt:''});
+  });
+}
+
+// Delete a file from Google Drive by its ID (live sync)
+function driveDeleteFile(fileId,cb){
+  if(!fileId){if(cb)cb('No file ID provided');return;}
+  driveGetToken(function(err,token){
+    if(err||!token){if(cb)cb(err||'Could not authenticate with Google Drive');return;}
+    fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(fileId),{
+      method:'DELETE',
+      headers:{'Authorization':'Bearer '+token}
+    }).then(function(r){
+      // 204 = deleted, 404 = already gone — both are success for our purposes
+      if(r.status===204||r.status===200||r.status===404){if(cb)cb(null);}
+      else{r.text().then(function(t){if(cb)cb('Drive delete failed ('+r.status+'): '+t);});}
+    }).catch(function(e){if(cb)cb('Network error: '+e.message);});
   });
 }
 
