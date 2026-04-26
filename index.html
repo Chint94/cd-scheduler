@@ -5205,7 +5205,7 @@ function openSimpleTaskModal(taskId){
   // -- Attachments (Google Drive) -------------------------------------------
   var attSec=document.createElement('div');attSec.className='stm-section';
   var attLbl=document.createElement('div');attLbl.className='stm-lbl';
-  attLbl.textContent=_isMobDev?'Attachments (download only)':'Attachments - Google Drive (no size limit)';
+  attLbl.textContent='Attachments - Google Drive (no size limit)';
   attSec.appendChild(attLbl);
 
   var attList=document.createElement('div');attList.className='stm-att-list';
@@ -5246,41 +5246,36 @@ function openSimpleTaskModal(taskId){
           +'text-decoration:none;display:inline-flex;align-items:center;justify-content:center;';
         acts.appendChild(dl);
       }
-      // Remove button — laptop only, hidden on mobile
-      if(!_isMobDev){
-        var db=document.createElement('button');db.type='button';db.className='stm-att-btn del';
-        db.textContent='X';db.title='Remove & delete from Drive';
-        db.style.cssText='font-weight:700;font-size:12px;min-width:28px;min-height:28px;';
-        (function(idx2,a2){
-          db.addEventListener('click',function(){
-            var msg=a2.driveFileId
-              ?'Remove "'+a2.name+'" from this task AND permanently delete from Google Drive?'
-              :'Remove "'+a2.name+'" from this task?';
-            if(!confirm(msg))return;
-            db.disabled=true;db.textContent='...';
-            function removeLocal(){
-              curAtts.splice(idx2,1);buildAttList();updateAttZone();
-              persistAttachmentSync({type:'file_delete',icon:'D',title:'Attachment deleted',detail:a2.name||'file',taskId:taskId});
-            }
-            if(a2.driveFileId){
-              driveDeleteFile(a2.driveFileId,function(err){
-                if(err){
-                  if(confirm('Could not delete from Google Drive:\n'+err+'\n\nRemove the link from this task anyway?')){
-                    removeLocal();
-                  } else {
-                    db.disabled=false;db.textContent='X';
-                  }
-                } else {
+      // Remove button - syncs deletion to Google Drive live
+      var db=document.createElement('button');db.type='button';db.className='stm-att-btn del';
+      db.textContent='X';db.title='Remove & delete from Drive';
+      db.style.cssText='font-weight:700;font-size:12px;min-width:28px;min-height:28px;';
+      (function(idx2,a2){
+        db.addEventListener('click',function(){
+          var msg=a2.driveFileId
+            ?'Remove "'+a2.name+'" from this task AND permanently delete from Google Drive?'
+            :'Remove "'+a2.name+'" from this task?';
+          if(!confirm(msg))return;
+          db.disabled=true;db.textContent='...';
+          function removeLocal(){curAtts.splice(idx2,1);buildAttList();updateAttZone();persistAttachmentSync({type:'file_delete',icon:'🗑️',title:'Attachment deleted',detail:a2.name||'file',taskId:taskId});}
+          if(a2.driveFileId){
+            driveDeleteFile(a2.driveFileId,function(err){
+              if(err){
+                if(confirm('Could not delete from Google Drive:\n'+err+'\n\nRemove the link from this task anyway?')){
                   removeLocal();
+                } else {
+                  db.disabled=false;db.textContent='X';
                 }
-              });
-            } else {
-              removeLocal();
-            }
-          });
-        })(i,att);
-        acts.appendChild(db);
-      }
+              } else {
+                removeLocal();
+              }
+            });
+          } else {
+            removeLocal();
+          }
+        });
+      })(i,att);
+      acts.appendChild(db);
       item.appendChild(ico);item.appendChild(inf);item.appendChild(acts);
       attList.appendChild(item);
     });
@@ -5288,13 +5283,10 @@ function openSimpleTaskModal(taskId){
 
   // Hidden file input — used by both desktop (transparent overlay) and mobile (triggered programmatically)
   var attFileInp=document.createElement('input');attFileInp.type='file';attFileInp.multiple=true;attFileInp.setAttribute('multiple','multiple');
-  attFileInp.style.display='none'; // always hidden — triggered via click() or overlay
-  document.body.appendChild(attFileInp); // attach to body so .click() works on all browsers
-
+  attFileInp.accept='image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.mp3,.mp4,.mov,.heic';
+  attFileInp.style.cssText='position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
   attFileInp.addEventListener('change',function(){
-    if(attFileInp.files&&attFileInp.files.length){
-      doUpload(attFileInp.files);
-    }
+    if(attFileInp.files&&attFileInp.files.length){doUpload(attFileInp.files);}
     attFileInp.value='';
   });
 
@@ -5303,33 +5295,56 @@ function openSimpleTaskModal(taskId){
   var attHint=document.createElement('div');attHint.className='stm-att-hint';
   var attSub=document.createElement('div');attSub.className='stm-att-sub';
 
-  var onMobileDevice = isMobile()||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
+    // Button-first upload on both laptop and mobile.
+  // Transparent overlay approach fails because file picker change event
+  // is not a user gesture context, so GIS popup gets blocked.
+  // Button click -> driveGetToken (popup allowed) -> file picker -> upload.
+  attZone.style.cursor='default';
+  attZone.appendChild(attFileInp);
+  attZone.appendChild(attHint);
+  attZone.appendChild(attSub);
+  attHint.innerHTML='<strong>Click the button below</strong> or drag & drop files here';
+  attSub.textContent='Any file size - stored in your Google Drive';
 
-  if(!onMobileDevice){
-    // Desktop: transparent file input overlay over the zone
-    var attOverlay=document.createElement('input');attOverlay.type='file';attOverlay.multiple=true;attOverlay.setAttribute('multiple','multiple');
-    attOverlay.addEventListener('change',function(){doUpload(attOverlay.files);attOverlay.value='';});
-    attZone.appendChild(attOverlay);
-    attZone.appendChild(attHint);
-    attZone.appendChild(attSub);
-    // Desktop drag & drop
-    attZone.addEventListener('dragover',function(e){e.preventDefault();attZone.classList.add('drag-over');});
-    attZone.addEventListener('dragleave',function(){attZone.classList.remove('drag-over');});
-    attZone.addEventListener('drop',function(e){
-      e.preventDefault();attZone.classList.remove('drag-over');doUpload(e.dataTransfer.files);
+  var attUploadBtn=document.createElement('button');
+  attUploadBtn.type='button';
+  attUploadBtn.className='stm-btn save';
+  attUploadBtn.style.cssText='width:100%;font-size:13px;padding:11px;margin-top:8px;';
+  attUploadBtn.textContent='Upload file to Google Drive';
+  attZone.appendChild(attUploadBtn);
+  var attMobileBtn=attUploadBtn;
+
+  function _getTokenThenPick(){
+    attUploadBtn.disabled=true;
+    attUploadBtn.textContent='Connecting to Google Drive...';
+    driveGetToken(function(err,token){
+      if(err||!token){
+        attUploadBtn.disabled=false;
+        attUploadBtn.textContent='Upload file to Google Drive';
+        alert('Google Drive sign-in failed:\n'+(err||'unknown error')+'\n\nPlease try again.');
+        return;
+      }
+      attUploadBtn.disabled=false;
+      attUploadBtn.textContent='Upload another file';
+      attFileInp.click();
     });
-  } else {
-    // Mobile: upload zone hidden — download only
-    attZone.style.display='none';
   }
+  attUploadBtn.addEventListener('click',_getTokenThenPick);
 
+  attZone.addEventListener('dragover',function(e){e.preventDefault();attZone.classList.add('drag-over');});
+  attZone.addEventListener('dragleave',function(){attZone.classList.remove('drag-over');});
+  attZone.addEventListener('drop',function(e){
+    e.preventDefault();attZone.classList.remove('drag-over');
+    attUploadBtn.disabled=true;attUploadBtn.textContent='Connecting to Google Drive...';
+    driveGetToken(function(err,token){
+      attUploadBtn.disabled=false;attUploadBtn.textContent='Upload another file';
+      if(err||!token){alert('Google Drive sign-in failed:\n'+(err||'unknown error'));return;}
+      doUpload(e.dataTransfer.files);
+    });
+  });
   var attNote=document.createElement('div');attNote.className='stm-att-note';
-  if(_isMobDev){
-    attNote.innerHTML='<strong>View &amp; download only on mobile.</strong> To upload or remove attachments, please use the laptop version.';
-  } else {
-    attNote.innerHTML='<strong>Files are stored in your Google Drive</strong> in a folder called '
-      +'<em>CD Scheduler Attachments</em>. Removing an attachment also permanently deletes it from Drive.';
-  }
+  attNote.innerHTML='<strong>Files are stored in your Google Drive</strong> in a folder called '
+    +'<em>CD Scheduler Attachments</em>. Removing an attachment also permanently deletes it from Drive.';
 
   function updateAttZone(){attZone.style.display='';}
   updateAttZone();
@@ -7835,6 +7850,7 @@ document.addEventListener('DOMContentLoaded', function() {
       var lbl = document.getElementById('signInLabel');
       if (lbl) lbl.textContent = 'Sign in with Google';
 
+      if(typeof window._actOnSignIn==='function')window._actOnSignIn();
       // Planner listener
       var wk = window.weekStart ? fmtDate(window.weekStart) : null;
       if (wk) window.FB.reattachPlanner(wk);
@@ -8052,25 +8068,20 @@ var _actSearch = '';        // current search term
 
 // Listen to Firebase activityLog in real-time
 function actStartListener(){
-  if(!uid()) return;
-  db.ref('users/' + uid() + '/activityLog')
-    .orderByChild('ts')
-    .on('value', function(snap){
-      var raw = snap.val() || {};
-      var entries = Object.values(raw);
-      // Sort newest first
-      entries.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
-      // 90-day purge — remove entries older than 90 days from Firebase
-      var cutoff = Date.now() - 90*24*60*60*1000;
-      entries.forEach(function(e){
-        if(e.ts < cutoff && e.id && uid()){
-          db.ref('users/'+uid()+'/activityLog/'+e.id).remove();
-        }
-      });
-      _actCache = entries.filter(function(e){return e.ts >= cutoff;});
-      // Re-render if Activity tab is active
-      if(currentTab === 'activity') renderActivity();
+  try{
+    var _db=firebase.database();
+    var _uid=firebase.auth().currentUser&&firebase.auth().currentUser.uid;
+    if(!_uid)return;
+    _db.ref('users/'+_uid+'/activityLog').orderByChild('ts').on('value',function(snap){
+      var raw=snap.val()||{};
+      var entries=Object.values(raw);
+      entries.sort(function(a,b){return(b.ts||0)-(a.ts||0);});
+      var cutoff=Date.now()-90*24*60*60*1000;
+      entries.forEach(function(e){if(e.ts<cutoff&&e.id)_db.ref('users/'+_uid+'/activityLog/'+e.id).remove();});
+      _actCache=entries.filter(function(e){return e.ts>=cutoff;});
+      if(currentTab==='activity')renderActivity();
     });
+  }catch(e){console.warn('Activity listener error:',e);}
 }
 
 // Format timestamp
@@ -8148,10 +8159,8 @@ function renderActivity(){
     clearBtn.innerHTML = 'Clear log <span class="act-count">('+_actCache.length+')</span>';
   }
 
-  if(!uid()){
-    feed.innerHTML = '<div class="act-empty"><div class="act-empty-icon">🔒</div>Sign in with Google to see your activity log.</div>';
-    return;
-  }
+  var _actUid=(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth().currentUser)?firebase.auth().currentUser.uid:null;
+  if(!_actUid){feed.innerHTML='<div class="act-empty"><div class="act-empty-icon">&#128274;</div>Sign in with Google to see your activity log.</div>';return;}
   if(_actCache.length === 0){
     feed.innerHTML = '<div class="act-empty"><div class="act-empty-icon">🕐</div>No activity recorded yet.<br>Actions you take will appear here.</div>';
     return;
@@ -8231,20 +8240,7 @@ function renderActivity(){
   });
 }
 
-// Start Firebase listener when user signs in
-(function(){
-  var _actListenerStarted = false;
-  var _origOnAuth = window._onAuthCallback || null;
-  // Hook into auth state — start listener when signed in
-  if(typeof firebase !== 'undefined' && firebase.auth){
-    firebase.auth().onAuthStateChanged(function(user){
-      if(user && !_actListenerStarted){
-        _actListenerStarted = true;
-        actStartListener();
-      }
-    });
-  }
-})();
+window._actOnSignIn=(function(){var s=false;return function(){if(!s){s=true;actStartListener();}};})();
 
 </script>
 </body>
