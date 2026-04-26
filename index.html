@@ -5204,7 +5204,6 @@ function openSimpleTaskModal(taskId){
 
   // -- Attachments (Google Drive) -------------------------------------------
   var attSec=document.createElement('div');attSec.className='stm-section';
-  var _isMobDev=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')||isMobile();
   var attLbl=document.createElement('div');attLbl.className='stm-lbl';
   attLbl.textContent=_isMobDev?'Attachments (download only)':'Attachments - Google Drive (no size limit)';
   attSec.appendChild(attLbl);
