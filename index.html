@@ -1275,37 +1275,6 @@ footer strong{color:rgba(255,253,245,0.85)}
   transition:all .15s;font-family:inherit;margin-left:auto}
 .act-clear-btn:hover{background:#FFE0E0}
 .act-count{font-size:11px;color:var(--inkl);margin-left:4px}
-
-/* ── Sync Status Panel ── */
-.act-sync-panel{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
-@media(max-width:700px){.act-sync-panel{grid-template-columns:1fr}}
-.act-sync-card{background:white;border:1.5px solid var(--gp);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden}
-.act-sync-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gp)}
-.act-sync-card.ok::before{background:#22c55e}
-.act-sync-card.warn::before{background:#f59e0b}
-.act-sync-card.err::before{background:#ef4444}
-.act-sync-card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.act-sync-card-icon{font-size:20px;line-height:1}
-.act-sync-card-title{font-size:12px;font-weight:700;color:var(--gd);text-transform:uppercase;letter-spacing:.06em}
-.act-sync-card-status{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:auto}
-.act-sync-card-status.connected{background:#dcfce7;color:#15803d}
-.act-sync-card-status.disconnected{background:#fee2e2;color:#dc2626}
-.act-sync-card-status.unknown{background:var(--gc);color:var(--inkl)}
-.act-sync-row{display:flex;flex-direction:column;gap:5px}
-.act-sync-item{display:flex;align-items:baseline;gap:6px}
-.act-sync-label{font-size:10px;color:var(--inkl);font-weight:600;min-width:90px;flex-shrink:0}
-.act-sync-value{font-size:11px;color:var(--ink);font-weight:500;line-height:1.3}
-.act-sync-value.ok{color:#15803d;font-weight:700}
-.act-sync-value.warn{color:#92400e;font-weight:700}
-.act-sync-value.err{color:#dc2626;font-weight:700}
-.act-sync-value.dim{color:var(--inkl)}
-.act-sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:1px}
-.act-sync-dot.green{background:#22c55e;box-shadow:0 0 0 2px #dcfce7}
-.act-sync-dot.amber{background:#f59e0b;box-shadow:0 0 0 2px #fef3c7}
-.act-sync-dot.red{background:#ef4444;box-shadow:0 0 0 2px #fee2e2}
-.act-sync-dot.grey{background:#9ca3af;box-shadow:0 0 0 2px #f3f4f6}
-.act-sync-divider{height:1px;background:var(--gc);margin:8px 0}
-.act-sync-refresh{font-size:10px;color:var(--inkl);margin-top:8px;text-align:right;font-style:italic}
 /* ── Mode toggle — mobile layout ── */
 @media(max-width:600px){
   header{flex-wrap:wrap;min-height:auto;padding:8px 14px;gap:6px;}
@@ -2203,11 +2172,9 @@ body.adv-mode .htg-expand-all{background:rgba(255,255,255,.15)}
         <button class="act-filter-btn" data-act-filter="note">Notes</button>
         <button class="act-filter-btn" data-act-filter="mobile">Mobile only</button>
         <button class="act-filter-btn" data-act-filter="desktop">Laptop only</button>
-        <button class="act-filter-btn" data-act-filter="sync">Sync events</button>
         <input class="act-search" id="actSearch" type="text" placeholder="Search activity...">
         <button class="act-clear-btn" id="actClearBtn" title="Clear all activity (cannot be undone)">Clear log</button>
       </div>
-      <div id="actSyncPanel" class="act-sync-panel"></div>
       <div id="actFeed"></div>
     </div>
   </div>
@@ -5237,8 +5204,9 @@ function openSimpleTaskModal(taskId){
 
   // -- Attachments (Google Drive) -------------------------------------------
   var attSec=document.createElement('div');attSec.className='stm-section';
+  var _isMobDev=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')||isMobile();
   var attLbl=document.createElement('div');attLbl.className='stm-lbl';
-  attLbl.textContent='Attachments - Google Drive (no size limit)';
+  attLbl.textContent=_isMobDev?'Attachments (download only)':'Attachments - Google Drive (no size limit)';
   attSec.appendChild(attLbl);
 
   var attList=document.createElement('div');attList.className='stm-att-list';
@@ -5279,36 +5247,41 @@ function openSimpleTaskModal(taskId){
           +'text-decoration:none;display:inline-flex;align-items:center;justify-content:center;';
         acts.appendChild(dl);
       }
-      // Remove button - syncs deletion to Google Drive live
-      var db=document.createElement('button');db.type='button';db.className='stm-att-btn del';
-      db.textContent='X';db.title='Remove & delete from Drive';
-      db.style.cssText='font-weight:700;font-size:12px;min-width:28px;min-height:28px;';
-      (function(idx2,a2){
-        db.addEventListener('click',function(){
-          var msg=a2.driveFileId
-            ?'Remove "'+a2.name+'" from this task AND permanently delete from Google Drive?'
-            :'Remove "'+a2.name+'" from this task?';
-          if(!confirm(msg))return;
-          db.disabled=true;db.textContent='...';
-          function removeLocal(){curAtts.splice(idx2,1);buildAttList();updateAttZone();persistAttachmentSync({type:'file_delete',icon:'🗑️',title:'Attachment deleted',detail:a2.name||'file',taskId:taskId});if(typeof actRecordDriveDeletion==='function')actRecordDriveDeletion(a2.name||'file');}
-          if(a2.driveFileId){
-            driveDeleteFile(a2.driveFileId,function(err){
-              if(err){
-                if(confirm('Could not delete from Google Drive:\n'+err+'\n\nRemove the link from this task anyway?')){
-                  removeLocal();
+      // Remove button — laptop only, hidden on mobile
+      if(!_isMobDev){
+        var db=document.createElement('button');db.type='button';db.className='stm-att-btn del';
+        db.textContent='X';db.title='Remove & delete from Drive';
+        db.style.cssText='font-weight:700;font-size:12px;min-width:28px;min-height:28px;';
+        (function(idx2,a2){
+          db.addEventListener('click',function(){
+            var msg=a2.driveFileId
+              ?'Remove "'+a2.name+'" from this task AND permanently delete from Google Drive?'
+              :'Remove "'+a2.name+'" from this task?';
+            if(!confirm(msg))return;
+            db.disabled=true;db.textContent='...';
+            function removeLocal(){
+              curAtts.splice(idx2,1);buildAttList();updateAttZone();
+              persistAttachmentSync({type:'file_delete',icon:'D',title:'Attachment deleted',detail:a2.name||'file',taskId:taskId});
+            }
+            if(a2.driveFileId){
+              driveDeleteFile(a2.driveFileId,function(err){
+                if(err){
+                  if(confirm('Could not delete from Google Drive:\n'+err+'\n\nRemove the link from this task anyway?')){
+                    removeLocal();
+                  } else {
+                    db.disabled=false;db.textContent='X';
+                  }
                 } else {
-                  db.disabled=false;db.textContent='X';
+                  removeLocal();
                 }
-              } else {
-                removeLocal();
-              }
-            });
-          } else {
-            removeLocal();
-          }
-        });
-      })(i,att);
-      acts.appendChild(db);
+              });
+            } else {
+              removeLocal();
+            }
+          });
+        })(i,att);
+        acts.appendChild(db);
+      }
       item.appendChild(ico);item.appendChild(inf);item.appendChild(acts);
       attList.appendChild(item);
     });
@@ -5347,30 +5320,17 @@ function openSimpleTaskModal(taskId){
       e.preventDefault();attZone.classList.remove('drag-over');doUpload(e.dataTransfer.files);
     });
   } else {
-    // Mobile: a visible button that:
-    //   Step 1 — gets Drive token via Firebase (direct user tap = real gesture)
-    //   Step 2 — opens file picker programmatically
-    attZone.style.cursor='default';
-    attZone.appendChild(attHint);
-    attZone.appendChild(attSub);
-    var attMobileBtn=document.createElement('button');
-    attMobileBtn.type='button';
-    attMobileBtn.className='stm-btn save';
-    attMobileBtn.style.cssText='width:100%;font-size:13px;padding:11px;margin-top:8px;';
-    attMobileBtn.textContent='Upload file to Google Drive';
-    attZone.appendChild(attMobileBtn);
-
-    attMobileBtn.addEventListener('click',function(){
-      // Mobile browsers require the native file picker to open directly from
-      // the user's tap. Asking Google for a token first makes the later
-      // input.click() look non-user-initiated and can silently fail on Android/iOS.
-      attFileInp.click();
-    });
+    // Mobile: upload zone hidden — download only
+    attZone.style.display='none';
   }
 
   var attNote=document.createElement('div');attNote.className='stm-att-note';
-  attNote.innerHTML='<strong>Files are stored in your Google Drive</strong> in a folder called '
-    +'<em>CD Scheduler Attachments</em>. Removing an attachment also permanently deletes it from Drive.';
+  if(_isMobDev){
+    attNote.innerHTML='<strong>View &amp; download only on mobile.</strong> To upload or remove attachments, please use the laptop version.';
+  } else {
+    attNote.innerHTML='<strong>Files are stored in your Google Drive</strong> in a folder called '
+      +'<em>CD Scheduler Attachments</em>. Removing an attachment also permanently deletes it from Drive.';
+  }
 
   function updateAttZone(){attZone.style.display='';}
   updateAttZone();
@@ -5421,7 +5381,6 @@ function openSimpleTaskModal(taskId){
         buildAttList();
         var uploadedNames=results.filter(function(r){return !r.error;}).map(function(r){return r.name;}).join(', ');
         persistAttachmentSync(uploadedNames?{type:'file_attach',icon:'📎',title:'File attached',detail:uploadedNames,taskId:taskId}:null);
-        if(uploadedNames&&typeof actRecordDriveUpload==='function') actRecordDriveUpload(uploadedNames,results.filter(function(r){return !r.error;}).length);
         if(typeof attMobileBtn!=='undefined'&&attMobileBtn){attMobileBtn.disabled=false;attMobileBtn.textContent='Upload file to Google Drive';}
       }
     );
@@ -7484,11 +7443,9 @@ function gcalSyncAllTasks(){
         if(errs===0){
           gcalMsg('✓ '+done+' task'+(done>1?'s':'')+' synced to Google Calendar!','ok');
           gcalStatus2('Synced at '+hm+' ✓');
-          if(typeof actRecordGcalSync==='function') actRecordGcalSync(done,0,done+' task'+(done!==1?'s':'')+' synced at '+hm);
         } else {
           gcalMsg('⚠ '+done+' synced, '+errs+' failed. Try again shortly.','err');
           gcalStatus2('⚠ Some failed');
-          if(typeof actRecordGcalSync==='function') actRecordGcalSync(done,errs,done+' synced, '+errs+' failed');
         }
         return;
       }
@@ -7879,16 +7836,6 @@ document.addEventListener('DOMContentLoaded', function() {
       var lbl = document.getElementById('signInLabel');
       if (lbl) lbl.textContent = 'Sign in with Google';
 
-      if(typeof window._actOnSignIn === 'function') window._actOnSignIn();
-
-      // Monitor Firebase connection state for Activity Centre
-      db.ref('.info/connected').on('value', function(snap){
-        var isConn = snap.val() === true;
-        if(typeof actRecordFirebaseConnection === 'function'){
-          actRecordFirebaseConnection(isConn);
-        }
-      });
-
       // Planner listener
       var wk = window.weekStart ? fmtDate(window.weekStart) : null;
       if (wk) window.FB.reattachPlanner(wk);
@@ -7904,10 +7851,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         firstTaskSync = false;
         lsSet(TK, remote);
-        // Record this sync event in Activity Centre status panel
-        if(typeof actRecordFirebaseSync === 'function'){
-          actRecordFirebaseSync(Object.keys(remote).length);
-        }
         Object.values(remote).forEach(function(t) {
           var ti = document.getElementById('tt-' + t.id);
           if (ti && document.activeElement !== ti) ti.value = t.title || '';
@@ -8108,92 +8051,27 @@ var _actCache = [];         // in-memory cache from Firebase
 var _actFilter = 'all';    // current filter
 var _actSearch = '';        // current search term
 
-// ── Sync status tracking ──────────────────────────────────────────────────────
-// These are updated whenever each sync type fires, and displayed in Activity Centre
-var _syncStatus = {
-  firebase: {
-    lastSync: null,           // timestamp of last successful Firebase cloud sync
-    lastSyncEntries: 0,       // number of tasks/entries received
-    connected: false,         // is Firebase currently connected?
-    firstSyncDone: false      // has at least one sync happened?
-  },
-  gcal: {
-    lastSync: null,           // timestamp of last successful Google Calendar sync
-    lastSyncCount: 0,         // number of tasks synced
-    lastSyncErrors: 0,        // errors in last sync
-    lastSyncStatus: 'Never synced'  // human-readable status
-  },
-  drive: {
-    lastUpload: null,         // timestamp of last successful Drive upload
-    lastUploadFile: '',       // name of last file uploaded
-    lastDelete: null,         // timestamp of last Drive file deletion
-    lastDeleteFile: '',       // name of last file deleted
-    lastTokenRefresh: null    // timestamp of last Drive token refresh
-  }
-};
-
-// Call this whenever Firebase delivers a real-time sync
-function actRecordFirebaseSync(taskCount){
-  _syncStatus.firebase.lastSync = Date.now();
-  _syncStatus.firebase.lastSyncEntries = taskCount;
-  _syncStatus.firebase.firstSyncDone = true;
-  if(currentTab === 'activity') renderActivity();
-}
-
-// Call this when Firebase connection state changes
-function actRecordFirebaseConnection(isConnected){
-  _syncStatus.firebase.connected = isConnected;
-  if(currentTab === 'activity') renderActivity();
-}
-
-// Call this when Google Calendar sync completes
-function actRecordGcalSync(count, errors, statusText){
-  _syncStatus.gcal.lastSync = Date.now();
-  _syncStatus.gcal.lastSyncCount = count;
-  _syncStatus.gcal.lastSyncErrors = errors;
-  _syncStatus.gcal.lastSyncStatus = statusText;
-  FB.logActivity({
-    type:'sync_gcal',icon:'📅',
-    title:'Google Calendar synced',
-    detail: errors===0
-      ? count+' task'+(count!==1?'s':'')+' pushed to Google Calendar'
-      : count+' synced, '+errors+' failed'
-  });
-  if(currentTab === 'activity') renderActivity();
-}
-
-// Call this when a Drive upload completes
-function actRecordDriveUpload(fileName, count){
-  _syncStatus.drive.lastUpload = Date.now();
-  _syncStatus.drive.lastUploadFile = fileName;
-  if(currentTab === 'activity') renderActivity();
-}
-
-// Call this when a Drive file is deleted
-function actRecordDriveDeletion(fileName){
-  _syncStatus.drive.lastDelete = Date.now();
-  _syncStatus.drive.lastDeleteFile = fileName;
-  if(currentTab === 'activity') renderActivity();
-}
-
 // Listen to Firebase activityLog in real-time
 function actStartListener(){
-  try{
-    var _db  = firebase.database();
-    var _uid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
-    if(!_uid) return;
-    _db.ref('users/'+_uid+'/activityLog').orderByChild('ts').on('value',function(snap){
-      var raw = snap.val()||{};
+  if(!uid()) return;
+  db.ref('users/' + uid() + '/activityLog')
+    .orderByChild('ts')
+    .on('value', function(snap){
+      var raw = snap.val() || {};
       var entries = Object.values(raw);
+      // Sort newest first
       entries.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
-      var cutoff = Date.now()-90*24*60*60*1000;
+      // 90-day purge — remove entries older than 90 days from Firebase
+      var cutoff = Date.now() - 90*24*60*60*1000;
       entries.forEach(function(e){
-        if(e.ts<cutoff&&e.id) _db.ref('users/'+_uid+'/activityLog/'+e.id).remove();
+        if(e.ts < cutoff && e.id && uid()){
+          db.ref('users/'+uid()+'/activityLog/'+e.id).remove();
+        }
       });
-      _actCache = entries.filter(function(e){return e.ts>=cutoff;});
-      if(currentTab==='activity') renderActivity();
+      _actCache = entries.filter(function(e){return e.ts >= cutoff;});
+      // Re-render if Activity tab is active
+      if(currentTab === 'activity') renderActivity();
     });
-  }catch(e){ console.warn('Activity listener error:',e); }
 }
 
 // Format timestamp
@@ -8218,12 +8096,14 @@ function actFmtDay(ts){
 
 function actGetFiltered(){
   return _actCache.filter(function(e){
+    // Device filter
     if(_actFilter==='mobile' && e.device!=='mobile') return false;
     if(_actFilter==='desktop' && e.device!=='desktop') return false;
+    // Type filter
     if(_actFilter==='task' && !e.type.startsWith('task')) return false;
     if(_actFilter==='file' && !e.type.startsWith('file')) return false;
     if(_actFilter==='note' && !e.type.startsWith('note')) return false;
-    if(_actFilter==='sync' && !e.type.startsWith('sync')) return false;
+    // Search
     if(_actSearch){
       var q = _actSearch.toLowerCase();
       var haystack = ((e.title||'')+(e.detail||'')).toLowerCase();
@@ -8231,138 +8111,6 @@ function actGetFiltered(){
     }
     return true;
   });
-}
-
-// ── Render the 3-card sync status panel ──────────────────────────────────────
-function renderSyncPanel(){
-  var panel = document.getElementById('actSyncPanel');
-  if(!panel) return;
-
-  var s = _syncStatus;
-  var now = Date.now();
-
-  function fmtAgo(ts){
-    if(!ts) return 'Never';
-    var diff = Math.floor((now - ts) / 1000);
-    if(diff < 5)  return 'Just now';
-    if(diff < 60) return diff + ' seconds ago';
-    if(diff < 3600) return Math.floor(diff/60) + ' min ago';
-    if(diff < 86400) return Math.floor(diff/3600) + ' hr ago';
-    return Math.floor(diff/86400) + ' days ago';
-  }
-
-  function fmtFull(ts){
-    if(!ts) return 'Never';
-    var d = new Date(ts);
-    var pad = function(n){return n<10?'0'+n:n;};
-    return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})
-      + ' at ' + pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
-  }
-
-  function mkCard(icon, title, statusLabel, statusClass, dotClass, rows, cardClass){
-    var div = document.createElement('div');
-    div.className = 'act-sync-card ' + (cardClass||'');
-    var hdr = document.createElement('div');
-    hdr.className = 'act-sync-card-header';
-    var ico = document.createElement('span');
-    ico.className = 'act-sync-card-icon';
-    ico.textContent = icon;
-    var ttl = document.createElement('span');
-    ttl.className = 'act-sync-card-title';
-    ttl.textContent = title;
-    var st = document.createElement('span');
-    st.className = 'act-sync-card-status ' + statusClass;
-    var dot = document.createElement('span');
-    dot.className = 'act-sync-dot ' + dotClass;
-    st.appendChild(dot);
-    st.appendChild(document.createTextNode(' '+statusLabel));
-    hdr.appendChild(ico); hdr.appendChild(ttl); hdr.appendChild(st);
-    div.appendChild(hdr);
-    var rowDiv = document.createElement('div');
-    rowDiv.className = 'act-sync-row';
-    rows.forEach(function(r){
-      var item = document.createElement('div');
-      item.className = 'act-sync-item';
-      var lbl = document.createElement('span');
-      lbl.className = 'act-sync-label';
-      lbl.textContent = r[0];
-      var val = document.createElement('span');
-      val.className = 'act-sync-value ' + (r[2]||'');
-      val.textContent = r[1];
-      item.appendChild(lbl); item.appendChild(val);
-      rowDiv.appendChild(item);
-    });
-    div.appendChild(rowDiv);
-    var ref = document.createElement('div');
-    ref.className = 'act-sync-refresh';
-    ref.textContent = 'Updated live';
-    div.appendChild(ref);
-    return div;
-  }
-
-  panel.innerHTML = '';
-
-  // ── Card 1: Firebase Cloud Sync ──────────────────────────────────────
-  var fbConn = s.firebase.connected;
-  var fbDone = s.firebase.firstSyncDone;
-  var fbCard = mkCard(
-    '☁️', 'Firebase Cloud',
-    fbConn ? 'Connected' : (fbDone ? 'Offline' : 'Connecting...'),
-    fbConn ? 'connected' : 'disconnected',
-    fbConn ? 'green' : (fbDone ? 'amber' : 'grey'),
-    [
-      ['Status',        fbConn ? 'Live real-time sync active' : (fbDone ? 'Temporarily offline' : 'Connecting to Firebase...'), fbConn?'ok':fbDone?'warn':'dim'],
-      ['Last sync',     fmtAgo(s.firebase.lastSync), s.firebase.lastSync?'':'dim'],
-      ['Exact time',    fmtFull(s.firebase.lastSync), 'dim'],
-      ['Tasks on cloud',s.firebase.lastSyncEntries > 0 ? s.firebase.lastSyncEntries + ' task'+(s.firebase.lastSyncEntries!==1?'s':'')+' received' : 'No tasks yet', s.firebase.lastSyncEntries?'':'dim'],
-      ['Sync scope',    'Tasks, Notes, Planner, Gamification', 'dim'],
-      ['Database',      'cd-scheduler-3fdad.firebaseio.com', 'dim'],
-    ],
-    fbConn ? 'ok' : (fbDone ? 'warn' : '')
-  );
-  panel.appendChild(fbCard);
-
-  // ── Card 2: Google Calendar Sync ─────────────────────────────────────
-  var gcDone = !!s.gcal.lastSync;
-  var gcErr  = s.gcal.lastSyncErrors > 0;
-  var gcCard = mkCard(
-    '📅', 'Google Calendar',
-    gcDone ? (gcErr ? 'Partial' : 'Synced') : 'Not synced',
-    gcDone ? (gcErr ? 'disconnected' : 'connected') : 'unknown',
-    gcDone ? (gcErr ? 'amber' : 'green') : 'grey',
-    [
-      ['Status',        gcDone ? s.gcal.lastSyncStatus : 'Not yet synced this session', gcDone?(gcErr?'warn':'ok'):'dim'],
-      ['Last sync',     fmtAgo(s.gcal.lastSync), gcDone?'':'dim'],
-      ['Exact time',    fmtFull(s.gcal.lastSync), 'dim'],
-      ['Tasks pushed',  gcDone ? s.gcal.lastSyncCount + ' task'+(s.gcal.lastSyncCount!==1?'s':'') : '—', gcDone?'ok':'dim'],
-      ['Errors',        gcDone ? (s.gcal.lastSyncErrors===0 ? 'None' : s.gcal.lastSyncErrors + ' failed') : '—', gcErr?'err':'dim'],
-      ['How to sync',   gcDone ? 'Use Sync button in Advanced tab' : 'Go to Advanced tab → Google Calendar → Sync', 'dim'],
-    ],
-    gcDone ? (gcErr ? 'warn' : 'ok') : ''
-  );
-  panel.appendChild(gcCard);
-
-  // ── Card 3: Google Drive (Attachments) ───────────────────────────────
-  var drUp   = !!s.drive.lastUpload;
-  var drDel  = !!s.drive.lastDelete;
-  var drAny  = drUp || drDel;
-  var drCard = mkCard(
-    '📁', 'Google Drive',
-    drAny ? 'Active' : 'No activity',
-    drAny ? 'connected' : 'unknown',
-    drAny ? 'green' : 'grey',
-    [
-      ['Last upload',   fmtAgo(s.drive.lastUpload), drUp?'ok':'dim'],
-      ['Upload time',   fmtFull(s.drive.lastUpload), 'dim'],
-      ['Last file up',  drUp ? s.drive.lastUploadFile : 'No uploads this session', drUp?'':'dim'],
-      ['Last deletion', fmtAgo(s.drive.lastDelete), drDel?'warn':'dim'],
-      ['Delete time',   fmtFull(s.drive.lastDelete), 'dim'],
-      ['Last file del', drDel ? s.drive.lastDeleteFile : 'No deletions this session', drDel?'':'dim'],
-      ['Drive folder',  'CD Scheduler Attachments', 'dim'],
-    ],
-    drAny ? 'ok' : ''
-  );
-  panel.appendChild(drCard);
 }
 
 function renderActivity(){
@@ -8393,9 +8141,6 @@ function renderActivity(){
     });
   }
 
-  // Always render sync panel (shows connection state even with no activity)
-  renderSyncPanel();
-
   var entries = actGetFiltered();
 
   // Update count badge
@@ -8404,9 +8149,7 @@ function renderActivity(){
     clearBtn.innerHTML = 'Clear log <span class="act-count">('+_actCache.length+')</span>';
   }
 
-  var _actUid = (typeof firebase!=='undefined'&&firebase.auth&&firebase.auth().currentUser)
-    ? firebase.auth().currentUser.uid : null;
-  if(!_actUid){
+  if(!uid()){
     feed.innerHTML = '<div class="act-empty"><div class="act-empty-icon">🔒</div>Sign in with Google to see your activity log.</div>';
     return;
   }
@@ -8471,8 +8214,7 @@ function renderActivity(){
       typeBadge.className = 'act-type-badge';
       var typeLabels = {
         task_edit:'Task edit', task_done:'Done', task_delete:'Deleted',
-        file_attach:'File added', file_delete:'File removed', note_save:'Note',
-        sync_gcal:'Calendar sync', sync_drive:'Drive sync', sync_firebase:'Cloud sync'
+        file_attach:'File added', file_delete:'File removed', note_save:'Note'
       };
       typeBadge.textContent = typeLabels[e.type] || e.type || '';
 
@@ -8490,16 +8232,20 @@ function renderActivity(){
   });
 }
 
-// window._actOnSignIn is called from inside onAuthStateChanged (Firebase IIFE)
-window._actOnSignIn = (function(){
-  var started = false;
-  return function(){ if(!started){ started=true; actStartListener(); } };
+// Start Firebase listener when user signs in
+(function(){
+  var _actListenerStarted = false;
+  var _origOnAuth = window._onAuthCallback || null;
+  // Hook into auth state — start listener when signed in
+  if(typeof firebase !== 'undefined' && firebase.auth){
+    firebase.auth().onAuthStateChanged(function(user){
+      if(user && !_actListenerStarted){
+        _actListenerStarted = true;
+        actStartListener();
+      }
+    });
+  }
 })();
-
-// Poll sync panel every 30s to keep "X seconds ago" fresh
-setInterval(function(){
-  if(currentTab==='activity') renderSyncPanel();
-}, 30000);
 
 </script>
 </body>
