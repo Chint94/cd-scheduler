@@ -1236,6 +1236,45 @@ footer strong{color:rgba(255,253,245,0.85)}
 .gm-pill.gm-on .gm-pill-label-right{color:var(--inkm);opacity:1;}
 /* Hide Advanced tab when mode OFF */
 .tab-btn[data-tab="rewards"].gm-hidden{display:none!important;}
+.tab-btn[data-tab="activity"].gm-hidden{display:none!important;}
+
+/* ── Activity Centre ── */
+.act-wrap{max-width:720px;margin:0 auto;padding:0 0 40px}
+.act-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.act-filter-btn{border:1.5px solid var(--gp);background:white;color:var(--gd);
+  border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;
+  transition:all .15s;font-family:inherit}
+.act-filter-btn:hover{border-color:var(--gm);color:var(--gm)}
+.act-filter-btn.active{background:var(--gm);color:white;border-color:var(--gm)}
+.act-search{flex:1;min-width:160px;border:1.5px solid var(--gp);border-radius:20px;
+  padding:6px 14px;font-size:12px;font-family:inherit;color:var(--ink);background:white;outline:none}
+.act-search:focus{border-color:var(--gm)}
+.act-day-group{margin-bottom:20px}
+.act-day-label{font-size:11px;font-weight:700;color:var(--inkl);text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:8px;padding:0 2px}
+.act-entry{display:flex;gap:12px;align-items:flex-start;background:white;
+  border:1.5px solid var(--gp);border-radius:10px;padding:10px 13px;
+  margin-bottom:7px;transition:border-color .15s}
+.act-entry:hover{border-color:var(--gm)}
+.act-icon{font-size:18px;flex-shrink:0;width:28px;text-align:center;padding-top:1px}
+.act-body{flex:1;min-width:0}
+.act-title{font-size:13px;font-weight:600;color:var(--ink);line-height:1.35;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.act-detail{font-size:11px;color:var(--inkl);margin-top:2px;line-height:1.4}
+.act-meta{display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap}
+.act-time{font-size:10px;color:var(--inkl)}
+.act-device{font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;
+  background:var(--gc);color:var(--gd)}
+.act-device.mob{background:#E8F0FE;color:#1a73e8}
+.act-type-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;
+  background:rgba(196,148,42,.12);color:var(--gd)}
+.act-empty{text-align:center;padding:48px 20px;color:var(--inkl);font-size:14px}
+.act-empty-icon{font-size:36px;margin-bottom:10px}
+.act-clear-btn{border:1.5px solid #FFB3B3;background:white;color:#c0392b;
+  border-radius:8px;padding:5px 14px;font-size:11px;font-weight:600;cursor:pointer;
+  transition:all .15s;font-family:inherit;margin-left:auto}
+.act-clear-btn:hover{background:#FFE0E0}
+.act-count{font-size:11px;color:var(--inkl);margin-left:4px}
 /* ── Mode toggle — mobile layout ── */
 @media(max-width:600px){
   header{flex-wrap:wrap;min-height:auto;padding:8px 14px;gap:6px;}
@@ -1612,6 +1651,7 @@ body.adv-mode .htg-expand-all{background:rgba(255,255,255,.15)}
     <button class="tab-btn" data-tab="tasks"><span class="tn-icon">✅</span><span class="tn-lbl">Tasks</span></button>
     <button class="tab-btn" data-tab="notes"><span class="tn-icon">📓</span><span class="tn-lbl">Notes</span></button>
     <button class="tab-btn gm-hidden" data-tab="rewards"><span class="tn-icon">⚡</span><span class="tn-lbl">Advanced</span></button>
+    <button class="tab-btn gm-hidden" data-tab="activity"><span class="tn-icon">🕐</span><span class="tn-lbl">Activity</span></button>
   </div>
 </nav>
 
@@ -2115,6 +2155,31 @@ body.adv-mode .htg-expand-all{background:rgba(255,255,255,.15)}
 
 <footer><strong>CD Scheduler</strong> · Dashboard · Planner · Tasks · Notes · Advanced · Sync across all devices</footer>
 
+<!-- ACTIVITY TAB -->
+<div id="tab-activity" class="tab-panel">
+  <div class="sw">
+    <div class="sh">
+      <div>
+        <div class="st">🕐 Activity Centre</div>
+        <div class="sd">A log of all task, attachment and note changes — synced across all your devices.</div>
+      </div>
+    </div>
+    <div class="act-wrap">
+      <div class="act-toolbar" id="actToolbar">
+        <button class="act-filter-btn active" data-act-filter="all">All</button>
+        <button class="act-filter-btn" data-act-filter="task">Tasks</button>
+        <button class="act-filter-btn" data-act-filter="file">Attachments</button>
+        <button class="act-filter-btn" data-act-filter="note">Notes</button>
+        <button class="act-filter-btn" data-act-filter="mobile">Mobile only</button>
+        <button class="act-filter-btn" data-act-filter="desktop">Laptop only</button>
+        <input class="act-search" id="actSearch" type="text" placeholder="Search activity...">
+        <button class="act-clear-btn" id="actClearBtn" title="Clear all activity (cannot be undone)">Clear log</button>
+      </div>
+      <div id="actFeed"></div>
+    </div>
+  </div>
+</div>
+
 </div><!-- #app -->
 
 <!-- ══════════════════════════════════════════════════════
@@ -2213,6 +2278,7 @@ function switchTab(name){
   if(name==='notes')renderNotes();
   if(name==='planner'){buildGrid();applyPlannerLayout();}
   if(name==='rewards')renderRewards();
+  if(name==='activity')renderActivity();
 }
 
 // Move the pill knob to the active tab button
@@ -3395,7 +3461,8 @@ function openTaskEditModal(taskId, editScope){
       var msg=isRecurring?'Delete this occurrence only? (Other occurrences remain)':'Delete this task?';
       if(!confirm(msg))return;
       if(typeof gcalDeleteEvent==='function') gcalDeleteEvent(taskId);
-      FB.deleteTask(taskId);
+      FB.logActivity({type:'task_delete',icon:'🗑️',title:'Task deleted',detail:tasks2[taskId]&&tasks2[taskId].title||'Untitled',taskId:taskId});
+  FB.deleteTask(taskId);
       delete tasks2[taskId];
     }
     lsSet(TK,tasks2);
@@ -4970,6 +5037,9 @@ function renderTasks(){
       else delete tasks2[t.id].completedAt;
       FB.ignoreNextTaskSync=true;
       lsSet(TK,tasks2);FB.saveTask(t.id,tasks2[t.id]);
+      FB.logActivity({type:'task_done',icon:chk.checked?'✅':'↩️',
+        title:chk.checked?'Task completed':'Task marked undone',
+        detail:t.title||'Untitled'});
       card.querySelector('.task-bd').className='task-bd'+(chk.checked?' task-done':'');
       var ti=card.querySelector('.task-ti');if(ti)ti.style.textDecoration=chk.checked?'line-through':'';
       buildGrid();
@@ -5135,8 +5205,7 @@ function openSimpleTaskModal(taskId){
   // -- Attachments (Google Drive) -------------------------------------------
   var attSec=document.createElement('div');attSec.className='stm-section';
   var attLbl=document.createElement('div');attLbl.className='stm-lbl';
-  var _isMobLbl=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')||isMobile();
-  attLbl.textContent=_isMobLbl?'Attachments (download only)':'Attachments - Google Drive (no size limit)';
+  attLbl.textContent='Attachments - Google Drive (no size limit)';
   attSec.appendChild(attLbl);
 
   var attList=document.createElement('div');attList.className='stm-att-list';
@@ -5177,39 +5246,36 @@ function openSimpleTaskModal(taskId){
           +'text-decoration:none;display:inline-flex;align-items:center;justify-content:center;';
         acts.appendChild(dl);
       }
-      // Remove button — desktop only (hidden on mobile)
-      var _isMob=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')||isMobile();
-      if(!_isMob){
-        var db=document.createElement('button');db.type='button';db.className='stm-att-btn del';
-        db.textContent='X';db.title='Remove & delete from Drive';
-        db.style.cssText='font-weight:700;font-size:12px;min-width:28px;min-height:28px;';
-        (function(idx2,a2){
-          db.addEventListener('click',function(){
-            var msg=a2.driveFileId
-              ?'Remove "'+a2.name+'" from this task AND permanently delete from Google Drive?'
-              :'Remove "'+a2.name+'" from this task?';
-            if(!confirm(msg))return;
-            db.disabled=true;db.textContent='...';
-            function removeLocal(){curAtts.splice(idx2,1);buildAttList();updateAttZone();persistAttachmentSync();}
-            if(a2.driveFileId){
-              driveDeleteFile(a2.driveFileId,function(err){
-                if(err){
-                  if(confirm('Could not delete from Google Drive:\n'+err+'\n\nRemove the link from this task anyway?')){
-                    removeLocal();
-                  } else {
-                    db.disabled=false;db.textContent='X';
-                  }
-                } else {
+      // Remove button - syncs deletion to Google Drive live
+      var db=document.createElement('button');db.type='button';db.className='stm-att-btn del';
+      db.textContent='X';db.title='Remove & delete from Drive';
+      db.style.cssText='font-weight:700;font-size:12px;min-width:28px;min-height:28px;';
+      (function(idx2,a2){
+        db.addEventListener('click',function(){
+          var msg=a2.driveFileId
+            ?'Remove "'+a2.name+'" from this task AND permanently delete from Google Drive?'
+            :'Remove "'+a2.name+'" from this task?';
+          if(!confirm(msg))return;
+          db.disabled=true;db.textContent='...';
+          function removeLocal(){curAtts.splice(idx2,1);buildAttList();updateAttZone();persistAttachmentSync({type:'file_delete',icon:'🗑️',title:'Attachment deleted',detail:a2.name||'file',taskId:taskId});}
+          if(a2.driveFileId){
+            driveDeleteFile(a2.driveFileId,function(err){
+              if(err){
+                if(confirm('Could not delete from Google Drive:\n'+err+'\n\nRemove the link from this task anyway?')){
                   removeLocal();
+                } else {
+                  db.disabled=false;db.textContent='X';
                 }
-              });
-            } else {
-              removeLocal();
-            }
-          });
-        })(i,att);
-        acts.appendChild(db);
-      }
+              } else {
+                removeLocal();
+              }
+            });
+          } else {
+            removeLocal();
+          }
+        });
+      })(i,att);
+      acts.appendChild(db);
       item.appendChild(ico);item.appendChild(inf);item.appendChild(acts);
       attList.appendChild(item);
     });
@@ -5248,18 +5314,30 @@ function openSimpleTaskModal(taskId){
       e.preventDefault();attZone.classList.remove('drag-over');doUpload(e.dataTransfer.files);
     });
   } else {
-    // Mobile: upload zone is hidden — view and download only
-    attZone.style.display='none';
+    // Mobile: a visible button that:
+    //   Step 1 — gets Drive token via Firebase (direct user tap = real gesture)
+    //   Step 2 — opens file picker programmatically
+    attZone.style.cursor='default';
+    attZone.appendChild(attHint);
+    attZone.appendChild(attSub);
+    var attMobileBtn=document.createElement('button');
+    attMobileBtn.type='button';
+    attMobileBtn.className='stm-btn save';
+    attMobileBtn.style.cssText='width:100%;font-size:13px;padding:11px;margin-top:8px;';
+    attMobileBtn.textContent='Upload file to Google Drive';
+    attZone.appendChild(attMobileBtn);
+
+    attMobileBtn.addEventListener('click',function(){
+      // Mobile browsers require the native file picker to open directly from
+      // the user's tap. Asking Google for a token first makes the later
+      // input.click() look non-user-initiated and can silently fail on Android/iOS.
+      attFileInp.click();
+    });
   }
 
   var attNote=document.createElement('div');attNote.className='stm-att-note';
-  var _isMobNote=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')||isMobile();
-  if(_isMobNote){
-    attNote.innerHTML='<strong>View only on mobile.</strong> To add or remove attachments, please use the laptop version.';
-  } else {
-    attNote.innerHTML='<strong>Files are stored in your Google Drive</strong> in a folder called '
-      +'<em>CD Scheduler Attachments</em>. Removing an attachment also permanently deletes it from Drive.';
-  }
+  attNote.innerHTML='<strong>Files are stored in your Google Drive</strong> in a folder called '
+    +'<em>CD Scheduler Attachments</em>. Removing an attachment also permanently deletes it from Drive.';
 
   function updateAttZone(){attZone.style.display='';}
   updateAttZone();
@@ -5269,13 +5347,14 @@ function openSimpleTaskModal(taskId){
   function cleanAttachmentList(){
     return curAtts.filter(function(a){return !a._uploading;});
   }
-  function persistAttachmentSync(){
+  function persistAttachmentSync(actEntry){
     var tasksNow=lsGet(TK);
     if(!tasksNow[taskId])return;
     tasksNow[taskId].attachments=cleanAttachmentList();
     FB.ignoreNextTaskSync=true;
     lsSet(TK,tasksNow);
     FB.saveTask(taskId,tasksNow[taskId]);
+    if(actEntry) FB.logActivity(actEntry);
     buildGrid();
     if(currentTab==='tasks')renderTasks();
     if(currentTab==='dashboard')renderDashboard();
@@ -5307,7 +5386,8 @@ function openSimpleTaskModal(taskId){
           else{if(pi>=0)curAtts[pi]=res;else curAtts.push(res);}
         });
         buildAttList();
-        persistAttachmentSync();
+        var uploadedNames=results.filter(function(r){return !r.error;}).map(function(r){return r.name;}).join(', ');
+        persistAttachmentSync(uploadedNames?{type:'file_attach',icon:'📎',title:'File attached',detail:uploadedNames,taskId:taskId}:null);
         if(typeof attMobileBtn!=='undefined'&&attMobileBtn){attMobileBtn.disabled=false;attMobileBtn.textContent='Upload file to Google Drive';}
       }
     );
@@ -5638,6 +5718,7 @@ function openSimpleTaskModal(taskId){
       tasks2[taskId].attachments=curAtts.filter(function(a){return !a._uploading;});
       FB.saveTask(taskId,tasks2[taskId]);
     }
+    FB.logActivity({type:'task_edit',icon:'✏️',title:'Task saved',detail:newTitle||'Untitled'});
     FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();
     if(currentTab==='dashboard')renderDashboard();
   });
@@ -5669,6 +5750,7 @@ function addNote(){
   notes[id]={id:id,title:'',body:'',color:NOTE_COLORS[ci],created:Date.now(),updated:Date.now()};
   lsSet(NK,notes);
   FB.saveNote(id,notes[id]);
+  FB.logActivity({type:'note_save',icon:'📝',title:'Note saved',detail:notes[id]&&notes[id].title||'Untitled note'});
   renderNotes();
   setTimeout(function(){var el=document.getElementById('nt-'+id);if(el)el.focus();},60);
 }
@@ -6572,6 +6654,16 @@ function gmApply(on){
     else  {
       rewardsBtn.classList.add('gm-hidden');
       if(currentTab === 'rewards'){ switchTab('dashboard'); }
+    }
+  }
+
+  // Activity tab button — show/hide with Advanced mode
+  var activityBtn=document.querySelector('.tab-btn[data-tab="activity"]');
+  if(activityBtn){
+    if(on){ activityBtn.classList.remove('gm-hidden'); }
+    else  {
+      activityBtn.classList.add('gm-hidden');
+      if(currentTab==='activity'){ switchTab('dashboard'); }
     }
   }
 
@@ -7642,6 +7734,20 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!uid()) return;
     db.ref('users/' + uid() + '/tasks/' + id).set(obj);
   };
+  // Activity log — write one entry to Firebase
+  window.FB.logActivity = function(entry) {
+    if (!uid()) return;
+    var id = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    entry.id = id;
+    entry.ts = Date.now();
+    entry.device = (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'')||window.innerWidth<=700)?'mobile':'desktop';
+    db.ref('users/' + uid() + '/activityLog/' + id).set(entry);
+  };
+  // Clear all activity log entries
+  window.FB.clearActivity = function() {
+    if (!uid()) return;
+    db.ref('users/' + uid() + '/activityLog').remove();
+  };
   window.FB.deleteTask = function(id) {
     if (!uid()) return;
     db.ref('users/' + uid() + '/tasks/' + id).remove();
@@ -7942,6 +8048,211 @@ function htgSyncExpandAllBtn(){
   var allOpen = Array.from(bodies).every(function(b){ return b.classList.contains('open'); });
   btn.textContent = allOpen ? 'Collapse all' : 'Expand all';
 }
+
+
+// ══════════════════════════════════════════════════════════════════════
+// ACTIVITY CENTRE
+// ══════════════════════════════════════════════════════════════════════
+var ACT_KEY = 'cds_activity_v1';
+var _actCache = [];         // in-memory cache from Firebase
+var _actFilter = 'all';    // current filter
+var _actSearch = '';        // current search term
+
+// Listen to Firebase activityLog in real-time
+function actStartListener(){
+  if(!uid()) return;
+  db.ref('users/' + uid() + '/activityLog')
+    .orderByChild('ts')
+    .on('value', function(snap){
+      var raw = snap.val() || {};
+      var entries = Object.values(raw);
+      // Sort newest first
+      entries.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+      // 90-day purge — remove entries older than 90 days from Firebase
+      var cutoff = Date.now() - 90*24*60*60*1000;
+      entries.forEach(function(e){
+        if(e.ts < cutoff && e.id && uid()){
+          db.ref('users/'+uid()+'/activityLog/'+e.id).remove();
+        }
+      });
+      _actCache = entries.filter(function(e){return e.ts >= cutoff;});
+      // Re-render if Activity tab is active
+      if(currentTab === 'activity') renderActivity();
+    });
+}
+
+// Format timestamp
+function actFmtTime(ts){
+  if(!ts) return '';
+  var d = new Date(ts);
+  var now = new Date();
+  var pad = function(n){return n<10?'0'+n:n;};
+  return pad(d.getHours())+':'+pad(d.getMinutes());
+}
+function actFmtDay(ts){
+  if(!ts) return '';
+  var d = new Date(ts);
+  var now = new Date();
+  var today = new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  var yesterday = new Date(today - 86400000);
+  var entryDay = new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  if(entryDay.getTime() === today.getTime()) return 'Today';
+  if(entryDay.getTime() === yesterday.getTime()) return 'Yesterday';
+  return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+}
+
+function actGetFiltered(){
+  return _actCache.filter(function(e){
+    // Device filter
+    if(_actFilter==='mobile' && e.device!=='mobile') return false;
+    if(_actFilter==='desktop' && e.device!=='desktop') return false;
+    // Type filter
+    if(_actFilter==='task' && !e.type.startsWith('task')) return false;
+    if(_actFilter==='file' && !e.type.startsWith('file')) return false;
+    if(_actFilter==='note' && !e.type.startsWith('note')) return false;
+    // Search
+    if(_actSearch){
+      var q = _actSearch.toLowerCase();
+      var haystack = ((e.title||'')+(e.detail||'')).toLowerCase();
+      if(haystack.indexOf(q)<0) return false;
+    }
+    return true;
+  });
+}
+
+function renderActivity(){
+  var feed = document.getElementById('actFeed');
+  if(!feed) return;
+
+  // Wire up filter buttons (once)
+  if(!document.getElementById('actToolbar')._actWired){
+    document.getElementById('actToolbar')._actWired = true;
+    document.querySelectorAll('.act-filter-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        _actFilter = btn.getAttribute('data-act-filter');
+        document.querySelectorAll('.act-filter-btn').forEach(function(b){b.classList.remove('active');});
+        btn.classList.add('active');
+        renderActivity();
+      });
+    });
+    var searchBox = document.getElementById('actSearch');
+    searchBox.addEventListener('input',function(){
+      _actSearch = searchBox.value.trim();
+      renderActivity();
+    });
+    document.getElementById('actClearBtn').addEventListener('click',function(){
+      if(!confirm('Clear the entire activity log? This cannot be undone.')) return;
+      FB.clearActivity();
+      _actCache = [];
+      renderActivity();
+    });
+  }
+
+  var entries = actGetFiltered();
+
+  // Update count badge
+  var clearBtn = document.getElementById('actClearBtn');
+  if(clearBtn){
+    clearBtn.innerHTML = 'Clear log <span class="act-count">('+_actCache.length+')</span>';
+  }
+
+  if(!uid()){
+    feed.innerHTML = '<div class="act-empty"><div class="act-empty-icon">🔒</div>Sign in with Google to see your activity log.</div>';
+    return;
+  }
+  if(_actCache.length === 0){
+    feed.innerHTML = '<div class="act-empty"><div class="act-empty-icon">🕐</div>No activity recorded yet.<br>Actions you take will appear here.</div>';
+    return;
+  }
+  if(entries.length === 0){
+    feed.innerHTML = '<div class="act-empty"><div class="act-empty-icon">🔍</div>No activity matches your filter or search.</div>';
+    return;
+  }
+
+  // Group by day
+  var groups = {};
+  var groupOrder = [];
+  entries.forEach(function(e){
+    var dayLabel = actFmtDay(e.ts);
+    if(!groups[dayLabel]){groups[dayLabel]=[];groupOrder.push(dayLabel);}
+    groups[dayLabel].push(e);
+  });
+
+  feed.innerHTML = '';
+  groupOrder.forEach(function(day){
+    var grp = document.createElement('div');
+    grp.className = 'act-day-group';
+    var lbl = document.createElement('div');
+    lbl.className = 'act-day-label';
+    lbl.textContent = day;
+    grp.appendChild(lbl);
+
+    groups[day].forEach(function(e){
+      var entry = document.createElement('div');
+      entry.className = 'act-entry';
+
+      var ico = document.createElement('div');
+      ico.className = 'act-icon';
+      ico.textContent = e.icon || '🔵';
+
+      var body = document.createElement('div');
+      body.className = 'act-body';
+
+      var title = document.createElement('div');
+      title.className = 'act-title';
+      title.textContent = e.title || '';
+
+      var detail = document.createElement('div');
+      detail.className = 'act-detail';
+      detail.textContent = e.detail || '';
+
+      var meta = document.createElement('div');
+      meta.className = 'act-meta';
+
+      var time = document.createElement('span');
+      time.className = 'act-time';
+      time.textContent = actFmtTime(e.ts);
+
+      var device = document.createElement('span');
+      device.className = 'act-device' + (e.device==='mobile'?' mob':'');
+      device.textContent = e.device==='mobile' ? '📱 Mobile' : '💻 Laptop';
+
+      var typeBadge = document.createElement('span');
+      typeBadge.className = 'act-type-badge';
+      var typeLabels = {
+        task_edit:'Task edit', task_done:'Done', task_delete:'Deleted',
+        file_attach:'File added', file_delete:'File removed', note_save:'Note'
+      };
+      typeBadge.textContent = typeLabels[e.type] || e.type || '';
+
+      meta.appendChild(time);
+      meta.appendChild(device);
+      meta.appendChild(typeBadge);
+      body.appendChild(title);
+      if(e.detail) body.appendChild(detail);
+      body.appendChild(meta);
+      entry.appendChild(ico);
+      entry.appendChild(body);
+      grp.appendChild(entry);
+    });
+    feed.appendChild(grp);
+  });
+}
+
+// Start Firebase listener when user signs in
+(function(){
+  var _actListenerStarted = false;
+  var _origOnAuth = window._onAuthCallback || null;
+  // Hook into auth state — start listener when signed in
+  if(typeof firebase !== 'undefined' && firebase.auth){
+    firebase.auth().onAuthStateChanged(function(user){
+      if(user && !_actListenerStarted){
+        _actListenerStarted = true;
+        actStartListener();
+      }
+    });
+  }
+})();
 
 </script>
 </body>
