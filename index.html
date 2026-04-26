@@ -1280,6 +1280,19 @@ footer strong{color:rgba(255,253,245,0.85)}
   transition:all .15s;font-family:inherit;margin-left:auto}
 .act-clear-btn:hover{background:#FFE0E0}
 .act-count{font-size:11px;color:var(--inkl);margin-left:4px}
+.act-sync-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.act-sync-card{background:white;border:1.5px solid var(--gp);border-radius:12px;padding:12px 13px;
+  min-height:112px;box-shadow:0 1px 0 rgba(196,148,42,.06)}
+.act-sync-top{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:var(--gd);
+  text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+.act-sync-ico{font-size:16px;line-height:1}
+.act-sync-main{font-size:16px;font-weight:700;color:var(--ink);line-height:1.25;margin-bottom:5px}
+.act-sync-sub{font-size:11px;color:var(--inkl);line-height:1.35;min-height:30px}
+.act-sync-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.act-sync-pill{font-size:9px;font-weight:700;padding:2px 7px;border-radius:9px;background:var(--gc);color:var(--gd)}
+.act-sync-pill.ok{background:#EAF7EA;color:#2e7d32}.act-sync-pill.warn{background:#FFF3CD;color:#8A6500}
+.act-sync-pill.err{background:#FFE0E0;color:#c0392b}.act-sync-pill.info{background:#E8F0FE;color:#1a73e8}
+@media(max-width:700px){.act-sync-grid{grid-template-columns:1fr}.act-sync-card{min-height:auto}}
 /* ── Mode toggle — mobile layout ── */
 @media(max-width:600px){
   header{flex-wrap:wrap;min-height:auto;padding:8px 14px;gap:6px;}
@@ -2170,6 +2183,7 @@ body.adv-mode .htg-expand-all{background:rgba(255,255,255,.15)}
       </div>
     </div>
     <div class="act-wrap">
+      <div class="act-sync-grid" id="actSyncCards" aria-label="Activity sync summary cards"></div>
       <div class="act-toolbar" id="actToolbar">
         <button class="act-filter-btn active" data-act-filter="all">All</button>
         <button class="act-filter-btn" data-act-filter="task">Tasks</button>
@@ -8150,6 +8164,106 @@ function actGetFiltered(){
   });
 }
 
+
+function actEsc(s){
+  return String(s==null?'':s).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});
+}
+function actFmtStamp(ts){
+  if(!ts) return 'Not recorded yet';
+  var d=new Date(ts);
+  if(isNaN(d.getTime())) return 'Not recorded yet';
+  return actFmtDay(ts)+' · '+actFmtTime(ts);
+}
+function actReadJson(key, fallback){
+  try{var raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(e){return fallback;}
+}
+function actGetCalendarCache(){
+  if(typeof gcalCacheGet==='function') return gcalCacheGet();
+  return actReadJson('cds_gcal_v3',{});
+}
+function actTaskArray(){
+  try{return Object.values(lsGet(TK)||{});}catch(e){return[];}
+}
+function actCalendarEligible(t){
+  try{return t&&t.date&&!t.done&&(taskStatus(t)==='today'||taskStatus(t)==='pending'||taskStatus(t)==='overdue');}
+  catch(e){return t&&t.date&&!t.done;}
+}
+function actCalendarNeedsSync(t, cache){
+  var cv=cache&&cache[t.id];
+  if(!cv||!cv.eventId) return true;
+  try{return typeof gcalHash==='function'&&gcalHash(t)!==cv.hash;}catch(e){return false;}
+}
+function actDriveAttachments(tasks){
+  var out=[];
+  tasks.forEach(function(t){
+    (t.attachments||[]).forEach(function(a){
+      if(a&&(a.driveFileId||a.source==='drive'||a.driveLink)) out.push(a);
+    });
+  });
+  return out;
+}
+function actCardHtml(kind, icon, label, main, sub, pills){
+  return '<div class="act-sync-card act-sync-'+kind+'">'+
+    '<div class="act-sync-top"><span class="act-sync-ico">'+icon+'</span><span>'+actEsc(label)+'</span></div>'+
+    '<div class="act-sync-main">'+actEsc(main)+'</div>'+
+    '<div class="act-sync-sub">'+actEsc(sub)+'</div>'+
+    '<div class="act-sync-pills">'+(pills||[]).map(function(p){
+      return '<span class="act-sync-pill '+(p.cls||'')+'">'+actEsc(p.txt)+'</span>';
+    }).join('')+'</div>'+
+  '</div>';
+}
+function renderActivitySyncCards(){
+  var box=document.getElementById('actSyncCards');
+  if(!box) return;
+  var signedIn=(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth().currentUser);
+  var online=(typeof navigator==='undefined'||navigator.onLine!==false);
+  var latest=_actCache&&_actCache.length?_actCache.slice().sort(function(a,b){return(b.ts||0)-(a.ts||0);})[0]:null;
+  var tasks=actTaskArray();
+  var notes=[];try{notes=Object.values(lsGet(NK)||{});}catch(e){}
+  var cloudMain=signedIn?(latest?actFmtStamp(latest.ts):'Live sync active'):'Not signed in';
+  var cloudSub=signedIn
+    ?((_actCache.length||0)+' logged activities · '+tasks.length+' tasks · '+notes.length+' notes tracked')
+    :'Sign in with Google to see Firebase cloud sync details.';
+  var cloudPills=[
+    {txt:signedIn?'Firebase connected':'Google sign-in needed',cls:signedIn?'ok':'warn'},
+    {txt:online?'Online':'Offline',cls:online?'ok':'err'}
+  ];
+  if(latest&&latest.device) cloudPills.push({txt:(latest.device==='mobile'?'Last from mobile':'Last from laptop'),cls:'info'});
+
+  var calCache=actGetCalendarCache();
+  var calKeys=Object.keys(calCache||{}).filter(function(k){return calCache[k]&&calCache[k].eventId;});
+  var eligible=tasks.filter(actCalendarEligible);
+  var needs=eligible.filter(function(t){return actCalendarNeedsSync(t,calCache);});
+  var calStatusEl=document.getElementById('gcalStatus2');
+  var calStatus=(calStatusEl&&calStatusEl.textContent||'').trim();
+  var calTokenLive=(typeof gcalToken!=='undefined'&&gcalToken&&gcalToken.access_token&&Date.now()<gcalToken.expires_at);
+  var calMain=calKeys.length+' synced event'+(calKeys.length!==1?'s':'');
+  var calSub=eligible.length+' dated active task'+(eligible.length!==1?'s':'')+' · '+needs.length+' pending sync'+(calStatus?' · '+calStatus:'');
+  var calPills=[
+    {txt:needs.length?'Needs sync':'Up to date',cls:needs.length?'warn':'ok'},
+    {txt:calTokenLive?'Calendar token active':'Calendar token inactive',cls:calTokenLive?'ok':'warn'}
+  ];
+
+  var driveAtts=actDriveAttachments(tasks);
+  var totalBytes=driveAtts.reduce(function(sum,a){return sum+(Number(a.size)||0);},0);
+  var latestDrive=driveAtts.reduce(function(best,a){return Math.max(best,Number(a.uploaded)||0);},0);
+  var fileAdds=(_actCache||[]).filter(function(e){return e.type==='file_attach';}).length;
+  var fileDels=(_actCache||[]).filter(function(e){return e.type==='file_delete';}).length;
+  var driveTokenLive=(typeof driveToken!=='undefined'&&driveToken&&driveToken.access_token&&Date.now()<driveToken.expires_at);
+  var driveMain=driveAtts.length+' Drive file'+(driveAtts.length!==1?'s':'')+' linked';
+  var driveSub=(driveAtts.length?fmtBytes(totalBytes)+' total · Latest upload '+actFmtStamp(latestDrive):'No Google Drive attachments linked yet')+
+    ' · '+fileAdds+' added / '+fileDels+' deleted in activity log';
+  var drivePills=[
+    {txt:driveTokenLive?'Drive token active':'Drive token inactive',cls:driveTokenLive?'ok':'warn'},
+    {txt:'CD Scheduler Attachments',cls:'info'}
+  ];
+
+  box.innerHTML=
+    actCardHtml('cloud','☁️','Last Cloud Sync',cloudMain,cloudSub,cloudPills)+
+    actCardHtml('calendar','📅','Google Calendar Sync',calMain,calSub,calPills)+
+    actCardHtml('drive','📁','Google Drive Sync',driveMain,driveSub,drivePills);
+}
+
 function renderActivity(){
   var feed = document.getElementById('actFeed');
   if(!feed) return;
@@ -8179,6 +8293,7 @@ function renderActivity(){
   }
 
   var entries = actGetFiltered();
+  renderActivitySyncCards();
 
   // Update count badge
   var clearBtn = document.getElementById('actClearBtn');
