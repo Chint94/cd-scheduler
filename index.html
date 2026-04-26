@@ -2206,6 +2206,8 @@ var FB={
   deleteTask:function(){},
   saveNote:function(){},
   deleteNote:function(){},
+  logActivity:function(){},
+  clearActivity:function(){},
   reattachPlanner:function(){},
   saveGami:function(){},
   saveMktGoals:function(){},
@@ -2933,6 +2935,7 @@ function dropTaskOnCell(taskId,cell){
   lsSet(TK,tasks);
   FB.ignoreNextTaskSync=true;
   FB.saveTask(taskId,tasks[taskId]);
+  FB.logActivity({type:'task_edit',icon:'📅',title:'Task rescheduled',detail:(tasks[taskId].title||'Untitled')+' → '+newDateStr+' '+newTime,taskId:taskId});
   // Rebuild both planner and tasks list
   buildGrid();
   if(typeof buildMobileDay==='function'&&isMobileView) buildMobileDay();
@@ -3157,6 +3160,9 @@ document.getElementById('clearWeekBtn').addEventListener('click',function(){
   if(toDelete.length>0){
     lsSet(TK,tasks);
     renderTasks();
+  }
+  if(toDelete.length>0){
+    FB.logActivity({type:'task_delete',icon:'🧹',title:'Planner week cleared',detail:toDelete.length+' task'+(toDelete.length!==1?'s':'')+' deleted'});
   }
   // Clear planner text notes
   var wk=fmtDate(weekStart);
@@ -3462,6 +3468,7 @@ function openTaskEditModal(taskId, editScope){
         FB.deleteTask(k);
         delete tasks2[k];
       });
+      FB.logActivity({type:'task_delete',icon:'🗑️',title:'Task deleted',detail:'Recurring series · '+groupIds.length+' occurrence'+(groupIds.length!==1?'s':''),taskId:taskId});
     } else {
       var msg=isRecurring?'Delete this occurrence only? (Other occurrences remain)':'Delete this task?';
       if(!confirm(msg))return;
@@ -4303,6 +4310,7 @@ function openRecurringSetupModal(existingGroupId){
         tasks2[inst.id]=inst;
         FB.saveTask(inst.id,inst);
       });
+      FB.logActivity({type:'task_add',icon:'➕',title:'Recurring occurrences added',detail:lastInst.title+' · '+newInstances.length+' occurrence'+(newInstances.length!==1?'s':''),taskId:lastInst.id});
       FB.ignoreNextTaskSync=true;
       lsSet(TK,tasks2);
       var summary=newInstances.length+' new occurrence'+(newInstances.length!==1?'s':'')+' added';
@@ -4366,6 +4374,7 @@ function openRecurringSetupModal(existingGroupId){
     };
     var instances=generateRecurringInstances(base);
     instances.forEach(function(inst){tasks2[inst.id]=inst;FB.saveTask(inst.id,inst);});
+    FB.logActivity({type:existingGroupId?'task_edit':'task_add',icon:existingGroupId?'✏️':'➕',title:existingGroupId?'Recurring task updated':'Recurring task added',detail:title+' · '+instances.length+' occurrence'+(instances.length!==1?'s':''),taskId:instances[0]&&instances[0].id});
     lsSet(TK,tasks2);
 
     // Show count summary
@@ -5062,12 +5071,15 @@ function renderTasks(){
         var choice=confirm('Delete recurring task:\n\nOK  → Delete ALL '+groupIds.length+' occurrences\nCancel → Delete this occurrence only');
         if(choice){
           groupIds.forEach(function(k){if(typeof gcalDeleteEvent==='function')gcalDeleteEvent(k);FB.deleteTask(k);delete tasks2[k];});
+          FB.logActivity({type:'task_delete',icon:'🗑️',title:'Task deleted',detail:(t.title||'Untitled')+' · recurring series ('+groupIds.length+')',taskId:t.id});
         } else {
           if(typeof gcalDeleteEvent==='function')gcalDeleteEvent(t.id);FB.deleteTask(t.id);delete tasks2[t.id];
+          FB.logActivity({type:'task_delete',icon:'🗑️',title:'Task deleted',detail:t.title||'Untitled',taskId:t.id});
         }
       } else {
         if(!confirm('Delete this task?'))return;
         if(typeof gcalDeleteEvent==='function')gcalDeleteEvent(t.id);FB.deleteTask(t.id);delete tasks2[t.id];
+        FB.logActivity({type:'task_delete',icon:'🗑️',title:'Task deleted',detail:t.title||'Untitled',taskId:t.id});
       }
       lsSet(TK,tasks2);card.remove();buildGrid();
       if(currentTab==='dashboard')renderDashboard();
@@ -5094,6 +5106,7 @@ function openSimpleTaskModal(taskId){
   var tasks=lsGet(TK);
   var t=tasks[taskId];if(!t)return;
   var isRec=!!t.recurrenceGroupId;
+  var wasNewTask=!((t.title||'').trim()||t.date||t.time||t.endDate||t.endTime||t.notes||t.recurrenceGroupId);
 
   // Overlay
   var overlay=document.createElement('div');
@@ -5595,6 +5608,7 @@ function openSimpleTaskModal(taskId){
         };
         tasks2[newSpecId]=specInst;
         FB.saveTask(newSpecId,specInst);
+        FB.logActivity({type:'task_add',icon:'➕',title:'Recurring occurrence added',detail:(lastInst.title||'Untitled')+' · '+specDateStr,taskId:newSpecId});
         FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);
         showDropToast(lastInst.title+' — 1 specific occurrence added on '+specDateStr+' 📅','','');
         closePopover();renderTasks();buildGrid();
@@ -5624,6 +5638,7 @@ function openSimpleTaskModal(taskId){
       var newI3=generateRecurringInstances(baseE3);
       if(!newI3.length){showDropToast('No new occurrences — check the date range.','','');return;}
       newI3.forEach(function(inst,i){inst.recurrenceIndex=maxIdx+1+i;inst.recurrenceEndType=lastInst.recurrenceEndType||'count';inst.recurrenceEndCount=lastInst.recurrenceEndCount||null;inst.recurrenceEndDate=lastInst.recurrenceEndDate||null;inst.recurrenceWeekDays=weekDaysExt||null;tasks2[inst.id]=inst;FB.saveTask(inst.id,inst);});
+      FB.logActivity({type:'task_add',icon:'➕',title:'Recurring occurrences added',detail:(lastInst.title||'Untitled')+' · '+newI3.length+' occurrence'+(newI3.length!==1?'s':''),taskId:lastInst.id});
       FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);
       showDropToast(lastInst.title+' — '+newI3.length+' more occurrence'+(newI3.length!==1?'s':'')+' added 🔁','','');
       closePopover();renderTasks();buildGrid();
@@ -5643,6 +5658,7 @@ function openSimpleTaskModal(taskId){
       if(!confirm('Delete this occurrence only? Other occurrences remain.'))return;
       var tasks2=lsGet(TK);
       if(typeof gcalDeleteEvent==='function')gcalDeleteEvent(t.id);FB.deleteTask(t.id);delete tasks2[t.id];
+      FB.logActivity({type:'task_delete',icon:'🗑️',title:'Task deleted',detail:t.title||'Untitled',taskId:t.id});
       lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();if(currentTab==='dashboard')renderDashboard();
     });
     delAll.addEventListener('click',function(){
@@ -5650,6 +5666,7 @@ function openSimpleTaskModal(taskId){
       var gIds=Object.keys(tasks2).filter(function(k){return tasks2[k].recurrenceGroupId===t.recurrenceGroupId;});
       if(!confirm('Delete ALL '+gIds.length+' occurrences? This cannot be undone.'))return;
       gIds.forEach(function(k){if(typeof gcalDeleteEvent==='function')gcalDeleteEvent(k);FB.deleteTask(k);delete tasks2[k];});
+      FB.logActivity({type:'task_delete',icon:'🗑️',title:'Task deleted',detail:(t.title||'Untitled')+' · recurring series ('+gIds.length+')',taskId:t.id});
       lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();if(currentTab==='dashboard')renderDashboard();
     });
     delOpts.appendChild(delThis);delOpts.appendChild(delAll);
@@ -5670,6 +5687,7 @@ function openSimpleTaskModal(taskId){
       if(!confirm('Delete this task?'))return;
       var tasks2=lsGet(TK);
       if(typeof gcalDeleteEvent==='function')gcalDeleteEvent(t.id);FB.deleteTask(t.id);delete tasks2[t.id];
+      FB.logActivity({type:'task_delete',icon:'🗑️',title:'Task deleted',detail:t.title||'Untitled',taskId:t.id});
       lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();if(currentTab==='dashboard')renderDashboard();
     });
     actBar.appendChild(delBtn2);
@@ -5709,6 +5727,7 @@ function openSimpleTaskModal(taskId){
         newInsts.forEach(function(inst,i){inst.recurrenceIndex=maxIdx3+1+i;inst.recurrenceWeekDays=newWeekDays;tasks2[inst.id]=inst;FB.saveTask(inst.id,inst);});
         doneInsts.forEach(function(k){k.title=newTitle;k.time=newTime;k.endDate=newEndDate;k.endTime=newEndTime;k.priority=curPri;k.notes=newNotes;k.recurrence=newFreq;k.recurrenceWeekDays=newWeekDays;FB.saveTask(k.id,k);});
         if(tasks2[taskId])tasks2[taskId].done=newDone;
+        FB.logActivity({type:'task_edit',icon:'✏️',title:'Recurring task updated',detail:newTitle||'Untitled',taskId:taskId});
         FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();buildGrid();renderTasks();if(currentTab==='dashboard')renderDashboard();
         return;
       }
@@ -5730,7 +5749,7 @@ function openSimpleTaskModal(taskId){
       tasks2[taskId].attachments=curAtts.filter(function(a){return !a._uploading;});
       FB.saveTask(taskId,tasks2[taskId]);
     }
-    FB.logActivity({type:'task_edit',icon:'✏️',title:'Task saved',detail:newTitle||'Untitled'});
+    FB.logActivity({type:wasNewTask?'task_add':'task_edit',icon:wasNewTask?'➕':'✏️',title:wasNewTask?'Task added':'Task saved',detail:newTitle||'Untitled',taskId:taskId});
     FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();
     if(currentTab==='dashboard')renderDashboard();
   });
@@ -5833,6 +5852,7 @@ function renderNotes(){
         var notes2=lsGet(NK);if(!notes2[note.id])return;
         notes2[note.id].color=c;notes2[note.id].updated=Date.now();lsSet(NK,notes2);
         FB.saveNote(note.id,notes2[note.id]);
+        FB.logActivity({type:'note_edit',icon:'📝',title:'Note edited',detail:notes2[note.id].title||'Untitled note'});
         strip.style.background=c;
         swatchRow.querySelectorAll('.cswatch').forEach(function(s){
           s.style.borderColor=s.style.background===c?'#555':'transparent';
@@ -5853,6 +5873,7 @@ function renderNotes(){
       var notes2=lsGet(NK);if(!notes2[note.id])return;
       FB.ignoreNextNoteSync=true; // tell listener to skip the echo
       FB.saveNote(note.id,notes2[note.id]);
+      FB.logActivity({type:'note_edit',icon:'📝',title:'Note edited',detail:notes2[note.id].title||'Untitled note'});
     },800);
     function saveNoteField(field,value){
       saveNoteLocal(field,value);
@@ -5878,8 +5899,9 @@ function renderNotes(){
 
     delBtn.addEventListener('click',function(){
       if(!confirm('Delete this note?'))return;
-      var notes2=lsGet(NK);delete notes2[note.id];lsSet(NK,notes2);
+      var notes2=lsGet(NK);var deletedNoteTitle=note.title||'Untitled note';delete notes2[note.id];lsSet(NK,notes2);
       FB.deleteNote(note.id);
+      FB.logActivity({type:'note_delete',icon:'🗑️',title:'Note deleted',detail:deletedNoteTitle});
       card.remove();
     });
   });
@@ -8226,8 +8248,9 @@ function renderActivity(){
       var typeBadge = document.createElement('span');
       typeBadge.className = 'act-type-badge';
       var typeLabels = {
-        task_edit:'Task edit', task_done:'Done', task_delete:'Deleted',
-        file_attach:'File added', file_delete:'File removed', note_save:'Note'
+        task_add:'Task added', task_edit:'Task edit', task_done:'Done', task_delete:'Deleted',
+        file_attach:'File added', file_delete:'File removed',
+        note_save:'Note added', note_edit:'Note edit', note_delete:'Note deleted'
       };
       typeBadge.textContent = typeLabels[e.type] || e.type || '';
 
