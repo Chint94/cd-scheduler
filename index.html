@@ -5281,59 +5281,74 @@ function openSimpleTaskModal(taskId){
     });
   }
 
-  // Hidden file input — used by both desktop (transparent overlay) and mobile (triggered programmatically)
+  // Hidden file input — created here, appended inside attZone below (no body leak)
   var attFileInp=document.createElement('input');attFileInp.type='file';attFileInp.multiple=true;attFileInp.setAttribute('multiple','multiple');
-  attFileInp.style.display='none'; // always hidden — triggered via click() or overlay
-  document.body.appendChild(attFileInp); // attach to body so .click() works on all browsers
-
-  attFileInp.addEventListener('change',function(){
-    if(attFileInp.files&&attFileInp.files.length){
-      doUpload(attFileInp.files);
-    }
-    attFileInp.value='';
-  });
+  attFileInp.accept='image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.mp3,.mp4,.mov,.heic';
 
   // Upload zone
   var attZone=document.createElement('div');attZone.className='stm-att-zone';
   var attHint=document.createElement('div');attHint.className='stm-att-hint';
   var attSub=document.createElement('div');attSub.className='stm-att-sub';
 
-  var onMobileDevice = isMobile()||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
+  // ── Upload zone: button-first pattern on both desktop and mobile ──────
+  // Why: The GIS requestAccessToken popup must be called from a direct user
+  // gesture (button click). If we use a transparent file input overlay, the
+  // popup fires from the file input's change event — which is NOT a gesture
+  // context — so it gets blocked or appears behind the modal invisibly.
+  // Solution: button tap -> get token (popup allowed) -> open file picker ->
+  // file picked -> doUpload -> token already cached -> upload succeeds.
+  attZone.style.cursor='default';
+  attZone.appendChild(attHint);
+  attZone.appendChild(attSub);
 
-  if(!onMobileDevice){
-    // Desktop: transparent file input overlay over the zone
-    var attOverlay=document.createElement('input');attOverlay.type='file';attOverlay.multiple=true;attOverlay.setAttribute('multiple','multiple');
-    attOverlay.addEventListener('change',function(){doUpload(attOverlay.files);attOverlay.value='';});
-    attZone.appendChild(attOverlay);
-    attZone.appendChild(attHint);
-    attZone.appendChild(attSub);
-    // Desktop drag & drop
-    attZone.addEventListener('dragover',function(e){e.preventDefault();attZone.classList.add('drag-over');});
-    attZone.addEventListener('dragleave',function(){attZone.classList.remove('drag-over');});
-    attZone.addEventListener('drop',function(e){
-      e.preventDefault();attZone.classList.remove('drag-over');doUpload(e.dataTransfer.files);
-    });
-  } else {
-    // Mobile: a visible button that:
-    //   Step 1 — gets Drive token via Firebase (direct user tap = real gesture)
-    //   Step 2 — opens file picker programmatically
-    attZone.style.cursor='default';
-    attZone.appendChild(attHint);
-    attZone.appendChild(attSub);
-    var attMobileBtn=document.createElement('button');
-    attMobileBtn.type='button';
-    attMobileBtn.className='stm-btn save';
-    attMobileBtn.style.cssText='width:100%;font-size:13px;padding:11px;margin-top:8px;';
-    attMobileBtn.textContent='Upload file to Google Drive';
-    attZone.appendChild(attMobileBtn);
+  // Single hidden file input (inside zone, no body.appendChild leak)
+  attFileInp.style.cssText='position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
+  attZone.appendChild(attFileInp);
+  attFileInp.addEventListener('change',function(){
+    if(attFileInp.files&&attFileInp.files.length){doUpload(attFileInp.files);}
+    attFileInp.value='';
+  });
 
-    attMobileBtn.addEventListener('click',function(){
-      // Mobile browsers require the native file picker to open directly from
-      // the user's tap. Asking Google for a token first makes the later
-      // input.click() look non-user-initiated and can silently fail on Android/iOS.
-      attFileInp.click();
+  var attMobileBtn=document.createElement('button');
+  attMobileBtn.type='button';
+  attMobileBtn.className='stm-btn save';
+  attMobileBtn.style.cssText='width:100%;font-size:13px;padding:11px;margin-top:8px;';
+  attMobileBtn.textContent='Upload file to Google Drive';
+  attZone.appendChild(attMobileBtn);
+
+  function _doAttAuth(onSuccess){
+    attMobileBtn.disabled=true;
+    attMobileBtn.textContent='Connecting to Google Drive...';
+    driveGetToken(function(err,token){
+      if(err||!token){
+        attMobileBtn.disabled=false;
+        attMobileBtn.textContent='Upload file to Google Drive';
+        alert('Google Drive sign-in failed:
+'+(err||'unknown error')+'
+
+Please try again.');
+        return;
+      }
+      attMobileBtn.disabled=false;
+      attMobileBtn.textContent='Upload another file';
+      onSuccess(token);
     });
   }
+
+  // Button click: get token then open file picker
+  attMobileBtn.addEventListener('click',function(){
+    _doAttAuth(function(token){
+      attFileInp.click(); // file picker opens with token already cached
+    });
+  });
+
+  // Drag & drop on desktop: drop IS a user gesture, so popup is allowed
+  attZone.addEventListener('dragover',function(e){e.preventDefault();attZone.classList.add('drag-over');});
+  attZone.addEventListener('dragleave',function(){attZone.classList.remove('drag-over');});
+  attZone.addEventListener('drop',function(e){
+    e.preventDefault();attZone.classList.remove('drag-over');
+    _doAttAuth(function(token){doUpload(e.dataTransfer.files);});
+  });
 
   var attNote=document.createElement('div');attNote.className='stm-att-note';
   attNote.innerHTML='<strong>Files are stored in your Google Drive</strong> in a folder called '
@@ -5388,7 +5403,7 @@ function openSimpleTaskModal(taskId){
         buildAttList();
         var uploadedNames=results.filter(function(r){return !r.error;}).map(function(r){return r.name;}).join(', ');
         persistAttachmentSync(uploadedNames?{type:'file_attach',icon:'📎',title:'File attached',detail:uploadedNames,taskId:taskId}:null);
-        if(typeof attMobileBtn!=='undefined'&&attMobileBtn){attMobileBtn.disabled=false;attMobileBtn.textContent='Upload file to Google Drive';}
+        if(typeof attMobileBtn!=='undefined'&&attMobileBtn){attMobileBtn.disabled=false;attMobileBtn.textContent='Upload another file';}
       }
     );
   }
