@@ -8839,8 +8839,12 @@ window._actOnSignIn=(function(){var s=false;return function(){if(!s){s=true;actS
 (function(){
 'use strict';
 
-var DISC_FEED_URL = 'https://zerodhamarkets.substack.com/feed';
-var DISC_PROXY    = 'https://api.allorigins.win/get?url=' + encodeURIComponent(DISC_FEED_URL);
+var DISC_FEED_URL = 'https://thedailybrief.zerodha.com/feed';
+var DISC_PROXIES  = [
+  'https://api.allorigins.win/get?url=' + encodeURIComponent(DISC_FEED_URL),
+  'https://api.allorigins.win/raw?url=' + encodeURIComponent(DISC_FEED_URL)
+];
+var DISC_PROXY    = DISC_PROXIES[0]; // kept for legacy refs
 var DISC_PAGE     = 8;
 
 var _all      = [];   // all parsed articles
@@ -9128,7 +9132,7 @@ function applyFilter(){
   renderPage();
 }
 
-/* ── Fetch & parse RSS via allorigins proxy ─────────────────────────────── */
+/* ── Fetch & parse RSS — tries /get (JSON wrapper) then /raw (plain XML) ── */
 function fetchFeed(){
   if(_loading) return;
   _loading = true;
@@ -9139,33 +9143,49 @@ function fetchFeed(){
   if(status) status.textContent='';
   if(lm)     lm.style.display='none';
 
-  // allorigins returns { contents: "<raw xml>", status: {...} }
-  fetch(DISC_PROXY, {cache:'no-cache'})
-    .then(function(r){
-      if(!r.ok) throw new Error('Network error '+r.status);
-      return r.json();
-    })
-    .then(function(data){
-      _loading = false;
-      if(!data || !data.contents) throw new Error('Empty response from proxy');
-      var articles = parseRSS(data.contents);
-      if(!articles.length) throw new Error('No articles found in feed');
-      _all = articles;
-      _loaded = true;
-      var now = new Date();
-      _lastRefresh = now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-      applyFilter();
-    })
-    .catch(function(err){
+  /* Try proxy at index proxyIdx; on failure advance to next */
+  function tryProxy(proxyIdx){
+    if(proxyIdx >= DISC_PROXIES.length){
       _loading = false;
       if(feed) feed.innerHTML =
         '<div class="disc-msg">' +
         '<div class="disc-msg-icon">📡</div>' +
         'Could not load articles. Please check your connection and try again.<br>' +
         '<small style="font-size:11px;margin-top:6px;display:block;color:var(--inkl);">' +
-        (err.message||'Unknown error')+'</small></div>';
+        'All proxies failed — try refreshing in a moment.</small></div>';
       if(status) status.textContent='';
-    });
+      return;
+    }
+    var url = DISC_PROXIES[proxyIdx];
+    var isRaw = url.indexOf('/raw?') !== -1;
+    fetch(url, {cache:'no-cache'})
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return isRaw ? r.text() : r.json();
+      })
+      .then(function(data){
+        var xmlStr;
+        if(isRaw){
+          xmlStr = data; // plain XML string
+        } else {
+          if(!data || !data.contents) throw new Error('Empty proxy response');
+          xmlStr = data.contents;
+        }
+        var articles = parseRSS(xmlStr);
+        if(!articles.length) throw new Error('No articles parsed from feed');
+        _loading = false;
+        _all = articles;
+        _loaded = true;
+        var now = new Date();
+        _lastRefresh = now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+        applyFilter();
+      })
+      .catch(function(){
+        tryProxy(proxyIdx + 1); // try next proxy
+      });
+  }
+
+  tryProxy(0);
 }
 
 /* ── Public init — called by switchTab ──────────────────────────────────── */
