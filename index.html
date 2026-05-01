@@ -8833,28 +8833,29 @@ function renderActivity(){
 window._actOnSignIn=(function(){var s=false;return function(){if(!s){s=true;actStartListener();}};})();
 
 // ══════════════════════════════════════════════════════════════════════════════
-// DISCOVER — The Daily Brief by Zerodha (Substack RSS, client-side XML parse)
-// Tries the official Substack/custom-domain feed first, then safe fallbacks.
+// DISCOVER — The Daily Brief by Zerodha (fast latest-feed reader)
 // Only this Discover module is changed; sync and other app sections are untouched.
 // ══════════════════════════════════════════════════════════════════════════════
 (function(){
 'use strict';
 
-var DISC_FEED_URLS = [
-  'https://thedailybrief.zerodha.com/feed',
-  'https://thedailybriefing.substack.com/feed',
-  'https://zerodhamarkets.substack.com/feed'
-];
-var DISC_PAGE = 8;
+var DISC_PRIMARY_FEED = 'https://thedailybrief.zerodha.com/feed';
+var DISC_FALLBACK_FEED = 'https://thedailybriefing.substack.com/feed';
+var DISC_LEGACY_FEED = 'https://zerodhamarkets.substack.com/feed';
+var DISC_MAX_ARTICLES = 3;
+var DISC_FETCH_TIMEOUT = 5500;
+var DISC_CACHE_KEY = 'cdSchedulerDailyBriefLatestV4';
+var DISC_CACHE_MAX_AGE = 45 * 60 * 1000;
 
-var _all      = [];   // all parsed articles
-var _filtered = [];   // after search
-var _shown    = 0;    // rendered count
+var _all      = [];
+var _filtered = [];
+var _shown    = 0;
 var _loaded   = false;
 var _loading  = false;
-var _expanded = {};   // guid → bool
+var _expanded = {};
 var _lastRefresh = '';
 var _lastSource  = '';
+var _lastFetchMs = 0;
 
 /* ── Inject CSS once ─────────────────────────────────────────────────────── */
 var _cssInjected = false;
@@ -8863,10 +8864,8 @@ function injectCSS(){
   var s = document.createElement('style');
   s.id = 'disc-styles';
   s.textContent =
-    /* card */
     '.disc-card{background:var(--gc);border:1.5px solid var(--gp);border-radius:14px;overflow:hidden;transition:box-shadow .15s;}' +
     '.disc-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.10);}' +
-    /* header */
     '.disc-hd{padding:15px 18px 13px;cursor:pointer;user-select:none;}' +
     '.disc-meta-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;}' +
     '.disc-date{font-size:11px;font-weight:600;color:var(--inkl);letter-spacing:.3px;text-transform:uppercase;}' +
@@ -8876,10 +8875,10 @@ function injectCSS(){
     '.disc-toggle-row{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--gd);}' +
     '.disc-arrow{display:inline-block;transition:transform .2s;font-style:normal;}' +
     '.disc-arrow.open{transform:rotate(180deg);}' +
-    /* body */
     '.disc-body{display:none;border-top:1px solid var(--gp);padding:14px 18px 16px;}' +
     '.disc-body.open{display:block;}' +
     '.disc-body img{max-width:100%;height:auto;border-radius:8px;margin:8px 0;display:block;}' +
+    '.disc-body iframe,.disc-body video{max-width:100%;}' +
     '.disc-body p{font-size:14px;line-height:1.75;color:var(--inkm);margin:0 0 12px;}' +
     '.disc-body h1,.disc-body h2,.disc-body h3{font-size:15px;font-weight:700;color:var(--inkd);margin:16px 0 6px;line-height:1.35;}' +
     '.disc-body h4,.disc-body h5,.disc-body h6{font-size:13px;font-weight:700;color:var(--inkd);margin:12px 0 4px;}' +
@@ -8894,24 +8893,13 @@ function injectCSS(){
     '.disc-body figcaption{font-size:11px;color:var(--inkl);text-align:center;margin-top:3px;}' +
     '.disc-ext{display:inline-flex;align-items:center;gap:5px;margin-top:12px;font-size:12px;font-weight:700;color:var(--gd);text-decoration:none;padding:6px 14px;border:1.5px solid var(--gp);border-radius:8px;transition:background .12s;}' +
     '.disc-ext:hover{background:var(--gp);}' +
-    /* spinner */
-    '.disc-spin{display:flex;justify-content:center;align-items:center;gap:10px;padding:56px 0;font-size:13px;color:var(--inkl);}' +
-    '.disc-ring{width:26px;height:26px;border:3px solid var(--gp);border-top-color:var(--gm);border-radius:50%;animation:disc-rot .7s linear infinite;flex-shrink:0;}' +
+    '.disc-spin{display:flex;justify-content:center;align-items:center;gap:10px;padding:42px 0;font-size:13px;color:var(--inkl);}' +
+    '.disc-ring{width:24px;height:24px;border:3px solid var(--gp);border-top-color:var(--gm);border-radius:50%;animation:disc-rot .7s linear infinite;flex-shrink:0;}' +
     '@keyframes disc-rot{to{transform:rotate(360deg)}}' +
-    /* empty / error */
-    '.disc-msg{text-align:center;padding:52px 20px;color:var(--inkl);font-size:14px;line-height:1.65;}' +
-    '.disc-msg-icon{font-size:38px;margin-bottom:10px;}' +
-    /* responsive */
-    '@media(max-width:600px){' +
-    '#tab-discover .sh{align-items:stretch;}' +
-    '#tab-discover .sh>div:last-child{width:100%;}' +
-    '#discSearchInp{max-width:none!important;width:100%;}' +
-    '.disc-hd{padding:12px 13px 11px;}' +
-    '.disc-body{padding:12px 13px 14px;}' +
-    '.disc-title{font-size:14px;}' +
-    '.disc-body p{font-size:13px;}' +
-    '.disc-body ul,.disc-body ol{font-size:13px;}' +
-    '}';
+    '.disc-msg{text-align:center;padding:42px 20px;color:var(--inkl);font-size:14px;line-height:1.65;}' +
+    '.disc-msg-icon{font-size:34px;margin-bottom:10px;}' +
+    '@media(max-width:800px){#tab-discover .sh{align-items:stretch;}#tab-discover .sh>div:last-child{width:100%;}#discSearchInp{max-width:none!important;width:100%;}}' +
+    '@media(max-width:600px){#tab-discover .sw{padding-left:12px!important;padding-right:12px!important;}#tab-discover .sh{gap:12px;}#discRefreshBtn{flex:0 0 auto;}#discSearchInp{flex:1 1 100%!important;}.disc-hd{padding:12px 13px 11px;}.disc-body{padding:12px 13px 14px;}.disc-title{font-size:14px;}.disc-body p{font-size:13px;}.disc-body ul,.disc-body ol{font-size:13px;}.disc-spin{padding:34px 0;}}';
   document.head.appendChild(s);
 }
 
@@ -8932,7 +8920,7 @@ function firstNode(el, names){
 function nodeValue(n){
   if(!n) return '';
   for(var i=0;i<n.childNodes.length;i++){
-    if(n.childNodes[i].nodeType===4) return n.childNodes[i].nodeValue; // CDATA
+    if(n.childNodes[i].nodeType===4) return n.childNodes[i].nodeValue;
   }
   return n.textContent || n.innerHTML || '';
 }
@@ -8942,6 +8930,8 @@ function xmlAttr(el, names, attr){
   return n ? (n.getAttribute(attr)||'') : '';
 }
 function itemLink(it){
+  var atomLink = firstNode(it,'link');
+  if(atomLink && atomLink.getAttribute('href')) return atomLink.getAttribute('href');
   return xmlText(it,'link') || xmlAttr(it,'link','href') || '';
 }
 
@@ -8965,14 +8955,12 @@ function parseRSS(xmlStr){
     var it = items[i];
     var content = xmlText(it,['content:encoded','encoded','content']) || xmlText(it,['summary','description']) || '';
     var description = xmlText(it,['description','summary']) || '';
-
     var cats = it.getElementsByTagName('category');
     var catList = [];
     for(var c=0;c<cats.length;c++){
       var cText = cats[c].textContent || cats[c].getAttribute('term') || '';
       if(cText) catList.push(cText);
     }
-
     out.push({
       title      : xmlText(it,'title') || 'Untitled',
       link       : atomMode ? itemLink(it) : (xmlText(it,'link') || itemLink(it)),
@@ -8987,7 +8975,6 @@ function parseRSS(xmlStr){
   return out.filter(function(a){ return a.title || a.link || a.content; });
 }
 
-/* ── Parse rss2json backup response → array of article objects ──────────── */
 function parseRSS2JSON(data){
   if(!data || !data.items || !data.items.length) return [];
   return data.items.map(function(it){
@@ -8999,12 +8986,27 @@ function parseRSS2JSON(data){
       description: it.description || '',
       content    : it.content || it.description || '',
       categories : it.categories || [],
-      thumb      : it.thumbnail || it.enclosure && it.enclosure.link || ''
+      thumb      : it.thumbnail || (it.enclosure && it.enclosure.link) || ''
     };
   });
 }
 
-/* ── Date formatter ─────────────────────────────────────────────────────── */
+function toTime(str){
+  var t = str ? new Date(str).getTime() : 0;
+  return isNaN(t) ? 0 : t;
+}
+function latestArticles(articles){
+  var seen = {};
+  var clean = (articles || []).filter(function(a){
+    var key = a.guid || a.link || a.title;
+    if(!key || seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
+  clean.sort(function(a,b){ return toTime(b.pubDate) - toTime(a.pubDate); });
+  return clean.slice(0, DISC_MAX_ARTICLES);
+}
+
 function fmtDate(str){
   if(!str) return '';
   try{
@@ -9013,23 +9015,17 @@ function fmtDate(str){
     return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
   }catch(e){ return str; }
 }
-
-/* ── Strip HTML to plain text (for excerpt/search) ──────────────────────── */
 function stripHTML(html){
   var d = document.createElement('div');
   d.innerHTML = html || '';
   return (d.textContent||d.innerText||'').replace(/\s+/g,' ').trim();
 }
-
-/* ── Sanitise article body HTML before injecting it ─────────────────────── */
 function sanitise(html){
   var d = document.createElement('div');
   d.innerHTML = html || '';
-
   Array.prototype.slice.call(d.querySelectorAll('script,style,form,input,button,textarea,select,meta,link')).forEach(function(n){
     if(n && n.parentNode) n.parentNode.removeChild(n);
   });
-
   Array.prototype.slice.call(d.querySelectorAll('*')).forEach(function(n){
     Array.prototype.slice.call(n.attributes || []).forEach(function(a){
       var name = a.name.toLowerCase();
@@ -9039,22 +9035,18 @@ function sanitise(html){
       }
     });
   });
-
   var clean = d.innerHTML
     .replace(/<div[^>]*class=["'][^"']*subscribe[^"']*["'][^>]*>[\s\S]*?<\/div>/gi,'')
     .replace(/<div[^>]*class=["'][^"']*footer[^"']*["'][^>]*>[\s\S]*?<\/div>/gi,'')
     .replace(/<img[^>]*(width=["']?1["']?|height=["']?1["']?)[^>]*>/gi,'');
-
   return clean || '<p>No content available.</p>';
 }
 
-/* ── Render one article card ─────────────────────────────────────────────── */
 function renderCard(item){
   var card = document.createElement('div');
   card.className = 'disc-card';
   var id = item.guid || item.link || item.title;
 
-  /* Header */
   var hd = document.createElement('div');
   hd.className = 'disc-hd';
 
@@ -9097,11 +9089,9 @@ function renderCard(item){
   hd.appendChild(toggleRow);
   card.appendChild(hd);
 
-  /* Body */
   var body = document.createElement('div');
   body.className = 'disc-body';
   body.innerHTML = sanitise(item.content || item.description || '<p>No content available.</p>');
-
   Array.prototype.slice.call(body.querySelectorAll('a')).forEach(function(a){
     a.setAttribute('target','_blank');
     a.setAttribute('rel','noopener noreferrer');
@@ -9117,7 +9107,6 @@ function renderCard(item){
   }
   card.appendChild(body);
 
-  /* Toggle */
   function toggle(){
     if(_expanded[id]){
       _expanded[id]=false;
@@ -9141,18 +9130,21 @@ function renderCard(item){
   return card;
 }
 
-/* ── Render next page slice ──────────────────────────────────────────────── */
 function renderPage(){
   var feed = document.getElementById('discFeed');
   var lm   = document.getElementById('discLoadMore');
   if(!feed) return;
-  var slice = _filtered.slice(_shown, _shown + DISC_PAGE);
+  if(lm) lm.style.display = 'none';
+  feed.innerHTML = '';
+  var slice = _filtered.slice(0, DISC_MAX_ARTICLES);
   slice.forEach(function(item){ feed.appendChild(renderCard(item)); });
-  _shown += slice.length;
-  if(lm) lm.style.display = _shown < _filtered.length ? 'inline-block' : 'none';
+  _shown = slice.length;
 }
 
-/* ── Apply search filter ─────────────────────────────────────────────────── */
+function updateStatus(text){
+  var status = document.getElementById('discStatus');
+  if(status) status.textContent = text || '';
+}
 function applyFilter(){
   var inp = document.getElementById('discSearchInp');
   var q   = inp ? inp.value.trim().toLowerCase() : '';
@@ -9160,24 +9152,17 @@ function applyFilter(){
     ? _all.filter(function(a){
         return (a.title||'').toLowerCase().indexOf(q)>=0 ||
                stripHTML(a.description||a.content||'').toLowerCase().indexOf(q)>=0;
-      })
-    : _all.slice();
+      }).slice(0, DISC_MAX_ARTICLES)
+    : _all.slice(0, DISC_MAX_ARTICLES);
 
   var feed = document.getElementById('discFeed');
   if(feed) feed.innerHTML='';
   _shown = 0;
 
-  var status = document.getElementById('discStatus');
-  if(status){
-    if(q){
-      status.textContent = _filtered.length
-        ? _filtered.length+' article'+(+_filtered.length!==1?'s':'')+' match "'+q+'"'
-        : 'No articles match "'+q+'"';
-    } else {
-      status.textContent = _all.length
-        ? _all.length+' articles loaded · Refreshed '+_lastRefresh+(_lastSource?' · Source: '+_lastSource:'')
-        : '';
-    }
+  if(q){
+    updateStatus(_filtered.length ? _filtered.length+' of the latest '+DISC_MAX_ARTICLES+' article(s) match "'+q+'"' : 'No latest articles match "'+q+'"');
+  } else {
+    updateStatus(_all.length ? 'Latest '+_all.length+' articles loaded · Refreshed '+_lastRefresh+(_lastSource?' · Source: '+_lastSource:'') : '');
   }
 
   if(!_filtered.length){
@@ -9189,33 +9174,48 @@ function applyFilter(){
   renderPage();
 }
 
-/* ── Fetch helpers: direct feed first, browser-compatible fallbacks after ─ */
 function cacheBust(url){
   return url + (url.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
 }
-function attemptList(){
-  var attempts = [];
-  DISC_FEED_URLS.forEach(function(feedUrl){
-    var live = cacheBust(feedUrl);
-    attempts.push({label:'Direct Substack RSS', url:live, kind:'text', feed:feedUrl});
-    attempts.push({label:'AllOrigins raw', url:'https://api.allorigins.win/raw?url=' + encodeURIComponent(live), kind:'text', feed:feedUrl});
-    attempts.push({label:'AllOrigins get', url:'https://api.allorigins.win/get?url=' + encodeURIComponent(live), kind:'allorigins', feed:feedUrl});
-    attempts.push({label:'Codetabs proxy', url:'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(live), kind:'text', feed:feedUrl});
-    attempts.push({label:'RSS2JSON backup', url:'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(feedUrl), kind:'rss2json', feed:feedUrl});
-  });
-  return attempts;
+function fetchWithTimeout(url, options, ms){
+  options = options || {};
+  if(window.AbortController){
+    var controller = new AbortController();
+    options.signal = controller.signal;
+    var timer = setTimeout(function(){ controller.abort(); }, ms);
+    return fetch(url, options).finally(function(){ clearTimeout(timer); });
+  }
+  return Promise.race([
+    fetch(url, options),
+    new Promise(function(_, reject){ setTimeout(function(){ reject(new Error('Request timed out')); }, ms); })
+  ]);
 }
-function normaliseArticles(articles){
-  var seen = {};
-  return (articles || []).filter(function(a){
-    var key = a.guid || a.link || a.title;
-    if(!key || seen[key]) return false;
-    seen[key] = true;
-    return true;
-  });
+function attemptUrl(feedUrl, type){
+  var live = cacheBust(feedUrl);
+  if(type === 'rss2json') return 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(feedUrl);
+  if(type === 'allorigins') return 'https://api.allorigins.win/get?url=' + encodeURIComponent(live);
+  if(type === 'alloriginsRaw') return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(live);
+  if(type === 'codetabs') return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(live);
+  return live;
+}
+function primaryAttempts(){
+  return [
+    {label:'RSS JSON', url:attemptUrl(DISC_PRIMARY_FEED,'rss2json'), kind:'rss2json', feed:DISC_PRIMARY_FEED},
+    {label:'AllOrigins raw', url:attemptUrl(DISC_PRIMARY_FEED,'alloriginsRaw'), kind:'text', feed:DISC_PRIMARY_FEED},
+    {label:'AllOrigins get', url:attemptUrl(DISC_PRIMARY_FEED,'allorigins'), kind:'allorigins', feed:DISC_PRIMARY_FEED}
+  ];
+}
+function fallbackAttempts(){
+  return [
+    {label:'Substack RSS JSON', url:attemptUrl(DISC_FALLBACK_FEED,'rss2json'), kind:'rss2json', feed:DISC_FALLBACK_FEED},
+    {label:'Substack AllOrigins raw', url:attemptUrl(DISC_FALLBACK_FEED,'alloriginsRaw'), kind:'text', feed:DISC_FALLBACK_FEED},
+    {label:'Substack AllOrigins get', url:attemptUrl(DISC_FALLBACK_FEED,'allorigins'), kind:'allorigins', feed:DISC_FALLBACK_FEED},
+    {label:'Legacy RSS JSON', url:attemptUrl(DISC_LEGACY_FEED,'rss2json'), kind:'rss2json', feed:DISC_LEGACY_FEED},
+    {label:'Codetabs backup', url:attemptUrl(DISC_PRIMARY_FEED,'codetabs'), kind:'text', feed:DISC_PRIMARY_FEED}
+  ];
 }
 function fetchAttempt(attempt){
-  return fetch(attempt.url, {cache:'no-store'})
+  return fetchWithTimeout(attempt.url, {cache:'no-store'}, DISC_FETCH_TIMEOUT)
     .then(function(r){
       if(!r.ok) throw new Error(attempt.label+' returned '+r.status);
       if(attempt.kind==='allorigins' || attempt.kind==='rss2json') return r.json();
@@ -9227,60 +9227,111 @@ function fetchAttempt(attempt){
         if(!data || !data.contents) throw new Error('Empty proxy response');
         articles = parseRSS(data.contents);
       } else if(attempt.kind==='rss2json'){
-        if(data && data.status && data.status!=='ok') throw new Error(data.message || 'RSS2JSON did not return ok');
+        if(data && data.status && data.status!=='ok') throw new Error(data.message || 'RSS JSON did not return ok');
         articles = parseRSS2JSON(data);
       } else {
         if(!data) throw new Error('Empty feed response');
         articles = parseRSS(data);
       }
-      articles = normaliseArticles(articles);
+      articles = latestArticles(articles);
       if(!articles.length) throw new Error('No articles found');
       return {articles:articles, label:attempt.label, feed:attempt.feed};
     });
 }
-function tryFetch(attempts, index, lastErr){
-  if(index >= attempts.length){
-    return Promise.reject(lastErr || new Error('All Discover feed sources failed'));
-  }
-  return fetchAttempt(attempts[index]).catch(function(err){
-    return tryFetch(attempts, index+1, err);
+function firstSuccessful(attempts){
+  return new Promise(function(resolve, reject){
+    var left = attempts.length;
+    var lastErr = null;
+    attempts.forEach(function(attempt){
+      fetchAttempt(attempt).then(resolve).catch(function(err){
+        lastErr = err;
+        left -= 1;
+        if(left === 0) reject(lastErr || new Error('All feed attempts failed'));
+      });
+    });
+  });
+}
+function fastFetch(){
+  return firstSuccessful(primaryAttempts()).catch(function(){
+    return firstSuccessful(fallbackAttempts());
   });
 }
 
-/* ── Fetch & parse RSS ──────────────────────────────────────────────────── */
-function fetchFeed(){
-  if(_loading) return;
-  _loading = true;
-  var feed   = document.getElementById('discFeed');
-  var status = document.getElementById('discStatus');
-  var lm     = document.getElementById('discLoadMore');
-  if(feed)   feed.innerHTML='<div class="disc-spin"><div class="disc-ring"></div>Fetching latest articles…</div>';
-  if(status) status.textContent='Connecting to The Daily Brief live feed…';
-  if(lm)     lm.style.display='none';
+function saveCache(result){
+  try{
+    localStorage.setItem(DISC_CACHE_KEY, JSON.stringify({
+      savedAt: Date.now(),
+      lastRefresh: _lastRefresh,
+      lastSource: _lastSource,
+      articles: result.articles
+    }));
+  }catch(e){}
+}
+function loadCache(){
+  try{
+    var raw = localStorage.getItem(DISC_CACHE_KEY);
+    if(!raw) return false;
+    var data = JSON.parse(raw);
+    if(!data || !data.articles || !data.articles.length) return false;
+    _all = latestArticles(data.articles);
+    _filtered = _all.slice();
+    _loaded = true;
+    _lastRefresh = data.lastRefresh || 'saved';
+    _lastSource = data.lastSource || 'saved feed';
+    applyFilter();
+    return true;
+  }catch(e){ return false; }
+}
 
-  tryFetch(attemptList(), 0)
+function fetchFeed(force){
+  if(_loading) return;
+  var feed   = document.getElementById('discFeed');
+  var lm     = document.getElementById('discLoadMore');
+  if(lm) lm.style.display='none';
+
+  var nowMs = Date.now();
+  var hasFreshMemory = _loaded && !force && (nowMs - _lastFetchMs < DISC_CACHE_MAX_AGE);
+  if(hasFreshMemory){
+    applyFilter();
+    return;
+  }
+
+  var showedCache = _loaded || loadCache();
+  if(showedCache && !force){
+    updateStatus('Showing saved latest articles while checking the live feed…');
+  } else {
+    if(feed) feed.innerHTML='<div class="disc-spin"><div class="disc-ring"></div>Fetching latest 3 articles…</div>';
+    updateStatus('Connecting to The Daily Brief live feed…');
+  }
+
+  _loading = true;
+  fastFetch()
     .then(function(result){
       _loading = false;
-      _all = result.articles;
+      _lastFetchMs = Date.now();
+      _all = latestArticles(result.articles);
       _loaded = true;
       _lastSource = result.feed.replace(/^https?:\/\//,'').replace(/\/feed.*$/,'');
-      var now = new Date();
-      _lastRefresh = now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+      _lastRefresh = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+      saveCache({articles:_all});
       applyFilter();
     })
     .catch(function(err){
       _loading = false;
+      if(showedCache){
+        updateStatus('Showing saved latest articles · Live refresh failed. Tap Refresh to try again.');
+        return;
+      }
       if(feed) feed.innerHTML =
         '<div class="disc-msg">' +
         '<div class="disc-msg-icon">📡</div>' +
         'Could not load live articles. Please check your connection and tap Refresh again.<br>' +
         '<small style="font-size:11px;margin-top:6px;display:block;color:var(--inkl);">' +
         (err && err.message ? err.message : 'Unknown error')+'</small></div>';
-      if(status) status.textContent='';
+      updateStatus('');
     });
 }
 
-/* ── Public init — called by switchTab ──────────────────────────────────── */
 function discInit(){
   injectCSS();
 
@@ -9288,13 +9339,16 @@ function discInit(){
   var searchInp   = document.getElementById('discSearchInp');
   var loadMoreBtn = document.getElementById('discLoadMore');
 
+  if(loadMoreBtn) loadMoreBtn.style.display = 'none';
+
   if(refreshBtn && !refreshBtn._dw){
     refreshBtn._dw=true;
     refreshBtn.addEventListener('click',function(){
-      _all=[];_filtered=[];_shown=0;_loaded=false;_lastSource='';
+      _all=[];_filtered=[];_shown=0;_loaded=false;_lastSource='';_lastFetchMs=0;
+      try{ localStorage.removeItem(DISC_CACHE_KEY); }catch(e){}
       var si=document.getElementById('discSearchInp');
       if(si) si.value='';
-      fetchFeed();
+      fetchFeed(true);
     });
   }
   if(searchInp && !searchInp._dw){
@@ -9302,15 +9356,15 @@ function discInit(){
     var _t;
     searchInp.addEventListener('input',function(){
       clearTimeout(_t);
-      _t=setTimeout(applyFilter,300);
+      _t=setTimeout(applyFilter,180);
     });
   }
   if(loadMoreBtn && !loadMoreBtn._dw){
     loadMoreBtn._dw=true;
-    loadMoreBtn.addEventListener('click',renderPage);
+    loadMoreBtn.addEventListener('click',function(){ return false; });
   }
 
-  if(!_loaded) fetchFeed();
+  fetchFeed(false);
 }
 
 window.discInit = discInit;
