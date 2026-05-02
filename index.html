@@ -63,8 +63,11 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
   flex-wrap:nowrap;gap:10px;min-height:62px;box-shadow:0 4px 20px rgba(139,105,20,0.4);
   position:sticky;top:0;z-index:200}
 .brand{display:flex;align-items:center;gap:10px}
-.brand-title{font-family:'Playfair Display',serif;font-size:clamp(18px,5vw,26px);font-weight:900;
-  color:var(--white);text-shadow:0 2px 8px rgba(0,0,0,0.3);letter-spacing:1px}
+.brand-title{display:inline-block;font-family:'Playfair Display',serif;font-size:clamp(16px,4.9vw,24px);font-weight:900;
+  line-height:1;letter-spacing:.55px;color:#3D2C0A;background:linear-gradient(180deg,#FFFDF5 0%,#FDF3D8 34%,#F2D79A 68%,#E8C069 100%);
+  border:1px solid rgba(255,253,245,.72);border-radius:14px;padding:5px 12px 7px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(139,105,20,.16),0 0 0 1px rgba(196,148,42,.45),0 6px 18px rgba(0,0,0,.20),0 2px 6px rgba(139,105,20,.18);
+  text-shadow:0 1px 0 rgba(255,255,255,.92),0 0 12px rgba(255,248,220,.32)}
 .brand-sub{font-size:10px;font-weight:500;color:rgba(255,253,245,0.65);letter-spacing:2px;text-transform:uppercase}
 .header-right{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;flex-shrink:0;}
 .btn-google{display:flex;align-items:center;gap:7px;background:var(--white);border:none;
@@ -1632,8 +1635,11 @@ header {
   box-shadow: 0 1px 4px rgba(0,0,0,0.2);
 }
 .brand-title {
-  font-size: clamp(16px, 4.5vw, 22px);
-  letter-spacing: 0.5px;
+  font-size: clamp(15px, 4.5vw, 22px);
+  letter-spacing: 0.45px;
+  border-radius: 13px;
+  padding: 5px 11px 6px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(139,105,20,0.16), 0 0 0 1px rgba(196,148,42,0.45), 0 5px 14px rgba(0,0,0,0.18);
 }
 .brand-sub {
   font-size: 9px;
