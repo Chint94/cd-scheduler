@@ -2294,6 +2294,13 @@ footer {
       </div>
     </div>
     <div id="discStatus" style="font-size:12px;color:var(--inkl);margin:4px 0 10px;min-height:16px;"></div>
+    <div class="disc-font-control" id="discFontControl" aria-label="Daily Brief mobile article text size control">
+      <span class="disc-font-label">Article Text Size</span>
+      <span class="disc-font-a disc-font-small">A−</span>
+      <input id="discFontSlider" class="disc-font-slider" type="range" min="15" max="22" step="1" value="17" aria-label="Adjust article font size">
+      <span class="disc-font-a disc-font-large">A+</span>
+      <span id="discFontValue" class="disc-font-value">17px</span>
+    </div>
     <div id="discFeed" style="display:flex;flex-direction:column;gap:14px;"></div>
     <div style="text-align:center;margin-top:18px;margin-bottom:8px;">
       <button id="discLoadMore"
@@ -9018,6 +9025,7 @@ var DISC_LEGACY_FEED = 'https://zerodhamarkets.substack.com/feed';
 var DISC_MAX_ARTICLES = 3;
 var DISC_FETCH_TIMEOUT = 5500;
 var DISC_CACHE_KEY = 'cdSchedulerDailyBriefLatestV4';
+var DISC_FONT_SIZE_KEY = 'cdSchedulerDailyBriefMobileFontSizeV1';
 var DISC_CACHE_MAX_AGE = 45 * 60 * 1000;
 
 var _all      = [];
@@ -9071,8 +9079,9 @@ function injectCSS(){
     '@keyframes disc-rot{to{transform:rotate(360deg)}}' +
     '.disc-msg{text-align:center;padding:42px 20px;color:var(--inkl);font-size:14px;line-height:1.65;}' +
     '.disc-msg-icon{font-size:34px;margin-bottom:10px;}' +
+    '.disc-font-control{display:none;}' +
     '@media(max-width:800px){#tab-discover .sh{align-items:stretch;}#tab-discover .sh>div:last-child{width:100%;}#discSearchInp{max-width:none!important;width:100%;}}' +
-    '@media(max-width:600px){#tab-discover .sw{padding-left:12px!important;padding-right:12px!important;}#tab-discover .sh{gap:12px;}#discRefreshBtn{flex:0 0 auto;}#discSearchInp{flex:1 1 100%!important;}.disc-hd{padding:12px 13px 11px;}.disc-body{padding:12px 13px 14px;}.disc-title{font-size:14px;}.disc-body p{font-size:13px;}.disc-body ul,.disc-body ol{font-size:13px;}.disc-spin{padding:34px 0;}}';
+    '@media(max-width:600px){#tab-discover .sw{padding-left:12px!important;padding-right:12px!important;}#tab-discover .sh{gap:12px;}#discRefreshBtn{flex:0 0 auto;}#discSearchInp{flex:1 1 100%!important;}.disc-font-control{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.72);border:1.5px solid var(--gp);border-radius:12px;padding:9px 11px;margin:0 0 12px;box-shadow:0 2px 8px rgba(139,105,20,.10);}.disc-font-label{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--gd);white-space:nowrap;}.disc-font-a{font-weight:900;color:var(--inkm);line-height:1;}.disc-font-small{font-size:12px;}.disc-font-large{font-size:18px;}.disc-font-slider{flex:1;min-width:84px;accent-color:var(--gm);}.disc-font-value{font-size:11px;font-weight:800;color:var(--inkl);min-width:34px;text-align:right;}.disc-hd{padding:12px 13px 11px;}.disc-body{padding:12px 13px 14px;}.disc-title{font-size:14px;}.disc-body p,.disc-body li{font-size:var(--disc-mobile-font-size,17px);line-height:1.78;}.disc-body ul,.disc-body ol{font-size:var(--disc-mobile-font-size,17px);line-height:1.78;}.disc-body h1,.disc-body h2,.disc-body h3{font-size:calc(var(--disc-mobile-font-size,17px) + 1px);line-height:1.42;}.disc-body h4,.disc-body h5,.disc-body h6,.disc-body blockquote{font-size:var(--disc-mobile-font-size,17px);line-height:1.7;}.disc-spin{padding:34px 0;}}';
   document.head.appendChild(s);
 }
 
@@ -9456,6 +9465,32 @@ function loadCache(){
   }catch(e){ return false; }
 }
 
+function getSavedMobileFontSize(){
+  var n = 17;
+  try{
+    var saved = parseInt(localStorage.getItem(DISC_FONT_SIZE_KEY),10);
+    if(!isNaN(saved)) n = saved;
+  }catch(e){}
+  return Math.max(15, Math.min(22, n));
+}
+function applyMobileFontSize(size){
+  var n = Math.max(15, Math.min(22, parseInt(size,10) || 17));
+  document.documentElement.style.setProperty('--disc-mobile-font-size', n + 'px');
+  var slider = document.getElementById('discFontSlider');
+  var value  = document.getElementById('discFontValue');
+  if(slider) slider.value = String(n);
+  if(value) value.textContent = n + 'px';
+  try{ localStorage.setItem(DISC_FONT_SIZE_KEY, String(n)); }catch(e){}
+}
+function initMobileFontControl(){
+  var slider = document.getElementById('discFontSlider');
+  applyMobileFontSize(getSavedMobileFontSize());
+  if(slider && !slider._dwFont){
+    slider._dwFont = true;
+    slider.addEventListener('input', function(){ applyMobileFontSize(this.value); });
+  }
+}
+
 function fetchFeed(force){
   if(_loading) return;
   var feed   = document.getElementById('discFeed');
@@ -9507,6 +9542,7 @@ function fetchFeed(force){
 
 function discInit(){
   injectCSS();
+  initMobileFontControl();
 
   var refreshBtn  = document.getElementById('discRefreshBtn');
   var searchInp   = document.getElementById('discSearchInp');
