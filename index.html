@@ -8539,10 +8539,12 @@ document.addEventListener('DOMContentLoaded', function() {
       var firstTaskSync = true;
       tasksCb = db.ref('users/' + uid() + '/tasks').on('value', function(snap) {
         var remote = snap.val() || {};
-        if (!firstTaskSync && window.FB.ignoreNextTaskSync) {
-          window.FB.ignoreNextTaskSync = false;
-          return;
-        }
+        // NOTE: We intentionally process every snapshot — including echoes of our own writes.
+        // The previous ignoreNextTaskSync flag was dropping entire snapshots, which silently
+        // discarded concurrent changes from other devices (e.g. a new task added on laptop
+        // while mobile had recently saved something). lsSet + renderTasks are idempotent so
+        // processing an echo of our own write is harmless (localStorage already has the right
+        // data, and re-rendering shows the same correct state).
         firstTaskSync = false;
         lsSet(TK, remote);
         Object.values(remote).forEach(function(t) {
@@ -8578,10 +8580,8 @@ document.addEventListener('DOMContentLoaded', function() {
       var firstNoteSync = true;
       notesCb = db.ref('users/' + uid() + '/notes').on('value', function(snap) {
         var remote = snap.val() || {};
-        if (!firstNoteSync && window.FB.ignoreNextNoteSync) {
-          window.FB.ignoreNextNoteSync = false;
-          return;
-        }
+        // Process every snapshot (same reasoning as tasks listener — drop the skip flag
+        // so notes added/edited/deleted on another device always reflect here in real-time).
         firstNoteSync = false;
         lsSet(NK, remote);
         Object.values(remote).forEach(function(n) {
@@ -8590,6 +8590,7 @@ document.addEventListener('DOMContentLoaded', function() {
           var bi = document.querySelector('[data-note-body="' + n.id + '"]');
           if (bi && document.activeElement !== bi) bi.value = n.body || '';
         });
+        if (currentTab === 'notes') renderNotes();
       });
 
       // ── GamiCfg listener (XP values + level thresholds) ─────────────────
