@@ -8541,6 +8541,8 @@ document.addEventListener('DOMContentLoaded', function() {
           if (ni && document.activeElement !== ni) ni.value = t.notes || '';
         });
         buildGrid();
+        if (currentTab === 'tasks') renderTasks();
+        if (currentTab === 'dashboard') renderDashboard();
         // XP is managed exclusively via Firebase /gami — no local recomputation here.
         // Just refresh the HUD so task completion counts stay current.
         gamiRenderHud();
