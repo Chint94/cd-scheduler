@@ -2718,6 +2718,8 @@ var FB={
   saveMktGoals:function(){},
   saveMktPurchased:function(){},
   saveGamiCfg:function(){},
+  syncLocalSet:function(){},
+  _applyingRemote:false,
   ignoreNextTaskSync:false,
   ignoreNextNoteSync:false
 };
@@ -2734,7 +2736,16 @@ function debounce(fn,ms){
 
 // ── Local storage helpers ────────────────────────────────────────────────────
 function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'{}')}catch(e){return{}}}
-function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function lsSet(k,v){
+  try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}
+  // Central real-time sync bridge: any section that writes through lsSet
+  // is pushed to Firebase immediately, unless this write came FROM Firebase.
+  try{
+    if(window.FB && !window.FB._applyingRemote && typeof window.FB.syncLocalSet==='function') {
+      window.FB.syncLocalSet(k,v);
+    }
+  }catch(e){}
+}
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
@@ -8424,18 +8435,43 @@ document.addEventListener('DOMContentLoaded', function() {
     db.ref('users/' + uid() + '/syncMeta/' + area).set(firebase.database.ServerValue.TIMESTAMP);
   }
 
+  function applyRemoteLocalStorage(fn) {
+    window.FB._applyingRemote = true;
+    try { fn(); } finally { window.FB._applyingRemote = false; }
+  }
+
+  function debounceByKey(fn, ms) {
+    var timers = {};
+    return function(key, value) {
+      clearTimeout(timers[key]);
+      timers[key] = setTimeout(function(){ fn(key, value); }, ms);
+    };
+  }
+
+  var pushRootDebounced = debounceByKey(function(key, value) {
+    if (!uid()) return;
+    if (key === TK) { db.ref('users/' + uid() + '/tasks').set(value || {}); touchSyncMeta('tasks'); }
+    else if (key === NK) { db.ref('users/' + uid() + '/notes').set(value || {}); touchSyncMeta('notes'); }
+    else if (key === SK) { db.ref('users/' + uid() + '/weeks').set(value || {}); touchSyncMeta('weeks'); }
+  }, 250);
+
   function maybeSeedCloud(area, storageKey, remote, setter) {
-    // First run/migration helper: if Firebase has never received this section,
-    // upload the existing local data once. After that, an empty Firebase section
-    // is treated as a real delete/empty state and is synced to every device.
+    // First run/migration helper. If Firebase has never received this section,
+    // upload existing local data once. If Firebase has a syncMeta timestamp but
+    // the section is empty, treat that empty value as authoritative and clear
+    // localStorage so deletions sync correctly across devices.
     var hasRemote = remote && Object.keys(remote).length > 0;
     if (hasRemote) return false;
     var local = lsGet(storageKey) || {};
-    if (!local || Object.keys(local).length === 0) return false;
     db.ref('users/' + uid() + '/syncMeta/' + area).once('value').then(function(metaSnap) {
       if (!metaSnap.exists()) {
-        setter(local);
-        touchSyncMeta(area);
+        if (local && Object.keys(local).length > 0) {
+          setter(local);
+          touchSyncMeta(area);
+        }
+      } else {
+        applyRemoteLocalStorage(function(){ lsSet(storageKey, {}); });
+        renderSyncedScreens();
       }
     });
     return true;
@@ -8486,6 +8522,13 @@ document.addEventListener('DOMContentLoaded', function() {
     touchSyncMeta('notes');
   };
 
+  // Anything that saves Tasks / Notes / Planner through lsSet now syncs to Firebase.
+  // This catches older code paths that changed localStorage but forgot to call FB.save*.
+  window.FB.syncLocalSet = function(key, value) {
+    if (!uid()) return;
+    if (key === TK || key === NK || key === SK) pushRootDebounced(key, value);
+  };
+
   // ── Gami / Marketplace write hooks ────────────────────────────────────
   window.FB.saveGami = function(g) {
     if (!uid()) return;
@@ -8516,14 +8559,21 @@ document.addEventListener('DOMContentLoaded', function() {
   window.FB.reattachPlanner = function(wk) {
     if (!uid()) return;
     if (plannerCb && plannerPath) db.ref(plannerPath).off('value', plannerCb);
-    plannerPath = 'users/' + uid() + '/weeks/' + wk;
+    plannerPath = 'users/' + uid() + '/weeks';
     plannerCb = db.ref(plannerPath).on('value', function(snap) {
-      var remote = snap.val() || {};
-      Object.keys(remote).forEach(function(key) {
-        var cell = document.querySelector('[data-key="' + key + '"]');
-        if (cell && cell.value !== remote[key]) cell.value = remote[key];
+      var remoteWeeks = snap.val() || {};
+      if (!snap.exists() && maybeSeedCloud('weeks', SK, remoteWeeks, function(local){ db.ref('users/' + uid() + '/weeks').set(local); })) return;
+      applyRemoteLocalStorage(function(){ lsSet(SK, remoteWeeks); });
+      var activeWk = window.weekStart ? fmtDate(window.weekStart) : wk;
+      var remote = (activeWk && remoteWeeks[activeWk]) ? remoteWeeks[activeWk] : {};
+      document.querySelectorAll('[data-key]').forEach(function(cell) {
+        var key = cell.getAttribute('data-key');
+        var val = Object.prototype.hasOwnProperty.call(remote, key) ? remote[key] : '';
+        if (document.activeElement !== cell && cell.value !== val) cell.value = val;
       });
+      buildGrid();
       markOverdue();
+      if (currentTab === 'dashboard') renderDashboard();
     });
   };
 
@@ -8585,7 +8635,7 @@ document.addEventListener('DOMContentLoaded', function() {
       tasksCb = db.ref('users/' + uid() + '/tasks').on('value', function(snap) {
         var remote = snap.val() || {};
         if (!snap.exists() && maybeSeedCloud('tasks', TK, remote, function(local){ db.ref('users/' + uid() + '/tasks').set(local); })) return;
-        lsSet(TK, remote);
+        applyRemoteLocalStorage(function(){ lsSet(TK, remote); });
         Object.values(remote).forEach(function(t) {
           var ti = document.getElementById('tt-' + t.id);
           if (ti && document.activeElement !== ti) ti.value = t.title || '';
@@ -8608,7 +8658,7 @@ document.addEventListener('DOMContentLoaded', function() {
       notesCb = db.ref('users/' + uid() + '/notes').on('value', function(snap) {
         var remote = snap.val() || {};
         if (!snap.exists() && maybeSeedCloud('notes', NK, remote, function(local){ db.ref('users/' + uid() + '/notes').set(local); })) return;
-        lsSet(NK, remote);
+        applyRemoteLocalStorage(function(){ lsSet(NK, remote); });
         Object.values(remote).forEach(function(n) {
           var ti = document.getElementById('nt-' + n.id);
           if (ti && document.activeElement !== ti) ti.value = n.title || '';
