@@ -3728,6 +3728,7 @@ function openTaskEditModal(taskId, editScope){
 
   var modal=document.createElement('div');
   modal.className='edit-modal';
+  modal.setAttribute('data-task-id', taskId);
   activePopover=modal;
 
   // Header
@@ -3937,6 +3938,8 @@ function openTaskEditModal(taskId, editScope){
   var doneLbl=document.createElement('label');doneLbl.className='pop-chk-lbl';
   var doneChk=document.createElement('input');doneChk.type='checkbox';
   doneChk.className='pop-chk';doneChk.checked=!!t.done;
+  var doneChkUserChanged=false;
+  doneChk.addEventListener('change',function(){doneChkUserChanged=true;});
   doneLbl.appendChild(doneChk);doneLbl.append(' Mark as done');
   doneRow.appendChild(doneLbl);modal.appendChild(doneRow);
 
@@ -4002,7 +4005,9 @@ function openTaskEditModal(taskId, editScope){
     var newEndTime=endChkEl.checked?inp.endTime.value||'':'';
     var newPriority=inp.priority.value;
     var newNotes=inp.notes.value||'';
-    var newDone=doneChk.checked;
+    // Use the checkbox value if the user explicitly toggled it; otherwise
+    // trust the current localStorage value (which the Firebase listener keeps fresh).
+    var newDone=doneChkUserChanged ? doneChk.checked : !!tasks2[taskId].done;
 
     var effectiveScope=scope;
 
@@ -5623,6 +5628,7 @@ function openSimpleTaskModal(taskId){
 
   var sheet=document.createElement('div');
   sheet.className='stm-sheet';
+  sheet.setAttribute('data-task-id', taskId);
   activePopover=sheet;
 
   // Handle bar (mobile)
@@ -6199,6 +6205,9 @@ function openSimpleTaskModal(taskId){
     actBar.appendChild(delBtn2);
   }
 
+  var doneChkUserChanged = false;
+  doneChk.addEventListener('change', function() { doneChkUserChanged = true; });
+
   var saveBtn2=document.createElement('button');saveBtn2.className='stm-btn save';saveBtn2.textContent='Save Changes';
   saveBtn2.addEventListener('click',function(){
     var tasks2=lsGet(TK);if(!tasks2[t.id])return;
@@ -6208,7 +6217,9 @@ function openSimpleTaskModal(taskId){
     var newEndDate=endChk.checked?fromInputDate(endDateInp.value)||'':'';
     var newEndTime=endChk.checked?endTimeInp.value||'':'';
     var newNotes=notesInp.value||'';
-    var newDone=doneChk.checked;
+    // Use the checkbox value if the user explicitly toggled it; otherwise
+    // trust the current localStorage value (which the Firebase listener keeps fresh).
+    var newDone=doneChkUserChanged ? doneChk.checked : !!tasks2[t.id].done;
 
     if(isRec&&scope==='all'){
       // Frequency change logic
@@ -8540,6 +8551,18 @@ document.addEventListener('DOMContentLoaded', function() {
           var ni = document.querySelector('[data-notes-id="' + t.id + '"]');
           if (ni && document.activeElement !== ni) ni.value = t.notes || '';
         });
+        // If an edit modal is open for a task whose done status changed in remote,
+        // update its done checkbox so a subsequent save doesn't overwrite with stale data.
+        if (window.activePopover) {
+          var openModalTaskId = window.activePopover.getAttribute && window.activePopover.getAttribute('data-task-id');
+          if (openModalTaskId && remote[openModalTaskId]) {
+            var latestDone = !!remote[openModalTaskId].done;
+            var modalDoneChk = window.activePopover.querySelector('.stm-toggle-chk, .pop-chk');
+            if (modalDoneChk && modalDoneChk.checked !== latestDone) {
+              modalDoneChk.checked = latestDone;
+            }
+          }
+        }
         buildGrid();
         if (currentTab === 'tasks') renderTasks();
         if (currentTab === 'dashboard') renderDashboard();
