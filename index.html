@@ -2720,8 +2720,10 @@ var FB={
   saveGamiCfg:function(){},
   syncLocalSet:function(){},
   _applyingRemote:false,
-  ignoreNextTaskSync:false,
-  ignoreNextNoteSync:false
+  ignoreNextTaskSync:0,   // counter: each local write increments, each echo decrements
+  ignoreNextNoteSync:0,
+  ignoreNextWeeksSync:0,
+  clearPlannerWeek:function(){}
 };
 
 // Debounce helper — delays fn execution until ms after last call
@@ -3450,7 +3452,7 @@ function dropTaskOnCell(taskId,cell){
     tasks[taskId].endDate=newDateStr;
   }
   lsSet(TK,tasks);
-  FB.ignoreNextTaskSync=true;
+  FB.ignoreNextTaskSync++;
   FB.saveTask(taskId,tasks[taskId]);
   FB.logActivity({type:'task_edit',icon:'📅',title:'Task rescheduled',detail:(tasks[taskId].title||'Untitled')+' → '+newDateStr+' '+newTime,taskId:taskId});
   // Rebuild both planner and tasks list
@@ -3558,6 +3560,7 @@ function buildGrid(){
         if(!s[wk])s[wk]={};
         s[wk][key]=ta.value;
         lsSet(SK,s);
+        FB.ignoreNextWeeksSync++;
         FB.savePlannerCell(wk,key,ta.value);
         var newH=Math.max(ta.scrollHeight,36);
         if(parseInt(ta.style.height||'0')<newH){
@@ -3684,9 +3687,8 @@ document.getElementById('clearWeekBtn').addEventListener('click',function(){
   // Clear planner text notes
   var wk=fmtDate(weekStart);
   var s=lsGet(SK);s[wk]={};lsSet(SK,s);
-  FB.savePlannerCell&&Object.keys(s[wk]||{}).forEach(function(k){
-    FB.savePlannerCell(wk,k,'');
-  });
+  // Remove the entire week node from Firebase so all devices see a clean slate
+  if(typeof FB.clearPlannerWeek==='function') FB.clearPlannerWeek(wk);
   buildGrid();
 });
 document.getElementById('weekStartInput').addEventListener('change',function(){
@@ -4076,7 +4078,7 @@ function openTaskEditModal(taskId, editScope){
         });
         tasks2[taskId]=tasks2[taskId]||{};
         if(tasks2[taskId]){tasks2[taskId].done=newDone;}
-        FB.ignoreNextTaskSync=true;
+        FB.ignoreNextTaskSync++;
         lsSet(TK,tasks2);
         closePopover();buildGrid();
         if(currentTab==='tasks')renderTasks();
@@ -4095,7 +4097,7 @@ function openTaskEditModal(taskId, editScope){
         });
         tasks2[taskId].done=newDone;tasks2[taskId].date=newDate;
         FB.saveTask(taskId,tasks2[taskId]);
-        FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();buildGrid();
+        FB.ignoreNextTaskSync++;lsSet(TK,tasks2);closePopover();buildGrid();
         if(currentTab==='tasks')renderTasks();if(currentTab==='dashboard')renderDashboard();
         return;
       }
@@ -4132,7 +4134,7 @@ function openTaskEditModal(taskId, editScope){
       tasks2[taskId].done=newDone;
       FB.saveTask(taskId,tasks2[taskId]);
     }
-    FB.ignoreNextTaskSync=true;
+    FB.ignoreNextTaskSync++;
     lsSet(TK,tasks2);
     closePopover();buildGrid();
     if(currentTab==='tasks')renderTasks();
@@ -4833,7 +4835,7 @@ function openRecurringSetupModal(existingGroupId){
         FB.saveTask(inst.id,inst);
       });
       FB.logActivity({type:'task_add',icon:'➕',title:'Recurring occurrences added',detail:lastInst.title+' · '+newInstances.length+' occurrence'+(newInstances.length!==1?'s':''),taskId:lastInst.id});
-      FB.ignoreNextTaskSync=true;
+      FB.ignoreNextTaskSync++;
       lsSet(TK,tasks2);
       var summary=newInstances.length+' new occurrence'+(newInstances.length!==1?'s':'')+' added';
       showDropToast(lastInst.title+' — '+summary,'','');
@@ -5571,7 +5573,7 @@ function renderTasks(){
       tasks2[t.id].done=chk.checked;
       if(chk.checked) tasks2[t.id].completedAt=Date.now();
       else delete tasks2[t.id].completedAt;
-      FB.ignoreNextTaskSync=true;
+      FB.ignoreNextTaskSync++;
       lsSet(TK,tasks2);FB.saveTask(t.id,tasks2[t.id]);
       FB.logActivity({type:'task_done',icon:chk.checked?'✅':'↩️',
         title:chk.checked?'Task completed':'Task marked undone',
@@ -5899,7 +5901,7 @@ function openSimpleTaskModal(taskId){
     var tasksNow=lsGet(TK);
     if(!tasksNow[taskId])return;
     tasksNow[taskId].attachments=cleanAttachmentList();
-    FB.ignoreNextTaskSync=true;
+    FB.ignoreNextTaskSync++;
     lsSet(TK,tasksNow);
     FB.saveTask(taskId,tasksNow[taskId]);
     if(actEntry) FB.logActivity(actEntry);
@@ -6132,7 +6134,7 @@ function openSimpleTaskModal(taskId){
         tasks2[newSpecId]=specInst;
         FB.saveTask(newSpecId,specInst);
         FB.logActivity({type:'task_add',icon:'➕',title:'Recurring occurrence added',detail:(lastInst.title||'Untitled')+' · '+specDateStr,taskId:newSpecId});
-        FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);
+        FB.ignoreNextTaskSync++;lsSet(TK,tasks2);
         showDropToast(lastInst.title+' — 1 specific occurrence added on '+specDateStr+' 📅','','');
         closePopover();renderTasks();buildGrid();
         return;
@@ -6162,7 +6164,7 @@ function openSimpleTaskModal(taskId){
       if(!newI3.length){showDropToast('No new occurrences — check the date range.','','');return;}
       newI3.forEach(function(inst,i){inst.recurrenceIndex=maxIdx+1+i;inst.recurrenceEndType=lastInst.recurrenceEndType||'count';inst.recurrenceEndCount=lastInst.recurrenceEndCount||null;inst.recurrenceEndDate=lastInst.recurrenceEndDate||null;inst.recurrenceWeekDays=weekDaysExt||null;tasks2[inst.id]=inst;FB.saveTask(inst.id,inst);});
       FB.logActivity({type:'task_add',icon:'➕',title:'Recurring occurrences added',detail:(lastInst.title||'Untitled')+' · '+newI3.length+' occurrence'+(newI3.length!==1?'s':''),taskId:lastInst.id});
-      FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);
+      FB.ignoreNextTaskSync++;lsSet(TK,tasks2);
       showDropToast(lastInst.title+' — '+newI3.length+' more occurrence'+(newI3.length!==1?'s':'')+' added 🔁','','');
       closePopover();renderTasks();buildGrid();
     });
@@ -6256,7 +6258,7 @@ function openSimpleTaskModal(taskId){
         doneInsts.forEach(function(k){k.title=newTitle;k.time=newTime;k.endDate=newEndDate;k.endTime=newEndTime;k.priority=curPri;k.notes=newNotes;k.recurrence=newFreq;k.recurrenceWeekDays=newWeekDays;FB.saveTask(k.id,k);});
         if(tasks2[taskId])tasks2[taskId].done=newDone;
         FB.logActivity({type:'task_edit',icon:'✏️',title:'Recurring task updated',detail:newTitle||'Untitled',taskId:taskId});
-        FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();buildGrid();renderTasks();if(currentTab==='dashboard')renderDashboard();
+        FB.ignoreNextTaskSync++;lsSet(TK,tasks2);closePopover();buildGrid();renderTasks();if(currentTab==='dashboard')renderDashboard();
         return;
       }
       // No freq change — update all
@@ -6278,7 +6280,7 @@ function openSimpleTaskModal(taskId){
       FB.saveTask(taskId,tasks2[taskId]);
     }
     FB.logActivity({type:wasNewTask?'task_add':'task_edit',icon:wasNewTask?'➕':'✏️',title:wasNewTask?'Task added':'Task saved',detail:newTitle||'Untitled',taskId:taskId});
-    FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();
+    FB.ignoreNextTaskSync++;lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();
     if(currentTab==='dashboard')renderDashboard();
   });
   actBar.appendChild(saveBtn2);
@@ -6399,7 +6401,7 @@ function renderNotes(){
     }
     var debouncedNoteSave=debounce(function(){
       var notes2=lsGet(NK);if(!notes2[note.id])return;
-      FB.ignoreNextNoteSync=true; // tell listener to skip the echo
+      FB.ignoreNextNoteSync++; // tell listener to skip the echo
       FB.saveNote(note.id,notes2[note.id]);
       FB.logActivity({type:'note_edit',icon:'📝',title:'Note edited',detail:notes2[note.id].title||'Untitled note'});
     },800);
@@ -6555,6 +6557,7 @@ function buildMobileDay(){
     ta.addEventListener('input',function(){
       var s=lsGet(SK);if(!s[wk])s[wk]={};
       s[wk][key]=ta.value;lsSet(SK,s);
+      FB.ignoreNextWeeksSync++;
       FB.savePlannerCell(wk,key,ta.value);
       var newH=Math.max(ta.scrollHeight,44);
       if(parseInt(ta.style.height||'0')<newH){
@@ -8448,12 +8451,29 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   }
 
+  // pushRootDebounced is a safety-net fallback for legacy code paths that write
+  // through lsSet without calling FB.saveTask/saveNote. We use individual node
+  // writes via db.ref().update() instead of .set() on the whole tree to avoid
+  // last-write-wins data loss when two devices are active simultaneously.
+  // The 1500ms debounce gives explicit FB.saveTask/saveNote calls priority.
   var pushRootDebounced = debounceByKey(function(key, value) {
     if (!uid()) return;
-    if (key === TK) { db.ref('users/' + uid() + '/tasks').set(value || {}); touchSyncMeta('tasks'); }
-    else if (key === NK) { db.ref('users/' + uid() + '/notes').set(value || {}); touchSyncMeta('notes'); }
-    else if (key === SK) { db.ref('users/' + uid() + '/weeks').set(value || {}); touchSyncMeta('weeks'); }
-  }, 250);
+    var val = value || {};
+    var basePath, metaArea;
+    if (key === TK) { basePath = 'users/' + uid() + '/tasks'; metaArea = 'tasks'; }
+    else if (key === NK) { basePath = 'users/' + uid() + '/notes'; metaArea = 'notes'; }
+    else if (key === SK) { basePath = 'users/' + uid() + '/weeks'; metaArea = 'weeks'; }
+    else return;
+    var keys = Object.keys(val);
+    if (keys.length > 0) {
+      var updates = {};
+      keys.forEach(function(k) { updates[basePath + '/' + k] = val[k]; });
+      db.ref().update(updates);
+    } else {
+      db.ref(basePath).set({});
+    }
+    touchSyncMeta(metaArea);
+  }, 1500);
 
   function maybeSeedCloud(area, storageKey, remote, setter) {
     // First run/migration helper. If Firebase has never received this section,
@@ -8486,11 +8506,25 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!uid()) return;
     db.ref('users/' + uid() + '/weeks/' + wk + '/' + key).set(value);
     touchSyncMeta('weeks');
+    // Safety: decay counter if echo never arrives (network hiccup)
+    if (window.FB.ignoreNextWeeksSync > 0) {
+      setTimeout(function() { if (window.FB.ignoreNextWeeksSync > 0) window.FB.ignoreNextWeeksSync = Math.max(0, window.FB.ignoreNextWeeksSync - 1); }, 10000);
+    }
+  };
+  window.FB.clearPlannerWeek = function(wk) {
+    if (!uid()) return;
+    // Atomically remove the entire week node so deletions propagate to all devices
+    db.ref('users/' + uid() + '/weeks/' + wk).remove();
+    touchSyncMeta('weeks');
   };
   window.FB.saveTask = function(id, obj) {
     if (!uid()) return;
     db.ref('users/' + uid() + '/tasks/' + id).set(obj);
     touchSyncMeta('tasks');
+    // Safety: if the echo listener never fires (e.g. network hiccup), decay the counter
+    if (window.FB.ignoreNextTaskSync > 0) {
+      setTimeout(function() { if (window.FB.ignoreNextTaskSync > 0) window.FB.ignoreNextTaskSync = Math.max(0, window.FB.ignoreNextTaskSync - 1); }, 10000);
+    }
   };
   // Activity log — write one entry to Firebase
   window.FB.logActivity = function(entry) {
@@ -8515,6 +8549,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!uid()) return;
     db.ref('users/' + uid() + '/notes/' + id).set(obj);
     touchSyncMeta('notes');
+    // Safety: decay counter if echo never arrives
+    if (window.FB.ignoreNextNoteSync > 0) {
+      setTimeout(function() { if (window.FB.ignoreNextNoteSync > 0) window.FB.ignoreNextNoteSync = Math.max(0, window.FB.ignoreNextNoteSync - 1); }, 10000);
+    }
   };
   window.FB.deleteNote = function(id) {
     if (!uid()) return;
@@ -8561,6 +8599,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (plannerCb && plannerPath) db.ref(plannerPath).off('value', plannerCb);
     plannerPath = 'users/' + uid() + '/weeks';
     plannerCb = db.ref(plannerPath).on('value', function(snap) {
+      // Echo suppression: skip full overwrite when this snap is from our own write
+      if (window.FB.ignoreNextWeeksSync > 0) {
+        window.FB.ignoreNextWeeksSync--;
+        buildGrid();
+        markOverdue();
+        if (currentTab === 'dashboard') renderDashboard();
+        return;
+      }
       var remoteWeeks = snap.val() || {};
       if (!snap.exists() && maybeSeedCloud('weeks', SK, remoteWeeks, function(local){ db.ref('users/' + uid() + '/weeks').set(local); })) return;
       applyRemoteLocalStorage(function(){ lsSet(SK, remoteWeeks); });
@@ -8633,6 +8679,13 @@ document.addEventListener('DOMContentLoaded', function() {
       // Tasks listener — live, cross-device, all snapshots processed
       if (tasksCb) db.ref('users/' + uid() + '/tasks').off('value', tasksCb);
       tasksCb = db.ref('users/' + uid() + '/tasks').on('value', function(snap) {
+        // If this snapshot is an echo of our own recent write, skip the
+        // local-storage overwrite (but still render so UI stays consistent).
+        if (window.FB.ignoreNextTaskSync > 0) {
+          window.FB.ignoreNextTaskSync--;
+          renderSyncedScreens();
+          return;
+        }
         var remote = snap.val() || {};
         if (!snap.exists() && maybeSeedCloud('tasks', TK, remote, function(local){ db.ref('users/' + uid() + '/tasks').set(local); })) return;
         applyRemoteLocalStorage(function(){ lsSet(TK, remote); });
@@ -8656,6 +8709,12 @@ document.addEventListener('DOMContentLoaded', function() {
       // Notes listener — live, cross-device, all snapshots processed
       if (notesCb) db.ref('users/' + uid() + '/notes').off('value', notesCb);
       notesCb = db.ref('users/' + uid() + '/notes').on('value', function(snap) {
+        // Echo suppression: skip overwrite if this listener fired from our own write
+        if (window.FB.ignoreNextNoteSync > 0) {
+          window.FB.ignoreNextNoteSync--;
+          renderSyncedScreens();
+          return;
+        }
         var remote = snap.val() || {};
         if (!snap.exists() && maybeSeedCloud('notes', NK, remote, function(local){ db.ref('users/' + uid() + '/notes').set(local); })) return;
         applyRemoteLocalStorage(function(){ lsSet(NK, remote); });
