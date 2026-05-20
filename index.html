@@ -8326,6 +8326,9 @@ document.addEventListener('DOMContentLoaded', function() {
           if (ni && document.activeElement !== ni) ni.value = t.notes || '';
         });
         buildGrid();
+        // Re-render task list and dashboard so changes from other devices appear immediately
+        if (currentTab === 'tasks') renderTasks();
+        if (currentTab === 'dashboard') renderDashboard();
         // XP is managed exclusively via Firebase /gami — no local recomputation here.
         // Just refresh the HUD so task completion counts stay current.
         gamiRenderHud();
@@ -8350,6 +8353,8 @@ document.addEventListener('DOMContentLoaded', function() {
           var bi = document.querySelector('[data-note-body="' + n.id + '"]');
           if (bi && document.activeElement !== bi) bi.value = n.body || '';
         });
+        // Re-render notes list so additions/deletions from other devices appear immediately
+        if (currentTab === 'notes') renderNotes();
       });
 
       // ── GamiCfg listener (XP values + level thresholds) ─────────────────
