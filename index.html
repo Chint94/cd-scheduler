@@ -680,7 +680,6 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 .gcal-msg.show{display:block}
 .gcal-msg.err{color:#B32020;background:#FFF0F0;border-color:#F5C0C0}
 .gcal-msg.ok{color:#2E7D32;background:#E8F5E9;border-color:#A5D6A7}
-@media(max-width:700px){.gcal-import-desktop{display:none!important}}
 
 /* ── Drag and drop ── */
 .tpill.dragging{opacity:.35;pointer-events:none}
@@ -2227,10 +2226,6 @@ footer {
             <svg viewBox="0 0 24 24" fill="none"><path d="M19 4h-1V2h-2v2H8V2H6v2H5C3.9 4 3 4.9 3 6v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h5v5H7z" fill="#4285F4"/></svg>
             Sync to Google Calendar
           </button>
-          <button class="btn-gcal gcal-import-desktop" id="gcalImportBtn" title="Import events from the selected planner week">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M19 4h-1V2h-2v2H8V2H6v2H5C3.9 4 3 4.9 3 6v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 5H5v11h14V9z" fill="#4285F4"/><path d="M12 11v5m0 0l-2-2m2 2l2-2" stroke="#4285F4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Import from Google Calendar
-          </button>
           <button class="btn-export" id="gcalExportBtn">⬇ Export .ics</button>
         </div>
         <div class="gcal-msg" id="gcalMsg"></div>
@@ -2294,13 +2289,6 @@ footer {
       </div>
     </div>
     <div id="discStatus" style="font-size:12px;color:var(--inkl);margin:4px 0 10px;min-height:16px;"></div>
-    <div class="disc-font-control" id="discFontControl" aria-label="Daily Brief mobile article text size control">
-      <span class="disc-font-label">Article Text Size</span>
-      <span class="disc-font-a disc-font-small">A−</span>
-      <input id="discFontSlider" class="disc-font-slider" type="range" min="15" max="22" step="1" value="17" aria-label="Adjust article font size">
-      <span class="disc-font-a disc-font-large">A+</span>
-      <span id="discFontValue" class="disc-font-value">17px</span>
-    </div>
     <div id="discFeed" style="display:flex;flex-direction:column;gap:14px;"></div>
     <div style="text-align:center;margin-top:18px;margin-bottom:8px;">
       <button id="discLoadMore"
@@ -8056,135 +8044,6 @@ function gcalSyncAllTasks(){
   });
 }
 
-
-// ── Import Google Calendar events for the selected planner week ──────────────
-function gcalEventIsLifeOS(ev){
-  var p=ev&&ev.extendedProperties&&ev.extendedProperties.private||{};
-  var title=(ev&&ev.summary||'').trim();
-  return p.cdScheduler==='true'||!!p.cdTaskId||title.indexOf('[CD]')===0;
-}
-function gcalDateTimeToTaskParts(ev){
-  var st=ev.start||{}, en=ev.end||{};
-  if(st.date){
-    var endDate='';
-    if(en.date){
-      var ed=parseDate(en.date);
-      if(ed){
-        ed.setDate(ed.getDate()-1);
-        if(fmtDate(ed)!==st.date) endDate=fmtDate(ed);
-      }
-    }
-    return {date:st.date,time:'',endDate:endDate,endTime:''};
-  }
-  if(st.dateTime){
-    var sd=new Date(st.dateTime), ed2=en.dateTime?new Date(en.dateTime):null;
-    var parts={date:fmtDate(sd),time:pad(sd.getHours())+':'+pad(sd.getMinutes()),endDate:'',endTime:''};
-    if(ed2&&!isNaN(ed2.getTime())){
-      parts.endDate=fmtDate(ed2);
-      parts.endTime=pad(ed2.getHours())+':'+pad(ed2.getMinutes());
-      if(parts.endDate===parts.date&&!parts.endTime) parts.endDate='';
-    }
-    return parts;
-  }
-  return null;
-}
-function gcalEventToTask(ev,existing){
-  var parts=gcalDateTimeToTaskParts(ev); if(!parts) return null;
-  var notes=[];
-  if(ev.location) notes.push('Location: '+ev.location);
-  if(ev.description) notes.push(ev.description);
-  var id=(existing&&existing.id)||('gcal_'+String(ev.id||genId()).replace(/[^a-zA-Z0-9_-]/g,'_'));
-  return Object.assign({},existing||{}, {
-    id:id,
-    title:(ev.summary||'Google Calendar event').replace(/^\[CD\]\s*/,'').trim()||'Google Calendar event',
-    date:parts.date,
-    time:parts.time,
-    endDate:parts.endDate,
-    endTime:parts.endTime,
-    notes:notes.join('\n\n'),
-    done:false,
-    priority:(existing&&existing.priority)||'medium',
-    source:'google_calendar',
-    gcalImported:true,
-    gcalEventId:ev.id,
-    gcalHtmlLink:ev.htmlLink||'',
-    updated:Date.now(),
-    created:(existing&&existing.created)||Date.now()
-  });
-}
-function gcalFindImportedTask(tasks,eventId){
-  var keys=Object.keys(tasks||{});
-  for(var i=0;i<keys.length;i++){
-    var t=tasks[keys[i]];
-    if(t&&t.gcalEventId===eventId) return t;
-  }
-  return null;
-}
-function gcalImportEvents(){
-  if(window.innerWidth<=700){
-    gcalMsg('Import is available on laptop/desktop view only. Mobile Google Calendar controls were not changed.','');
-    return;
-  }
-  if(!weekStart) setWeek(new Date());
-  var start=new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate(),0,0,0);
-  var end=addDays(start,7);
-  var btn=document.getElementById('gcalImportBtn');
-  gcalPanelOpen();
-  gcalMsg('Requesting calendar access to import this planner week…','');
-  gcalStatus2('Importing week…');
-  gcalGetToken(function(token){
-    if(btn) btn.classList.add('syncing');
-    var params=[
-      'key='+encodeURIComponent(GCAL_API_KEY),
-      'singleEvents=true',
-      'orderBy=startTime',
-      'showDeleted=false',
-      'maxResults=250',
-      'timeMin='+encodeURIComponent(start.toISOString()),
-      'timeMax='+encodeURIComponent(end.toISOString())
-    ].join('&');
-    fetch(GCAL_CAL+'?'+params,{headers:{'Authorization':'Bearer '+token}})
-      .then(function(r){return r.json();})
-      .then(function(d){
-        if(btn) btn.classList.remove('syncing');
-        if(d.error){
-          var code=d.error.code||'';
-          if(code===401){gcalToken=null;}
-          gcalMsg('❌ Import failed: '+(d.error.message||'Google Calendar error'),'err');
-          gcalStatus2('Import failed');
-          return;
-        }
-        var events=(d.items||[]).filter(function(ev){return !gcalEventIsLifeOS(ev)&&ev.status!=='cancelled';});
-        var tasks=lsGet(TK), cache=gcalCacheGet();
-        var imported=0,updated=0,skipped=0;
-        events.forEach(function(ev){
-          var existing=gcalFindImportedTask(tasks,ev.id);
-          var task=gcalEventToTask(ev,existing);
-          if(!task){skipped++;return;}
-          if(existing) updated++; else imported++;
-          tasks[task.id]=task;
-          cache[task.id]={eventId:ev.id,hash:gcalHash(task)};
-          if(window.FB&&FB.saveTask) FB.saveTask(task.id,task);
-        });
-        lsSet(TK,tasks);gcalCacheSet(cache);
-        renderTasks();buildGrid();
-        if(currentTab==='dashboard') renderDashboard();
-        if(window.FB&&FB.logActivity&&(imported||updated)){
-          FB.logActivity({type:'gcal_import',icon:'📥',title:'Google Calendar imported',detail:imported+' new, '+updated+' updated'});
-        }
-        var msg='✓ Imported '+imported+' new event'+(imported!==1?'s':'')+' and updated '+updated+' existing event'+(updated!==1?'s':'')+' for '+shortD(start)+' – '+shortD(addDays(start,6))+'.';
-        if(skipped) msg+=' '+skipped+' skipped.';
-        gcalMsg(msg,'ok');
-        gcalStatus2('Imported '+(imported+updated)+' ✓');
-      })
-      .catch(function(e){
-        if(btn) btn.classList.remove('syncing');
-        gcalMsg('❌ Import failed: '+(e&&e.message?e.message:'Network error'),'err');
-        gcalStatus2('Import failed');
-      });
-  });
-}
-
 // ── Export .ics ───────────────────────────────────────────────────────────────
 document.getElementById('gcalExportBtn').addEventListener('click',function(){
   var tasks=lsGet(TK);
@@ -8236,12 +8095,6 @@ document.getElementById('gcalExportBtn').addEventListener('click',function(){
     gcalMsg('Requesting calendar access…','');
     gcalSyncAllTasks();
   });
-  var importBtn=document.getElementById('gcalImportBtn');
-  if(importBtn){
-    importBtn.addEventListener('click',function(){
-      gcalImportEvents();
-    });
-  }
 })();
 
 // ── Current time line ────────────────────────────────────────────────────────
@@ -9025,7 +8878,6 @@ var DISC_LEGACY_FEED = 'https://zerodhamarkets.substack.com/feed';
 var DISC_MAX_ARTICLES = 3;
 var DISC_FETCH_TIMEOUT = 5500;
 var DISC_CACHE_KEY = 'cdSchedulerDailyBriefLatestV4';
-var DISC_FONT_SIZE_KEY = 'cdSchedulerDailyBriefMobileFontSizeV1';
 var DISC_CACHE_MAX_AGE = 45 * 60 * 1000;
 
 var _all      = [];
@@ -9079,9 +8931,8 @@ function injectCSS(){
     '@keyframes disc-rot{to{transform:rotate(360deg)}}' +
     '.disc-msg{text-align:center;padding:42px 20px;color:var(--inkl);font-size:14px;line-height:1.65;}' +
     '.disc-msg-icon{font-size:34px;margin-bottom:10px;}' +
-    '.disc-font-control{display:none;}' +
     '@media(max-width:800px){#tab-discover .sh{align-items:stretch;}#tab-discover .sh>div:last-child{width:100%;}#discSearchInp{max-width:none!important;width:100%;}}' +
-    '@media(max-width:600px){#tab-discover .sw{padding-left:12px!important;padding-right:12px!important;}#tab-discover .sh{gap:12px;}#discRefreshBtn{flex:0 0 auto;}#discSearchInp{flex:1 1 100%!important;}.disc-font-control{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.72);border:1.5px solid var(--gp);border-radius:12px;padding:9px 11px;margin:0 0 12px;box-shadow:0 2px 8px rgba(139,105,20,.10);}.disc-font-label{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--gd);white-space:nowrap;}.disc-font-a{font-weight:900;color:var(--inkm);line-height:1;}.disc-font-small{font-size:12px;}.disc-font-large{font-size:18px;}.disc-font-slider{flex:1;min-width:84px;accent-color:var(--gm);}.disc-font-value{font-size:11px;font-weight:800;color:var(--inkl);min-width:34px;text-align:right;}.disc-hd{padding:12px 13px 11px;}.disc-body{padding:12px 13px 14px;}.disc-title{font-size:14px;}.disc-body p,.disc-body li{font-size:var(--disc-mobile-font-size,17px);line-height:1.78;}.disc-body ul,.disc-body ol{font-size:var(--disc-mobile-font-size,17px);line-height:1.78;}.disc-body h1,.disc-body h2,.disc-body h3{font-size:calc(var(--disc-mobile-font-size,17px) + 1px);line-height:1.42;}.disc-body h4,.disc-body h5,.disc-body h6,.disc-body blockquote{font-size:var(--disc-mobile-font-size,17px);line-height:1.7;}.disc-spin{padding:34px 0;}}';
+    '@media(max-width:600px){#tab-discover .sw{padding-left:12px!important;padding-right:12px!important;}#tab-discover .sh{gap:12px;}#discRefreshBtn{flex:0 0 auto;}#discSearchInp{flex:1 1 100%!important;}.disc-hd{padding:12px 13px 11px;}.disc-body{padding:12px 13px 14px;}.disc-title{font-size:14px;}.disc-body p{font-size:13px;}.disc-body ul,.disc-body ol{font-size:13px;}.disc-spin{padding:34px 0;}}';
   document.head.appendChild(s);
 }
 
@@ -9465,32 +9316,6 @@ function loadCache(){
   }catch(e){ return false; }
 }
 
-function getSavedMobileFontSize(){
-  var n = 17;
-  try{
-    var saved = parseInt(localStorage.getItem(DISC_FONT_SIZE_KEY),10);
-    if(!isNaN(saved)) n = saved;
-  }catch(e){}
-  return Math.max(15, Math.min(22, n));
-}
-function applyMobileFontSize(size){
-  var n = Math.max(15, Math.min(22, parseInt(size,10) || 17));
-  document.documentElement.style.setProperty('--disc-mobile-font-size', n + 'px');
-  var slider = document.getElementById('discFontSlider');
-  var value  = document.getElementById('discFontValue');
-  if(slider) slider.value = String(n);
-  if(value) value.textContent = n + 'px';
-  try{ localStorage.setItem(DISC_FONT_SIZE_KEY, String(n)); }catch(e){}
-}
-function initMobileFontControl(){
-  var slider = document.getElementById('discFontSlider');
-  applyMobileFontSize(getSavedMobileFontSize());
-  if(slider && !slider._dwFont){
-    slider._dwFont = true;
-    slider.addEventListener('input', function(){ applyMobileFontSize(this.value); });
-  }
-}
-
 function fetchFeed(force){
   if(_loading) return;
   var feed   = document.getElementById('discFeed');
@@ -9542,7 +9367,6 @@ function fetchFeed(force){
 
 function discInit(){
   injectCSS();
-  initMobileFontControl();
 
   var refreshBtn  = document.getElementById('discRefreshBtn');
   var searchInp   = document.getElementById('discSearchInp');
