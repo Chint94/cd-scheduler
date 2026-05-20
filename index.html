@@ -4250,6 +4250,7 @@ document.getElementById('addTaskBtn').addEventListener('click',function(){
   var tasks=lsGet(TK);var id=genId();
   tasks[id]={id:id,title:'',date:'',time:'',endDate:'',endTime:'',notes:'',done:false,priority:'medium',created:Date.now()};
   lsSet(TK,tasks);
+  FB.ignoreNextTaskSync=true;
   FB.saveTask(id,tasks[id]);
   renderTasks();
   setTimeout(function(){openSimpleTaskModal(id);},60);
@@ -6206,6 +6207,7 @@ function addNote(){
   var ci=Object.keys(notes).length%NOTE_COLORS.length;
   notes[id]={id:id,title:'',body:'',color:NOTE_COLORS[ci],created:Date.now(),updated:Date.now()};
   lsSet(NK,notes);
+  FB.ignoreNextNoteSync=true;
   FB.saveNote(id,notes[id]);
   FB.logActivity({type:'note_save',icon:'📝',title:'Note saved',detail:notes[id]&&notes[id].title||'Untitled note'});
   renderNotes();
@@ -6326,6 +6328,7 @@ function renderNotes(){
     delBtn.addEventListener('click',function(){
       if(!confirm('Delete this note?'))return;
       var notes2=lsGet(NK);var deletedNoteTitle=note.title||'Untitled note';delete notes2[note.id];lsSet(NK,notes2);
+      FB.ignoreNextNoteSync=true;
       FB.deleteNote(note.id);
       FB.logActivity({type:'note_delete',icon:'🗑️',title:'Note deleted',detail:deletedNoteTitle});
       card.remove();
@@ -8319,16 +8322,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         firstTaskSync = false;
         lsSet(TK, remote);
+
+        // Update in-place for content edits to avoid destroying focused inputs
         Object.values(remote).forEach(function(t) {
           var ti = document.getElementById('tt-' + t.id);
           if (ti && document.activeElement !== ti) ti.value = t.title || '';
           var ni = document.querySelector('[data-notes-id="' + t.id + '"]');
           if (ni && document.activeElement !== ni) ni.value = t.notes || '';
         });
+
         buildGrid();
-        // Re-render task list and dashboard so changes from other devices appear immediately
-        if (currentTab === 'tasks') renderTasks();
-        if (currentTab === 'dashboard') renderDashboard();
+
+        // Re-render task list and dashboard so remote adds/edits/deletes appear immediately.
+        // Guard: skip only if user is actively editing a task input on this device.
+        var activeInTasksArea = document.activeElement &&
+          document.activeElement.closest &&
+          (document.activeElement.closest('#tasksList') ||
+           document.activeElement.closest('#tab-tasks'));
+        if (!activeInTasksArea) {
+          if (currentTab === 'tasks') renderTasks();
+          if (currentTab === 'dashboard') renderDashboard();
+        }
+
         // XP is managed exclusively via Firebase /gami — no local recomputation here.
         // Just refresh the HUD so task completion counts stay current.
         gamiRenderHud();
@@ -8346,15 +8361,27 @@ document.addEventListener('DOMContentLoaded', function() {
           return;
         }
         firstNoteSync = false;
+
+        // Detect structural change: note added or deleted (not just content edit)
+        var prevNoteIds = Array.from(document.querySelectorAll('.note-card [id^="nt-"]'))
+          .map(function(el){ return el.id.replace('nt-',''); }).sort().join(',');
+        var remoteNoteIds = Object.keys(remote).sort().join(',');
+        var noteStructuralChange = (prevNoteIds !== remoteNoteIds);
+
         lsSet(NK, remote);
-        Object.values(remote).forEach(function(n) {
-          var ti = document.getElementById('nt-' + n.id);
-          if (ti && document.activeElement !== ti) ti.value = n.title || '';
-          var bi = document.querySelector('[data-note-body="' + n.id + '"]');
-          if (bi && document.activeElement !== bi) bi.value = n.body || '';
-        });
-        // Re-render notes list so additions/deletions from other devices appear immediately
-        if (currentTab === 'notes') renderNotes();
+
+        if (noteStructuralChange) {
+          // New note added or note deleted from another device — rebuild the full list
+          if (currentTab === 'notes') renderNotes();
+        } else {
+          // Content-only update — patch in-place to avoid destroying focused inputs
+          Object.values(remote).forEach(function(n) {
+            var ti = document.getElementById('nt-' + n.id);
+            if (ti && document.activeElement !== ti) ti.value = n.title || '';
+            var bi = document.querySelector('[data-note-body="' + n.id + '"]');
+            if (bi && document.activeElement !== bi) bi.value = n.body || '';
+          });
+        }
       });
 
       // ── GamiCfg listener (XP values + level thresholds) ─────────────────
