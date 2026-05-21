@@ -3547,6 +3547,7 @@ function openTaskEditModal(taskId, editScope){
         };
         var maxIdx2=doneInstances.reduce(function(m,k){return Math.max(m,k.recurrenceIndex||0);},-1);
         var newInstances=generateRecurringInstances(baseRegen);
+        FB.ignoreNextTaskSync+=(newInstances.length+doneInstances.length);
         newInstances.forEach(function(inst,i){
           inst.recurrenceIndex=maxIdx2+1+i;
           inst.recurrenceWeekDays=newWeekDays;
@@ -3561,7 +3562,6 @@ function openTaskEditModal(taskId, editScope){
         });
         tasks2[taskId]=tasks2[taskId]||{};
         if(tasks2[taskId]){tasks2[taskId].done=newDone;}
-        FB.ignoreNextTaskSync+=(newInstances.length+doneInstances.length);
         lsSet(TK,tasks2);
         closePopover();buildGrid();
         if(currentTab==='tasks')renderTasks();
@@ -3571,8 +3571,9 @@ function openTaskEditModal(taskId, editScope){
       // No frequency change, or editing this instance only — just patch recurrence fields
       if(effectiveScope==='all'){
         var groupId3=t.recurrenceGroupId;
-        Object.values(tasks2).forEach(function(task){
-          if(task.recurrenceGroupId!==groupId3) return;
+        var _grp3Tasks=Object.values(tasks2).filter(function(task){return task.recurrenceGroupId===groupId3;});
+        FB.ignoreNextTaskSync+=(_grp3Tasks.length+1);
+        _grp3Tasks.forEach(function(task){
           task.title=newTitle;task.time=newTime;task.endDate=newEndDate;task.endTime=newEndTime;
           task.priority=newPriority;task.notes=newNotes;
           task.recurrence=newFreq;task.recurrenceWeekDays=newWeekDays;
@@ -3580,7 +3581,7 @@ function openTaskEditModal(taskId, editScope){
         });
         tasks2[taskId].done=newDone;tasks2[taskId].date=newDate;
         FB.saveTask(taskId,tasks2[taskId]);
-        FB.ignoreNextTaskSync+=1;lsSet(TK,tasks2);closePopover();buildGrid();
+        lsSet(TK,tasks2);closePopover();buildGrid();
         if(currentTab==='tasks')renderTasks();if(currentTab==='dashboard')renderDashboard();
         return;
       }
@@ -3590,8 +3591,9 @@ function openTaskEditModal(taskId, editScope){
     if(isRecurring&&effectiveScope==='all'){
       // Apply to all non-done instances in the series
       var groupId=t.recurrenceGroupId;
-      Object.values(tasks2).forEach(function(task){
-        if(task.recurrenceGroupId!==groupId) return;
+      var _allSeriesTasks=Object.values(tasks2).filter(function(task){return task.recurrenceGroupId===groupId;});
+      FB.ignoreNextTaskSync+=(_allSeriesTasks.length+1);
+      _allSeriesTasks.forEach(function(task){
         task.title=newTitle;
         task.time=newTime;
         task.endDate=newEndDate;
@@ -3615,9 +3617,9 @@ function openTaskEditModal(taskId, editScope){
       tasks2[taskId].priority=newPriority;
       tasks2[taskId].notes=newNotes;
       tasks2[taskId].done=newDone;
+      FB.ignoreNextTaskSync+=1;
       FB.saveTask(taskId,tasks2[taskId]);
     }
-    FB.ignoreNextTaskSync+=1;
     lsSet(TK,tasks2);
     closePopover();buildGrid();
     if(currentTab==='tasks')renderTasks();
@@ -3831,6 +3833,7 @@ document.getElementById('addTaskBtn').addEventListener('click',function(){
   var tasks=lsGet(TK);var id=genId();
   tasks[id]={id:id,title:'',date:'',time:'',endDate:'',endTime:'',notes:'',done:false,priority:'medium',created:Date.now()};
   lsSet(TK,tasks);
+  FB.ignoreNextTaskSync+=1;
   FB.saveTask(id,tasks[id]);
   renderTasks();
   setTimeout(function(){openSimpleTaskModal(id);},60);
@@ -4308,6 +4311,7 @@ function openRecurringSetupModal(existingGroupId){
       };
       var newInstances=generateRecurringInstances(baseExt);
       if(!newInstances.length){showDropToast('No new occurrences to add — check the date range.','','');return;}
+      FB.ignoreNextTaskSync+=newInstances.length;
       newInstances.forEach(function(inst,i){
         inst.recurrenceIndex=maxIdx+1+i;
         inst.recurrenceEndType=lastInst.recurrenceEndType||'count';
@@ -4318,7 +4322,6 @@ function openRecurringSetupModal(existingGroupId){
         FB.saveTask(inst.id,inst);
       });
       FB.logActivity({type:'task_add',icon:'➕',title:'Recurring occurrences added',detail:lastInst.title+' · '+newInstances.length+' occurrence'+(newInstances.length!==1?'s':''),taskId:lastInst.id});
-      FB.ignoreNextTaskSync+=newInstances.length;
       lsSet(TK,tasks2);
       var summary=newInstances.length+' new occurrence'+(newInstances.length!==1?'s':'')+' added';
       showDropToast(lastInst.title+' — '+summary,'','');
@@ -5058,7 +5061,8 @@ function renderTasks(){
       if(chk.checked) tasks2[t.id].completedAt=Date.now();
       else delete tasks2[t.id].completedAt;
       FB.ignoreNextTaskSync+=1;
-      lsSet(TK,tasks2);FB.saveTask(t.id,tasks2[t.id]);
+      FB.saveTask(t.id,tasks2[t.id]);
+      lsSet(TK,tasks2);
       FB.logActivity({type:'task_done',icon:chk.checked?'✅':'↩️',
         title:chk.checked?'Task completed':'Task marked undone',
         detail:t.title||'Untitled'});
@@ -5615,6 +5619,7 @@ function openSimpleTaskModal(taskId){
           created:Date.now()
         };
         tasks2[newSpecId]=specInst;
+        FB.ignoreNextTaskSync+=1;
         FB.saveTask(newSpecId,specInst);
         FB.logActivity({type:'task_add',icon:'➕',title:'Recurring occurrence added',detail:(lastInst.title||'Untitled')+' · '+specDateStr,taskId:newSpecId});
         FB.ignoreNextTaskSync+=1;lsSet(TK,tasks2);
@@ -5645,6 +5650,7 @@ function openSimpleTaskModal(taskId){
       var baseE3={title:lastInst.title,date:nextStart3,time:lastInst.time||'',notes:lastInst.notes||'',priority:lastInst.priority||'medium',recurrence:recTypeExt,recurrenceGroupId:t.recurrenceGroupId,endType:extMode,endCount:extMode==='count'?extCount3:null,endDate:extMode==='date'?extEndDate3:null,weekDays:weekDaysExt,taskEndDate:lastInst.endDate||'',taskEndTime:lastInst.endTime||''};
       var newI3=generateRecurringInstances(baseE3);
       if(!newI3.length){showDropToast('No new occurrences — check the date range.','','');return;}
+      FB.ignoreNextTaskSync+=newI3.length;
       newI3.forEach(function(inst,i){inst.recurrenceIndex=maxIdx+1+i;inst.recurrenceEndType=lastInst.recurrenceEndType||'count';inst.recurrenceEndCount=lastInst.recurrenceEndCount||null;inst.recurrenceEndDate=lastInst.recurrenceEndDate||null;inst.recurrenceWeekDays=weekDaysExt||null;tasks2[inst.id]=inst;FB.saveTask(inst.id,inst);});
       FB.logActivity({type:'task_add',icon:'➕',title:'Recurring occurrences added',detail:(lastInst.title||'Untitled')+' · '+newI3.length+' occurrence'+(newI3.length!==1?'s':''),taskId:lastInst.id});
       FB.ignoreNextTaskSync+=1;lsSet(TK,tasks2);
@@ -5732,16 +5738,17 @@ function openSimpleTaskModal(taskId){
         var baseRegen2={title:newTitle,date:newStart2,time:newTime,notes:newNotes,priority:curPri,recurrence:newFreq,recurrenceGroupId:groupId2,endType:t.recurrenceEndType||'count',endCount:t.recurrenceEndCount||20,endDate:t.recurrenceEndDate||null,weekDays:newWeekDays,taskEndDate:newEndDate,taskEndTime:newEndTime};
         var maxIdx3=doneInsts.reduce(function(m,k){return Math.max(m,k.recurrenceIndex||0);},-1);
         var newInsts=generateRecurringInstances(baseRegen2);
+        FB.ignoreNextTaskSync+=(newInsts.length+doneInsts.length);
         newInsts.forEach(function(inst,i){inst.recurrenceIndex=maxIdx3+1+i;inst.recurrenceWeekDays=newWeekDays;tasks2[inst.id]=inst;FB.saveTask(inst.id,inst);});
         doneInsts.forEach(function(k){k.title=newTitle;k.time=newTime;k.endDate=newEndDate;k.endTime=newEndTime;k.priority=curPri;k.notes=newNotes;k.recurrence=newFreq;k.recurrenceWeekDays=newWeekDays;FB.saveTask(k.id,k);});
         if(tasks2[taskId])tasks2[taskId].done=newDone;
-        FB.logActivity({type:'task_edit',icon:'✏️',title:'Recurring task updated',detail:newTitle||'Untitled',taskId:taskId});
-        FB.ignoreNextTaskSync+=(newInsts.length+doneInsts.length);lsSet(TK,tasks2);closePopover();buildGrid();renderTasks();if(currentTab==='dashboard')renderDashboard();
+        FB.logActivity({type:'task_edit',icon:'✏️',title:'Recurring task updated',detail:newTitle||'Untitled',taskId:taskId});lsSet(TK,tasks2);closePopover();buildGrid();renderTasks();if(currentTab==='dashboard')renderDashboard();
         return;
       }
       // No freq change — update all
       var groupId3=t.recurrenceGroupId;
       var _grpTasks=Object.values(tasks2).filter(function(task){return task.recurrenceGroupId===groupId3;});
+      FB.ignoreNextTaskSync+=(_grpTasks.length+1);
       _grpTasks.forEach(function(task){
         task.title=newTitle;task.time=newTime;task.endDate=newEndDate;task.endTime=newEndTime;task.priority=curPri;task.notes=newNotes;
         task.attachments=curAtts.filter(function(a){return !a._uploading;});
@@ -5749,17 +5756,17 @@ function openSimpleTaskModal(taskId){
       });
       tasks2[taskId].done=newDone;tasks2[taskId].date=newDate;
       FB.saveTask(taskId,tasks2[taskId]);
-      FB.ignoreNextTaskSync+=(_grpTasks.length+1);
     } else {
       // Edit this instance only
       tasks2[taskId].title=newTitle;tasks2[taskId].date=newDate;tasks2[taskId].time=newTime;
       tasks2[taskId].endDate=newEndDate;tasks2[taskId].endTime=newEndTime;
       tasks2[taskId].priority=curPri;tasks2[taskId].notes=newNotes;tasks2[taskId].done=newDone;
       tasks2[taskId].attachments=curAtts.filter(function(a){return !a._uploading;});
+      FB.ignoreNextTaskSync+=1;
       FB.saveTask(taskId,tasks2[taskId]);
     }
     FB.logActivity({type:wasNewTask?'task_add':'task_edit',icon:wasNewTask?'➕':'✏️',title:wasNewTask?'Task added':'Task saved',detail:newTitle||'Untitled',taskId:taskId});
-    FB.ignoreNextTaskSync+=1;lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();
+    lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();
     if(currentTab==='dashboard')renderDashboard();
   });
   actBar.appendChild(saveBtn2);
