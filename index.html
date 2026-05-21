@@ -58,8 +58,11 @@ header{background:linear-gradient(135deg,var(--gd) 0%,var(--gm) 60%,var(--gb) 10
 #syncBadge{display:none;align-items:center;gap:5px;background:rgba(255,255,255,0.15);
   border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:3px 9px;
   color:var(--white);font-size:11px;font-weight:500}
-.sync-dot{width:6px;height:6px;border-radius:50%;background:#7fff7f;animation:pulse 2s infinite}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:#7fff7f;animation:pulse 2s infinite;transition:background .3s}
+.sync-dot.syncing{background:#ffd700;animation:spin 0.8s linear infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+#syncLabel{transition:opacity .3s}
 
 /* ── Tab nav ── */
 /* ── Tab nav pill ── */
@@ -1635,7 +1638,7 @@ body.adv-mode .htg-expand-all{background:rgba(255,255,255,.15)}
     </div>
   </div>
   <div class="header-right">
-    <div id="syncBadge"><div class="sync-dot"></div>Live Sync</div>
+    <div id="syncBadge"><div class="sync-dot"></div><span id="syncLabel">Live Sync</span></div>
     <div id="loginPanel">
       <button class="btn-google" id="signInBtn">
         <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H24v8h11.3C33.5 33.6 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.2-2.7-.1-4z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.1 19 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.5 29.3 4 24 4 16.3 4 9.7 8.4 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.9 13.5-5.1l-6.2-5.2C29.4 35.5 26.8 36 24 36c-5.2 0-9.5-3.4-11.2-8l-6.6 5.1C9.7 39.5 16.3 44 24 44z"/><path fill="#1976D2" d="M43.6 20H24v8h11.3c-.9 2.5-2.6 4.5-4.7 5.8l6.2 5.2C40.5 35.6 44 30.3 44 24c0-1.3-.2-2.7-.4-4z"/></svg>
@@ -2217,7 +2220,7 @@ var FB={
   saveMktGoals:function(){},
   saveMktPurchased:function(){},
   saveGamiCfg:function(){},
-  ignoreNextTaskSync:false,
+  ignoreNextTaskSync:0,   // counter: each batch save increments, listener decrements
   ignoreNextNoteSync:false
 };
 
@@ -2937,7 +2940,7 @@ function dropTaskOnCell(taskId,cell){
     tasks[taskId].endDate=newDateStr;
   }
   lsSet(TK,tasks);
-  FB.ignoreNextTaskSync=true;
+  FB.ignoreNextTaskSync+=1;
   FB.saveTask(taskId,tasks[taskId]);
   FB.logActivity({type:'task_edit',icon:'📅',title:'Task rescheduled',detail:(tasks[taskId].title||'Untitled')+' → '+newDateStr+' '+newTime,taskId:taskId});
   // Rebuild both planner and tasks list
@@ -3558,7 +3561,7 @@ function openTaskEditModal(taskId, editScope){
         });
         tasks2[taskId]=tasks2[taskId]||{};
         if(tasks2[taskId]){tasks2[taskId].done=newDone;}
-        FB.ignoreNextTaskSync=true;
+        FB.ignoreNextTaskSync+=(newInstances.length+doneInstances.length);
         lsSet(TK,tasks2);
         closePopover();buildGrid();
         if(currentTab==='tasks')renderTasks();
@@ -3577,7 +3580,7 @@ function openTaskEditModal(taskId, editScope){
         });
         tasks2[taskId].done=newDone;tasks2[taskId].date=newDate;
         FB.saveTask(taskId,tasks2[taskId]);
-        FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();buildGrid();
+        FB.ignoreNextTaskSync+=1;lsSet(TK,tasks2);closePopover();buildGrid();
         if(currentTab==='tasks')renderTasks();if(currentTab==='dashboard')renderDashboard();
         return;
       }
@@ -3614,7 +3617,7 @@ function openTaskEditModal(taskId, editScope){
       tasks2[taskId].done=newDone;
       FB.saveTask(taskId,tasks2[taskId]);
     }
-    FB.ignoreNextTaskSync=true;
+    FB.ignoreNextTaskSync+=1;
     lsSet(TK,tasks2);
     closePopover();buildGrid();
     if(currentTab==='tasks')renderTasks();
@@ -4315,7 +4318,7 @@ function openRecurringSetupModal(existingGroupId){
         FB.saveTask(inst.id,inst);
       });
       FB.logActivity({type:'task_add',icon:'➕',title:'Recurring occurrences added',detail:lastInst.title+' · '+newInstances.length+' occurrence'+(newInstances.length!==1?'s':''),taskId:lastInst.id});
-      FB.ignoreNextTaskSync=true;
+      FB.ignoreNextTaskSync+=newInstances.length;
       lsSet(TK,tasks2);
       var summary=newInstances.length+' new occurrence'+(newInstances.length!==1?'s':'')+' added';
       showDropToast(lastInst.title+' — '+summary,'','');
@@ -4377,6 +4380,7 @@ function openRecurringSetupModal(existingGroupId){
       taskEndTime:taskEndTime
     };
     var instances=generateRecurringInstances(base);
+    FB.ignoreNextTaskSync+=instances.length;
     instances.forEach(function(inst){tasks2[inst.id]=inst;FB.saveTask(inst.id,inst);});
     FB.logActivity({type:existingGroupId?'task_edit':'task_add',icon:existingGroupId?'✏️':'➕',title:existingGroupId?'Recurring task updated':'Recurring task added',detail:title+' · '+instances.length+' occurrence'+(instances.length!==1?'s':''),taskId:instances[0]&&instances[0].id});
     lsSet(TK,tasks2);
@@ -5053,7 +5057,7 @@ function renderTasks(){
       tasks2[t.id].done=chk.checked;
       if(chk.checked) tasks2[t.id].completedAt=Date.now();
       else delete tasks2[t.id].completedAt;
-      FB.ignoreNextTaskSync=true;
+      FB.ignoreNextTaskSync+=1;
       lsSet(TK,tasks2);FB.saveTask(t.id,tasks2[t.id]);
       FB.logActivity({type:'task_done',icon:chk.checked?'✅':'↩️',
         title:chk.checked?'Task completed':'Task marked undone',
@@ -5380,7 +5384,7 @@ function openSimpleTaskModal(taskId){
     var tasksNow=lsGet(TK);
     if(!tasksNow[taskId])return;
     tasksNow[taskId].attachments=cleanAttachmentList();
-    FB.ignoreNextTaskSync=true;
+    FB.ignoreNextTaskSync+=1;
     lsSet(TK,tasksNow);
     FB.saveTask(taskId,tasksNow[taskId]);
     if(actEntry) FB.logActivity(actEntry);
@@ -5613,7 +5617,7 @@ function openSimpleTaskModal(taskId){
         tasks2[newSpecId]=specInst;
         FB.saveTask(newSpecId,specInst);
         FB.logActivity({type:'task_add',icon:'➕',title:'Recurring occurrence added',detail:(lastInst.title||'Untitled')+' · '+specDateStr,taskId:newSpecId});
-        FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);
+        FB.ignoreNextTaskSync+=1;lsSet(TK,tasks2);
         showDropToast(lastInst.title+' — 1 specific occurrence added on '+specDateStr+' 📅','','');
         closePopover();renderTasks();buildGrid();
         return;
@@ -5643,7 +5647,7 @@ function openSimpleTaskModal(taskId){
       if(!newI3.length){showDropToast('No new occurrences — check the date range.','','');return;}
       newI3.forEach(function(inst,i){inst.recurrenceIndex=maxIdx+1+i;inst.recurrenceEndType=lastInst.recurrenceEndType||'count';inst.recurrenceEndCount=lastInst.recurrenceEndCount||null;inst.recurrenceEndDate=lastInst.recurrenceEndDate||null;inst.recurrenceWeekDays=weekDaysExt||null;tasks2[inst.id]=inst;FB.saveTask(inst.id,inst);});
       FB.logActivity({type:'task_add',icon:'➕',title:'Recurring occurrences added',detail:(lastInst.title||'Untitled')+' · '+newI3.length+' occurrence'+(newI3.length!==1?'s':''),taskId:lastInst.id});
-      FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);
+      FB.ignoreNextTaskSync+=1;lsSet(TK,tasks2);
       showDropToast(lastInst.title+' — '+newI3.length+' more occurrence'+(newI3.length!==1?'s':'')+' added 🔁','','');
       closePopover();renderTasks();buildGrid();
     });
@@ -5732,19 +5736,20 @@ function openSimpleTaskModal(taskId){
         doneInsts.forEach(function(k){k.title=newTitle;k.time=newTime;k.endDate=newEndDate;k.endTime=newEndTime;k.priority=curPri;k.notes=newNotes;k.recurrence=newFreq;k.recurrenceWeekDays=newWeekDays;FB.saveTask(k.id,k);});
         if(tasks2[taskId])tasks2[taskId].done=newDone;
         FB.logActivity({type:'task_edit',icon:'✏️',title:'Recurring task updated',detail:newTitle||'Untitled',taskId:taskId});
-        FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();buildGrid();renderTasks();if(currentTab==='dashboard')renderDashboard();
+        FB.ignoreNextTaskSync+=(newInsts.length+doneInsts.length);lsSet(TK,tasks2);closePopover();buildGrid();renderTasks();if(currentTab==='dashboard')renderDashboard();
         return;
       }
       // No freq change — update all
       var groupId3=t.recurrenceGroupId;
-      Object.values(tasks2).forEach(function(task){
-        if(task.recurrenceGroupId!==groupId3)return;
+      var _grpTasks=Object.values(tasks2).filter(function(task){return task.recurrenceGroupId===groupId3;});
+      _grpTasks.forEach(function(task){
         task.title=newTitle;task.time=newTime;task.endDate=newEndDate;task.endTime=newEndTime;task.priority=curPri;task.notes=newNotes;
         task.attachments=curAtts.filter(function(a){return !a._uploading;});
         FB.saveTask(task.id,task);
       });
       tasks2[taskId].done=newDone;tasks2[taskId].date=newDate;
       FB.saveTask(taskId,tasks2[taskId]);
+      FB.ignoreNextTaskSync+=(_grpTasks.length+1);
     } else {
       // Edit this instance only
       tasks2[taskId].title=newTitle;tasks2[taskId].date=newDate;tasks2[taskId].time=newTime;
@@ -5754,7 +5759,7 @@ function openSimpleTaskModal(taskId){
       FB.saveTask(taskId,tasks2[taskId]);
     }
     FB.logActivity({type:wasNewTask?'task_add':'task_edit',icon:wasNewTask?'➕':'✏️',title:wasNewTask?'Task added':'Task saved',detail:newTitle||'Untitled',taskId:taskId});
-    FB.ignoreNextTaskSync=true;lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();
+    FB.ignoreNextTaskSync+=1;lsSet(TK,tasks2);closePopover();renderTasks();buildGrid();
     if(currentTab==='dashboard')renderDashboard();
   });
   actBar.appendChild(saveBtn2);
@@ -7896,31 +7901,42 @@ document.addEventListener('DOMContentLoaded', function() {
       // Tasks listener
       if (tasksCb) db.ref('users/' + uid() + '/tasks').off('value', tasksCb);
       var firstTaskSync = true;
+      // Debounced render: prevents rapid-fire re-renders during batch writes
+      var _taskRenderDebounced = debounce(function() {
+        buildGrid();
+        if (currentTab === 'tasks')     renderTasks();
+        if (currentTab === 'dashboard') renderDashboard();
+        if (currentTab === 'planner')   { buildGrid(); applyPlannerLayout(); }
+        gamiRenderHud();
+        mktRefreshXpBadge();
+        if (currentTab === 'rewards')   renderRewards();
+      }, 150);
       tasksCb = db.ref('users/' + uid() + '/tasks').on('value', function(snap) {
         var remote = snap.val() || {};
-        if (!firstTaskSync && window.FB.ignoreNextTaskSync) {
-          window.FB.ignoreNextTaskSync = false;
+        // ignoreNextTaskSync is now a counter so batch saves skip the right number of echoes
+        if (!firstTaskSync && window.FB.ignoreNextTaskSync > 0) {
+          window.FB.ignoreNextTaskSync--;
           return;
         }
         firstTaskSync = false;
+        if(typeof syncFlash==='function') syncFlash('Tasks synced');
         lsSet(TK, remote);
+        // Patch any visible inline inputs without disrupting active edits
         Object.values(remote).forEach(function(t) {
           var ti = document.getElementById('tt-' + t.id);
           if (ti && document.activeElement !== ti) ti.value = t.title || '';
           var ni = document.querySelector('[data-notes-id="' + t.id + '"]');
           if (ni && document.activeElement !== ni) ni.value = t.notes || '';
         });
-        buildGrid();
-        // XP is managed exclusively via Firebase /gami — no local recomputation here.
-        // Just refresh the HUD so task completion counts stay current.
-        gamiRenderHud();
-        mktRefreshXpBadge();
-        if (currentTab === 'rewards') renderRewards();
+        _taskRenderDebounced();
       });
 
       // Notes listener
       if (notesCb) db.ref('users/' + uid() + '/notes').off('value', notesCb);
       var firstNoteSync = true;
+      var _noteRenderDebounced = debounce(function() {
+        if (currentTab === 'notes') renderNotes();
+      }, 150);
       notesCb = db.ref('users/' + uid() + '/notes').on('value', function(snap) {
         var remote = snap.val() || {};
         if (!firstNoteSync && window.FB.ignoreNextNoteSync) {
@@ -7928,13 +7944,17 @@ document.addEventListener('DOMContentLoaded', function() {
           return;
         }
         firstNoteSync = false;
+        if(typeof syncFlash==='function') syncFlash('Notes synced');
         lsSet(NK, remote);
+        // Patch visible inline inputs without disrupting active edits
         Object.values(remote).forEach(function(n) {
           var ti = document.getElementById('nt-' + n.id);
           if (ti && document.activeElement !== ti) ti.value = n.title || '';
           var bi = document.querySelector('[data-note-body="' + n.id + '"]');
           if (bi && document.activeElement !== bi) bi.value = n.body || '';
         });
+        // Re-render Notes tab if visible so remote adds/deletes appear instantly
+        _noteRenderDebounced();
       });
 
       // ── GamiCfg listener (XP values + level thresholds) ─────────────────
@@ -8324,6 +8344,20 @@ function renderActivity(){
 }
 
 // actStartListener is called directly from onAuthStateChanged above
+
+// Flash the sync badge to show a remote update was received
+function syncFlash(label) {
+  var dot   = document.querySelector('.sync-dot');
+  var lbl   = document.getElementById('syncLabel');
+  if (!dot) return;
+  dot.classList.add('syncing');
+  if (lbl) lbl.textContent = label || 'Syncing…';
+  clearTimeout(window._syncFlashTimer);
+  window._syncFlashTimer = setTimeout(function() {
+    dot.classList.remove('syncing');
+    if (lbl) lbl.textContent = 'Live Sync';
+  }, 1200);
+}
 
 </script>
 </body>
